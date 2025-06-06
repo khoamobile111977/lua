@@ -1,0 +1,316 @@
+
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
+
+-- Cấu hình API
+local API_CONFIG = {
+    BASE_URL = "https://caythueapi.onrender.com", 
+    ENDPOINTS = {
+        GET_ORDERS = "/api/orders/",
+        CHECK_USER = "/api/check/"
+    }
+}
+
+local GUI_CONFIG = {
+    POSITION = UDim2.new(0, 10, 0, 10), 
+    SIZE = UDim2.new(0, 350, 0, 200),
+    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30),
+    TEXT_COLOR = Color3.fromRGB(255, 255, 255),
+    ACCENT_COLOR = Color3.fromRGB(0, 162, 255),
+    SUCCESS_COLOR = Color3.fromRGB(46, 204, 113),
+    ERROR_COLOR = Color3.fromRGB(231, 76, 60)
+}
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Biến lưu trữ
+local currentOrderData = nil
+local isGUIVisible = false
+local orderGUI = nil
+
+-- Hàm tạo notification
+local function showNotification(title, message, color)
+    StarterGui:SetCore("SendNotification", {
+        Title = title;
+        Text = message;
+        Duration = 3;
+        Color = color or GUI_CONFIG.ACCENT_COLOR;
+    })
+end
+
+
+local function callAPI(endpoint, username)
+    local success, result = pcall(function()
+        local url = API_CONFIG.BASE_URL .. endpoint .. username
+        return HttpService:GetAsync(url)
+    end)
+    
+    if success then
+        local decoded = HttpService:JSONDecode(result)
+        return decoded
+    else
+        warn("Lỗi kết nối API: " .. tostring(result))
+        return nil
+    end
+end
+
+local function createOrderGUI()
+    if orderGUI then
+        orderGUI:Destroy()
+    end
+    
+    orderGUI = Instance.new("ScreenGui")
+    orderGUI.Name = "BloxFruitOrderManager"
+    orderGUI.ResetOnSpawn = false
+    orderGUI.Parent = PlayerGui
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = GUI_CONFIG.SIZE
+    mainFrame.Position = GUI_CONFIG.POSITION
+    mainFrame.BackgroundColor3 = GUI_CONFIG.BACKGROUND_COLOR
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = orderGUI
+    
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 10)
+    mainCorner.Parent = mainFrame
+    
+    -- Header
+    local headerFrame = Instance.new("Frame")
+    headerFrame.Name = "Header"
+    headerFrame.Size = UDim2.new(1, 0, 0, 40)
+    headerFrame.Position = UDim2.new(0, 0, 0, 0)
+    headerFrame.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
+    headerFrame.BorderSizePixel = 0
+    headerFrame.Parent = mainFrame
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 10)
+    headerCorner.Parent = headerFrame
+    
+    local headerFix = Instance.new("Frame")
+    headerFix.Size = UDim2.new(1, 0, 0, 10)
+    headerFix.Position = UDim2.new(0, 0, 1, -10)
+    headerFix.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
+    headerFix.BorderSizePixel = 0
+    headerFix.Parent = headerFrame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, -80, 1, 0)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "🎮 Đơn Cày Thuê - " .. LocalPlayer.Name
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextScaled = true
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Parent = headerFrame
+    
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -35, 0, 5)
+    closeButton.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
+    closeButton.Text = "✕"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextScaled = true
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = headerFrame
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 5)
+    closeCorner.Parent = closeButton
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(0, 30, 0, 30)
+    toggleButton.Position = UDim2.new(1, -70, 0, 5)
+    toggleButton.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
+    toggleButton.Text = "−"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextScaled = true
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Parent = headerFrame
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 5)
+    toggleCorner.Parent = toggleButton
+    
+    -- Khu vực nội dung
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "Content"
+    contentFrame.Size = UDim2.new(1, -20, 1, -50)
+    contentFrame.Position = UDim2.new(0, 10, 0, 45)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.BorderSizePixel = 0
+    contentFrame.ScrollBarThickness = 5
+    contentFrame.ScrollBarImageColor3 = GUI_CONFIG.ACCENT_COLOR
+    contentFrame.Parent = mainFrame
+    
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 5)
+    contentLayout.Parent = contentFrame
+    
+    closeButton.MouseButton1Click:Connect(function()
+        orderGUI:Destroy()
+        orderGUI = nil
+        isGUIVisible = false
+    end)
+    
+    local isMinimized = false
+    toggleButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        local targetSize = isMinimized and UDim2.new(0, 350, 0, 45) or GUI_CONFIG.SIZE
+        toggleButton.Text = isMinimized and "+" or "−"
+        
+        local tween = TweenService:Create(mainFrame, 
+            TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            {Size = targetSize}
+        )
+        tween:Play()
+    end)
+    
+    return contentFrame
+end
+
+local function displayOrderInfo(orderData)
+    local contentFrame = createOrderGUI()
+    
+    if not orderData or not orderData.success then
+        local noOrderLabel = Instance.new("TextLabel")
+        noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
+        noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
+        noOrderLabel.Text = "❌ Không tìm thấy đơn cày cho tài khoản này"
+        noOrderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noOrderLabel.TextScaled = true
+        noOrderLabel.Font = Enum.Font.Gotham
+        noOrderLabel.BorderSizePixel = 0
+        noOrderLabel.Parent = contentFrame
+        
+        local noOrderCorner = Instance.new("UICorner")
+        noOrderCorner.CornerRadius = UDim.new(0, 5)
+        noOrderCorner.Parent = noOrderLabel
+        
+        return
+    end
+    
+    -- Hiển thị thông tin đơn hàng
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Size = UDim2.new(1, 0, 0, 40)
+    infoLabel.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
+    infoLabel.Text = string.format("✅ Tìm thấy %d đơn hàng", orderData.total_orders or 1)
+    infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    infoLabel.TextScaled = true
+    infoLabel.Font = Enum.Font.GothamBold
+    infoLabel.BorderSizePixel = 0
+    infoLabel.Parent = contentFrame
+    
+    local infoCorner = Instance.new("UICorner")
+    infoCorner.CornerRadius = UDim.new(0, 5)
+    infoCorner.Parent = infoLabel
+    
+    local orders = orderData.orders or {}
+    if type(orders) == "string" then
+        orders = {orders}
+    end
+    
+    for i, order in ipairs(orders) do
+        local orderFrame = Instance.new("Frame")
+        orderFrame.Size = UDim2.new(1, 0, 0, 60)
+        orderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        orderFrame.BorderSizePixel = 0
+        orderFrame.Parent = contentFrame
+        
+        local orderCorner = Instance.new("UICorner")
+        orderCorner.CornerRadius = UDim.new(0, 5)
+        orderCorner.Parent = orderFrame
+        
+        local orderNumber = Instance.new("TextLabel")
+        orderNumber.Size = UDim2.new(0, 30, 1, 0)
+        orderNumber.Position = UDim2.new(0, 5, 0, 0)
+        orderNumber.BackgroundTransparency = 1
+        orderNumber.Text = tostring(i)
+        orderNumber.TextColor3 = GUI_CONFIG.ACCENT_COLOR
+        orderNumber.TextScaled = true
+        orderNumber.Font = Enum.Font.GothamBold
+        orderNumber.Parent = orderFrame
+        
+        local orderText = Instance.new("TextLabel")
+        orderText.Size = UDim2.new(1, -40, 1, 0)
+        orderText.Position = UDim2.new(0, 35, 0, 0)
+        orderText.BackgroundTransparency = 1
+        orderText.Text = tostring(order)
+        orderText.TextColor3 = GUI_CONFIG.TEXT_COLOR
+        orderText.TextScaled = true
+        orderText.TextXAlignment = Enum.TextXAlignment.Left
+        orderText.Font = Enum.Font.Gotham
+        orderText.TextWrapped = true
+        orderText.Parent = orderFrame
+    end
+    
+    contentFrame.CanvasSize = UDim2.new(0, 0, 0, contentFrame.UIListLayout.AbsoluteContentSize.Y)
+end
+
+local function checkAndDisplayOrders()
+    local username = LocalPlayer.Name
+    
+    showNotification("🔄 Đang tải", "Đang kiểm tra đơn cày cho " .. username, GUI_CONFIG.ACCENT_COLOR)
+    
+    local orderData = callAPI(API_CONFIG.ENDPOINTS.GET_ORDERS, username)
+    
+    if orderData then
+        if orderData.success then
+            showNotification("✅ Thành công", "Đã tìm thấy đơn cày!", GUI_CONFIG.SUCCESS_COLOR)
+            displayOrderInfo(orderData)
+            isGUIVisible = true
+        else
+            showNotification("❌ Không có đơn", orderData.message or "Không tìm thấy đơn cày", GUI_CONFIG.ERROR_COLOR)
+            displayOrderInfo(nil)
+        end
+    else
+        showNotification("🔌 Lỗi kết nối", "Không thể kết nối đến server API", GUI_CONFIG.ERROR_COLOR)
+    end
+end
+
+local function toggleGUI()
+    if isGUIVisible and orderGUI then
+        orderGUI:Destroy()
+        orderGUI = nil
+        isGUIVisible = false
+    else
+        checkAndDisplayOrders()
+    end
+end
+
+wait(2) -- Chờ game load xong
+checkAndDisplayOrders()
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.F9 then
+        toggleGUI()
+    elseif input.KeyCode == Enum.KeyCode.F10 then
+        checkAndDisplayOrders() -- Refresh đơn hàng
+    end
+end)
+
+showNotification("🎮 Script Đã Khởi Động!", "F9: Bật/Tắt GUI | F10: Làm mới đơn hàng", GUI_CONFIG.SUCCESS_COLOR)
+
+print("✅ Script Quản Lý Đơn Cày Thuê đã khởi động!")
+print("📋 Username hiện tại: " .. LocalPlayer.Name)
+print("🔧 Phím tắt:")
+print("   F9  - Bật/Tắt giao diện")
+print("   F10 - Làm mới thông tin đơn hàng")
+print("🌐 API Server: " .. API_CONFIG.BASE_URL)
