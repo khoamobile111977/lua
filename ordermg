@@ -14,9 +14,11 @@ local API_CONFIG = {
 local GUI_CONFIG = {
     POSITION = UDim2.new(0, 10, 0, 10), 
     SIZE = UDim2.new(0, 350, 0, 200),
-    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30),
-    TEXT_COLOR = Color3.fromRGB(255, 255, 255),
+    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30), -- Dark base for transparency
+    BACKGROUND_TRANSPARENCY = 0.4, -- Semi-transparent
+    TEXT_COLOR = Color3.fromRGB(255, 255, 255), -- White for high contrast
     ACCENT_COLOR = Color3.fromRGB(0, 162, 255),
+    ACCENT_TRANSPARENCY = 0.3, -- Slightly less transparent for accent
     SUCCESS_COLOR = Color3.fromRGB(46, 204, 113),
     ERROR_COLOR = Color3.fromRGB(231, 76, 60)
 }
@@ -86,6 +88,7 @@ local function createOrderGUI()
     mainFrame.Size = GUI_CONFIG.SIZE
     mainFrame.Position = GUI_CONFIG.POSITION
     mainFrame.BackgroundColor3 = GUI_CONFIG.BACKGROUND_COLOR
+    mainFrame.BackgroundTransparency = GUI_CONFIG.BACKGROUND_TRANSPARENCY
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
     mainFrame.Draggable = true
@@ -101,6 +104,7 @@ local function createOrderGUI()
     headerFrame.Size = UDim2.new(1, 0, 0, 40)
     headerFrame.Position = UDim2.new(0, 0, 0, 0)
     headerFrame.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
+    headerFrame.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
     headerFrame.BorderSizePixel = 0
     headerFrame.Parent = mainFrame
     
@@ -112,6 +116,7 @@ local function createOrderGUI()
     headerFix.Size = UDim2.new(1, 0, 0, 10)
     headerFix.Position = UDim2.new(0, 0, 1, -10)
     headerFix.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
+    headerFix.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
     headerFix.BorderSizePixel = 0
     headerFix.Parent = headerFrame
     
@@ -121,7 +126,7 @@ local function createOrderGUI()
     titleLabel.Position = UDim2.new(0, 10, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "🎮 Đơn Cày Thuê - " .. LocalPlayer.Name
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
     titleLabel.TextScaled = true
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Font = Enum.Font.GothamBold
@@ -132,8 +137,9 @@ local function createOrderGUI()
     closeButton.Size = UDim2.new(0, 30, 0, 30)
     closeButton.Position = UDim2.new(1, -35, 0, 5)
     closeButton.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
+    closeButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
     closeButton.Text = "✕"
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
     closeButton.TextScaled = true
     closeButton.Font = Enum.Font.GothamBold
     closeButton.BorderSizePixel = 0
@@ -148,8 +154,9 @@ local function createOrderGUI()
     toggleButton.Size = UDim2.new(0, 30, 0, 30)
     toggleButton.Position = UDim2.new(1, -70, 0, 5)
     toggleButton.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
+    toggleButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
     toggleButton.Text = "−"
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
     toggleButton.TextScaled = true
     toggleButton.Font = Enum.Font.GothamBold
     toggleButton.BorderSizePixel = 0
@@ -209,8 +216,9 @@ local function displayOrderInfo(orderData)
         local noOrderLabel = Instance.new("TextLabel")
         noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
         noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
+        noOrderLabel.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
         noOrderLabel.Text = "❌ Không tìm thấy đơn cày hoặc dữ liệu không hợp lệ"
-        noOrderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noOrderLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
         noOrderLabel.TextScaled = true
         noOrderLabel.Font = Enum.Font.Gotham
         noOrderLabel.BorderSizePixel = 0
@@ -223,21 +231,6 @@ local function displayOrderInfo(orderData)
         return
     end
     
-    -- Hiển thị thông tin đơn hàng
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Size = UDim2.new(1, 0, 0, 40)
-    infoLabel.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
-    infoLabel.Text = string.format("✅ Tìm thấy %d đơn hàng", orderData.total_orders or #orderData.orders)
-    infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    infoLabel.TextScaled = true
-    infoLabel.Font = Enum.Font.GothamBold
-    infoLabel.BorderSizePixel = 0
-    infoLabel.Parent = contentFrame
-    
-    local infoCorner = Instance.new("UICorner")
-    infoCorner.CornerRadius = UDim.new(0, 5)
-    infoCorner.Parent = infoLabel
-    
     local orders = orderData.orders or {}
     if type(orders) == "string" then
         orders = {orders}
@@ -248,7 +241,8 @@ local function displayOrderInfo(orderData)
     for i, order in ipairs(orders) do
         local orderFrame = Instance.new("Frame")
         orderFrame.Size = UDim2.new(1, 0, 0, 60)
-        orderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        orderFrame.BackgroundColor3 = GUI_CONFIG.BACKGROUND_COLOR
+        orderFrame.BackgroundTransparency = GUI_CONFIG.BACKGROUND_TRANSPARENCY
         orderFrame.BorderSizePixel = 0
         orderFrame.Parent = contentFrame
         
