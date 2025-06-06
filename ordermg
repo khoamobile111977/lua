@@ -1,7 +1,4 @@
-
-
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
@@ -24,13 +21,24 @@ local GUI_CONFIG = {
     ERROR_COLOR = Color3.fromRGB(231, 76, 60)
 }
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+-- Tìm LocalPlayer bằng repeat until
+local LocalPlayer
+repeat
+    LocalPlayer = Players.LocalPlayer
+    task.wait(0.1)
+until LocalPlayer
+
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+if not PlayerGui then
+    warn("Không thể tìm thấy PlayerGui")
+    return
+end
 
 -- Biến lưu trữ
 local currentOrderData = nil
 local isGUIVisible = false
 local orderGUI = nil
+local debounce = false
 
 -- Hàm tạo notification
 local function showNotification(title, message, color)
@@ -42,18 +50,23 @@ local function showNotification(title, message, color)
     })
 end
 
-
+-- Hàm gọi API sử dụng http_request
 local function callAPI(endpoint, username)
-    local success, result = pcall(function()
-        local url = API_CONFIG.BASE_URL .. endpoint .. username
-        return HttpService:GetAsync(url)
+    local success, response = pcall(function()
+        return http_request({
+            Url = API_CONFIG.BASE_URL .. endpoint .. username,
+            Method = "GET",
+            Headers = {
+                ["user-agent"] = "RobloxOrderManager"
+            }
+        })
     end)
     
-    if success then
-        local decoded = HttpService:JSONDecode(result)
+    if success and response and response.Success and response.Body then
+        local decoded = game:GetService("HttpService"):JSONDecode(response.Body)
         return decoded
     else
-        warn("Lỗi kết nối API: " .. tostring(result))
+        warn("Lỗi kết nối API: " .. (response and response.StatusMessage or tostring(response)))
         return nil
     end
 end
@@ -162,6 +175,11 @@ local function createOrderGUI()
     contentLayout.Padding = UDim.new(0, 5)
     contentLayout.Parent = contentFrame
     
+    -- Cập nhật CanvasSize động
+    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        contentFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y)
+    end)
+    
     closeButton.MouseButton1Click:Connect(function()
         orderGUI:Destroy()
         orderGUI = nil
@@ -187,11 +205,11 @@ end
 local function displayOrderInfo(orderData)
     local contentFrame = createOrderGUI()
     
-    if not orderData or not orderData.success then
+    if not orderData or type(orderData) ~= "table" or not orderData.success or not orderData.orders or #orderData.orders == 0 then
         local noOrderLabel = Instance.new("TextLabel")
         noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
         noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
-        noOrderLabel.Text = "❌ Không tìm thấy đơn cày cho tài khoản này"
+        noOrderLabel.Text = "❌ Không tìm thấy đơn cày hoặc dữ liệu không hợp lệ"
         noOrderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         noOrderLabel.TextScaled = true
         noOrderLabel.Font = Enum.Font.Gotham
@@ -209,7 +227,7 @@ local function displayOrderInfo(orderData)
     local infoLabel = Instance.new("TextLabel")
     infoLabel.Size = UDim2.new(1, 0, 0, 40)
     infoLabel.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
-    infoLabel.Text = string.format("✅ Tìm thấy %d đơn hàng", orderData.total_orders or 1)
+    infoLabel.Text = string.format("✅ Tìm thấy %d đơn hàng", orderData.total_orders or #orderData.orders)
     infoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     infoLabel.TextScaled = true
     infoLabel.Font = Enum.Font.GothamBold
@@ -223,6 +241,8 @@ local function displayOrderInfo(orderData)
     local orders = orderData.orders or {}
     if type(orders) == "string" then
         orders = {orders}
+    elseif type(orders) ~= "table" then
+        orders = {}
     end
     
     for i, order in ipairs(orders) do
@@ -258,32 +278,41 @@ local function displayOrderInfo(orderData)
         orderText.TextWrapped = true
         orderText.Parent = orderFrame
     end
-    
-    contentFrame.CanvasSize = UDim2.new(0, 0, 0, contentFrame.UIListLayout.AbsoluteContentSize.Y)
 end
 
 local function checkAndDisplayOrders()
-    local username = LocalPlayer.Name
+    if debounce then return end
+    debounce = true
     
+    local username = LocalPlayer.Name
     showNotification("🔄 Đang tải", "Đang kiểm tra đơn cày cho " .. username, GUI_CONFIG.ACCENT_COLOR)
     
-    local orderData = callAPI(API_CONFIG.ENDPOINTS.GET_ORDERS, username)
-    
-    if orderData then
-        if orderData.success then
-            showNotification("✅ Thành công", "Đã tìm thấy đơn cày!", GUI_CONFIG.SUCCESS_COLOR)
-            displayOrderInfo(orderData)
-            isGUIVisible = true
+    spawn(function()
+        local orderData = callAPI(API_CONFIG.ENDPOINTS.GET_ORDERS, username)
+        
+        if orderData then
+            if orderData.success then
+                showNotification("✅ Thành công", "Đã tìm thấy đơn cày!", GUI_CONFIG.SUCCESS_COLOR)
+                displayOrderInfo(orderData)
+                isGUIVisible = true
+            else
+                showNotification("❌ Không có đơn", orderData.message or "Không tìm thấy đơn cày", GUI_CONFIG.ERROR_COLOR)
+                displayOrderInfo(nil)
+            end
         else
-            showNotification("❌ Không có đơn", orderData.message or "Không tìm thấy đơn cày", GUI_CONFIG.ERROR_COLOR)
+            showNotification("🔌 Lỗi kết nối", "Không thể kết nối đến server API", GUI_CONFIG.ERROR_COLOR)
             displayOrderInfo(nil)
         end
-    else
-        showNotification("🔌 Lỗi kết nối", "Không thể kết nối đến server API", GUI_CONFIG.ERROR_COLOR)
-    end
+        
+        wait(0.5)
+        debounce = false
+    end)
 end
 
 local function toggleGUI()
+    if debounce then return end
+    debounce = true
+    
     if isGUIVisible and orderGUI then
         orderGUI:Destroy()
         orderGUI = nil
@@ -291,6 +320,9 @@ local function toggleGUI()
     else
         checkAndDisplayOrders()
     end
+    
+    wait(0.5)
+    debounce = false
 end
 
 wait(2) -- Chờ game load xong
@@ -299,18 +331,18 @@ checkAndDisplayOrders()
 game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.KeyCode == Enum.KeyCode.F9 then
+    if input.KeyCode == Enum.KeyCode.F4 then
         toggleGUI()
     elseif input.KeyCode == Enum.KeyCode.F10 then
         checkAndDisplayOrders() -- Refresh đơn hàng
     end
 end)
 
-showNotification("🎮 Script Đã Khởi Động!", "F9: Bật/Tắt GUI | F10: Làm mới đơn hàng", GUI_CONFIG.SUCCESS_COLOR)
+showNotification("🎮 Script Đã Khởi Động!", "F4: Bật/Tắt GUI | F10: Làm mới đơn hàng", GUI_CONFIG.SUCCESS_COLOR)
 
 print("✅ Script Quản Lý Đơn Cày Thuê đã khởi động!")
 print("📋 Username hiện tại: " .. LocalPlayer.Name)
 print("🔧 Phím tắt:")
-print("   F9  - Bật/Tắt giao diện")
+print("   F4  - Bật/Tắt giao diện")
 print("   F10 - Làm mới thông tin đơn hàng")
 print("🌐 API Server: " .. API_CONFIG.BASE_URL)
