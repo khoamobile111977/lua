@@ -2,9 +2,9 @@ local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
--- Cấu hình API
+
 local API_CONFIG = {
-    BASE_URL = "https://caythueapi.onrender.com", 
+    BASE_URL = "https://caythueapi-production.up.railway.app", 
     ENDPOINTS = {
         GET_ORDERS = "/api/orders/",
         CHECK_USER = "/api/check/"
