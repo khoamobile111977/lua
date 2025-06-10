@@ -13,14 +13,13 @@ local API_CONFIG = {
 local GUI_CONFIG = {
     POSITION = UDim2.new(0, 10, 0, 10), 
     SIZE = UDim2.new(0, 350, 0, 200),
-    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30),
-    BACKGROUND_TRANSPARENCY = 0.4,
-    TEXT_COLOR = Color3.fromRGB(255, 255, 255),
+    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30), -- Dark base for transparency
+    BACKGROUND_TRANSPARENCY = 0.4, -- Semi-transparent
+    TEXT_COLOR = Color3.fromRGB(255, 255, 255), -- White for high contrast
     ACCENT_COLOR = Color3.fromRGB(0, 162, 255),
-    ACCENT_TRANSPARENCY = 0.3,
+    ACCENT_TRANSPARENCY = 0.3, -- Slightly less transparent for accent
     SUCCESS_COLOR = Color3.fromRGB(46, 204, 113),
-    ERROR_COLOR = Color3.fromRGB(231, 76, 60),
-    DONE_COLOR = Color3.fromRGB(155, 89, 182)
+    ERROR_COLOR = Color3.fromRGB(231, 76, 60)
 }
 
 -- Tìm LocalPlayer bằng repeat until
@@ -38,105 +37,9 @@ end
 
 -- Biến lưu trữ
 local currentOrderData = nil
-local completedOrders = {}
 local isGUIVisible = false
 local orderGUI = nil
 local debounce = false
-local SAVE_FILE = "OrderStatus_" .. LocalPlayer.Name .. ".json"
-
--- Hàm lưu trạng thái vào file
-local function saveOrderStatus()
-    local success, error = pcall(function()
-        local data = {
-            completedOrders = completedOrders,
-            lastUpdate = os.time(),
-            username = LocalPlayer.Name
-        }
-        local jsonData = game:GetService("HttpService"):JSONEncode(data)
-        writefile(SAVE_FILE, jsonData)
-    end)
-    
-    if not success then
-        warn("Lỗi khi lưu trạng thái: " .. tostring(error))
-    end
-end
-
--- Hàm tải trạng thái từ file
-local function loadOrderStatus()
-    local success, result = pcall(function()
-        if isfile(SAVE_FILE) then
-            local fileContent = readfile(SAVE_FILE)
-            local data = game:GetService("HttpService"):JSONDecode(fileContent)
-            return data
-        end
-        return nil
-    end)
-    
-    if success and result then
-        completedOrders = result.completedOrders or {}
-        return result
-    else
-        completedOrders = {}
-        return nil
-    end
-end
-
--- Hàm tạo hash đơn hàng để theo dõi thay đổi
-local function createOrderHash(orders)
-    if not orders or type(orders) ~= "table" or #orders == 0 then
-        return ""
-    end
-    
-    local orderString = ""
-    for i, order in ipairs(orders) do
-        orderString = orderString .. tostring(order)
-    end
-    
-    -- Tạo hash đơn giản
-    local hash = 0
-    for i = 1, #orderString do
-        hash = (hash * 31 + string.byte(orderString, i)) % 2147483647
-    end
-    
-    return tostring(hash)
-end
-
--- Hàm kiểm tra xem đơn có thay đổi không
-local function checkOrderChanges(newOrders)
-    local newHash = createOrderHash(newOrders)
-    local savedData = loadOrderStatus()
-    
-    if savedData and savedData.orderHash and savedData.orderHash ~= newHash then
-        -- Đơn hàng đã thay đổi, reset trạng thái hoàn thành
-        completedOrders = {}
-        showNotification("🔄 Đơn hàng đã thay đổi", "Trạng thái hoàn thành đã được reset", GUI_CONFIG.ACCENT_COLOR)
-    end
-    
-    -- Lưu hash mới
-    local dataToSave = savedData or {}
-    dataToSave.orderHash = newHash
-    dataToSave.completedOrders = completedOrders
-    dataToSave.lastUpdate = os.time()
-    dataToSave.username = LocalPlayer.Name
-    
-    local success, error = pcall(function()
-        local jsonData = game:GetService("HttpService"):JSONEncode(dataToSave)
-        writefile(SAVE_FILE, jsonData)
-    end)
-end
-
--- Hàm đánh dấu đơn hoàn thành
-local function markOrderComplete(orderIndex)
-    completedOrders[orderIndex] = true
-    saveOrderStatus()
-    
-    -- Cập nhật GUI
-    if orderGUI then
-        displayOrderInfo(currentOrderData)
-    end
-    
-    showNotification("✅ Đã hoàn thành", "Đơn số " .. orderIndex .. " đã được đánh dấu hoàn thành", GUI_CONFIG.SUCCESS_COLOR)
-end
 
 -- Hàm tạo notification
 local function showNotification(title, message, color)
@@ -218,7 +121,7 @@ local function createOrderGUI()
     
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, -110, 1, 0)
+    titleLabel.Size = UDim2.new(1, -80, 1, 0)
     titleLabel.Position = UDim2.new(0, 10, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "🎮 Đơn Cày Thuê - " .. LocalPlayer.Name
@@ -304,9 +207,8 @@ local function createOrderGUI()
     return contentFrame
 end
 
-function displayOrderInfo(orderData)
+local function displayOrderInfo(orderData)
     local contentFrame = createOrderGUI()
-    currentOrderData = orderData
     
     if not orderData or type(orderData) ~= "table" or not orderData.success or not orderData.orders or #orderData.orders == 0 then
         local noOrderLabel = Instance.new("TextLabel")
@@ -334,15 +236,10 @@ function displayOrderInfo(orderData)
         orders = {}
     end
     
-    -- Kiểm tra thay đổi đơn hàng
-    checkOrderChanges(orders)
-    
     for i, order in ipairs(orders) do
-        local isCompleted = completedOrders[i] or false
-        
         local orderFrame = Instance.new("Frame")
-        orderFrame.Size = UDim2.new(1, 0, 0, 80)
-        orderFrame.BackgroundColor3 = isCompleted and GUI_CONFIG.DONE_COLOR or GUI_CONFIG.BACKGROUND_COLOR
+        orderFrame.Size = UDim2.new(1, 0, 0, 60)
+        orderFrame.BackgroundColor3 = GUI_CONFIG.BACKGROUND_COLOR
         orderFrame.BackgroundTransparency = GUI_CONFIG.BACKGROUND_TRANSPARENCY
         orderFrame.BorderSizePixel = 0
         orderFrame.Parent = contentFrame
@@ -352,7 +249,7 @@ function displayOrderInfo(orderData)
         orderCorner.Parent = orderFrame
         
         local orderNumber = Instance.new("TextLabel")
-        orderNumber.Size = UDim2.new(0, 30, 0, 40)
+        orderNumber.Size = UDim2.new(0, 30, 1, 0)
         orderNumber.Position = UDim2.new(0, 5, 0, 0)
         orderNumber.BackgroundTransparency = 1
         orderNumber.Text = tostring(i)
@@ -362,7 +259,7 @@ function displayOrderInfo(orderData)
         orderNumber.Parent = orderFrame
         
         local orderText = Instance.new("TextLabel")
-        orderText.Size = UDim2.new(1, -110, 0, 40)
+        orderText.Size = UDim2.new(1, -40, 1, 0)
         orderText.Position = UDim2.new(0, 35, 0, 0)
         orderText.BackgroundTransparency = 1
         orderText.Text = tostring(order)
@@ -372,57 +269,6 @@ function displayOrderInfo(orderData)
         orderText.Font = Enum.Font.Gotham
         orderText.TextWrapped = true
         orderText.Parent = orderFrame
-        
-        local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(1, -10, 0, 20)
-        statusLabel.Position = UDim2.new(0, 5, 0, 45)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Text = isCompleted and "✅ Đã hoàn thành" or "⏳ Chưa hoàn thành"
-        statusLabel.TextColor3 = isCompleted and GUI_CONFIG.SUCCESS_COLOR or GUI_CONFIG.ERROR_COLOR
-        statusLabel.TextScaled = true
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-        statusLabel.Font = Enum.Font.GothamBold
-        statusLabel.Parent = orderFrame
-        
-        local doneButton = Instance.new("TextButton")
-        doneButton.Size = UDim2.new(0, 65, 0, 30)
-        doneButton.Position = UDim2.new(1, -70, 0, 5)
-        doneButton.BackgroundColor3 = isCompleted and GUI_CONFIG.SUCCESS_COLOR or GUI_CONFIG.DONE_COLOR
-        doneButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-        doneButton.Text = isCompleted and "✅" or "Done"
-        doneButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
-        doneButton.TextScaled = true
-        doneButton.Font = Enum.Font.GothamBold
-        doneButton.BorderSizePixel = 0
-        doneButton.Active = not isCompleted
-        doneButton.Parent = orderFrame
-        
-        local doneCorner = Instance.new("UICorner")
-        doneCorner.CornerRadius = UDim.new(0, 5)
-        doneCorner.Parent = doneButton
-        
-        if not isCompleted then
-            doneButton.MouseButton1Click:Connect(function()
-                markOrderComplete(i)
-            end)
-            
-            -- Hiệu ứng hover cho nút Done
-            doneButton.MouseEnter:Connect(function()
-                local tween = TweenService:Create(doneButton,
-                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 0.1}
-                )
-                tween:Play()
-            end)
-            
-            doneButton.MouseLeave:Connect(function()
-                local tween = TweenService:Create(doneButton,
-                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY}
-                )
-                tween:Play()
-            end)
-        end
     end
 end
 
@@ -471,9 +317,6 @@ local function toggleGUI()
     debounce = false
 end
 
--- Tải trạng thái đã lưu khi script khởi động
-loadOrderStatus()
-
 wait(2) 
 checkAndDisplayOrders()
 
@@ -488,3 +331,4 @@ game:GetService("UserInputService").InputBegan:Connect(function(input, gameProce
 end)
 
 showNotification("🎮 Script Đã Khởi Động!", "F4: Bật/Tắt GUI | F10: Làm mới đơn hàng", GUI_CONFIG.SUCCESS_COLOR)
+
