@@ -101,28 +101,49 @@ local function createOrderHash(orders)
     return tostring(hash)
 end
 
+-- Hàm xóa workspace của acc
+local function clearWorkspace()
+    local success, error = pcall(function()
+        if isfile(SAVE_FILE) then
+            delfile(SAVE_FILE)
+        end
+    end)
+    
+    if success then
+        showNotification("🗑️ Đã xóa workspace", "File lưu trữ đã được xóa do thay đổi đơn hàng", GUI_CONFIG.ACCENT_COLOR)
+    else
+        warn("Lỗi khi xóa workspace: " .. tostring(error))
+    end
+end
+
 -- Hàm kiểm tra xem đơn có thay đổi không
 local function checkOrderChanges(newOrders)
     local newHash = createOrderHash(newOrders)
     local savedData = loadOrderStatus()
     
     if savedData and savedData.orderHash and savedData.orderHash ~= newHash then
-        -- Đơn hàng đã thay đổi, reset trạng thái hoàn thành
+        -- Đơn hàng đã thay đổi, xóa workspace và reset trạng thái
+        clearWorkspace()
         completedOrders = {}
-        showNotification("🔄 Đơn hàng đã thay đổi", "Trạng thái hoàn thành đã được reset", GUI_CONFIG.ACCENT_COLOR)
+        showNotification("🔄 Đơn hàng đã thay đổi", "Workspace đã được xóa và reset trạng thái", GUI_CONFIG.ACCENT_COLOR)
     end
     
     -- Lưu hash mới
-    local dataToSave = savedData or {}
-    dataToSave.orderHash = newHash
-    dataToSave.completedOrders = completedOrders
-    dataToSave.lastUpdate = os.time()
-    dataToSave.username = LocalPlayer.Name
+    local dataToSave = {
+        orderHash = newHash,
+        completedOrders = completedOrders,
+        lastUpdate = os.time(),
+        username = LocalPlayer.Name
+    }
     
     local success, error = pcall(function()
         local jsonData = game:GetService("HttpService"):JSONEncode(dataToSave)
         writefile(SAVE_FILE, jsonData)
     end)
+    
+    if not success then
+        warn("Lỗi khi lưu trạng thái: " .. tostring(error))
+    end
 end
 
 -- Hàm đánh dấu đơn hoàn thành
@@ -334,7 +355,27 @@ function displayOrderInfo(orderData)
         orders = {}
     end
     
-    -- Kiểm tra thay đổi đơn hàng
+    -- Nếu không có đơn hàng, hiển thị thông báo
+    if #orders == 0 then
+        local noOrderLabel = Instance.new("TextLabel")
+        noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
+        noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
+        noOrderLabel.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
+        noOrderLabel.Text = "❌ Không tìm thấy đơn cày"
+        noOrderLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
+        noOrderLabel.TextScaled = true
+        noOrderLabel.Font = Enum.Font.Gotham
+        noOrderLabel.BorderSizePixel = 0
+        noOrderLabel.Parent = contentFrame
+        
+        local noOrderCorner = Instance.new("UICorner")
+        noOrderCorner.CornerRadius = UDim.new(0, 5)
+        noOrderCorner.Parent = noOrderLabel
+        
+        return
+    end
+    
+    -- Kiểm tra thay đổi đơn hàng - làm này trước khi hiển thị
     checkOrderChanges(orders)
     
     for i, order in ipairs(orders) do
