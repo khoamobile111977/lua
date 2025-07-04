@@ -1,7 +1,15 @@
+-- Dịch vụ
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local HttpService = game:GetService("HttpService")
 
+local LocalPlayer = Players.LocalPlayer
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Cấu hình API
 local API_CONFIG = {
     BASE_URL = "https://caythueapi-production.up.railway.app", 
     ENDPOINTS = {
@@ -10,37 +18,201 @@ local API_CONFIG = {
     }
 }
 
-local GUI_CONFIG = {
-    POSITION = UDim2.new(0, 10, 0, 10), 
-    SIZE = UDim2.new(0, 350, 0, 200),
-    BACKGROUND_COLOR = Color3.fromRGB(30, 30, 30),
-    BACKGROUND_TRANSPARENCY = 0.4,
-    TEXT_COLOR = Color3.fromRGB(255, 255, 255),
-    ACCENT_COLOR = Color3.fromRGB(0, 162, 255),
-    ACCENT_TRANSPARENCY = 0.3,
-    SUCCESS_COLOR = Color3.fromRGB(46, 204, 113),
-    ERROR_COLOR = Color3.fromRGB(231, 76, 60),
-    DONE_COLOR = Color3.fromRGB(155, 89, 182)
-}
+-- GUI chính
+local nameHub = Instance.new("ScreenGui")
+nameHub.Name = "OrderManagerHub"
+nameHub.Parent = playerGui
+nameHub.DisplayOrder = 100
+nameHub.ResetOnSpawn = false
 
--- Tìm LocalPlayer bằng repeat until
-local LocalPlayer
-repeat
-    LocalPlayer = Players.LocalPlayer
-    task.wait(0.1)
-until LocalPlayer
+-- Frame chính
+local mainFrame = Instance.new("Frame")
+mainFrame.Parent = nameHub
+mainFrame.Size = UDim2.new(0.35, 0, 0.6, 0)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.BorderSizePixel = 0
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Active = true
+mainFrame.Draggable = true
 
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
-if not PlayerGui then
-    warn("Không thể tìm thấy PlayerGui")
-    return
-end
+local corner = Instance.new("UICorner", mainFrame)
+corner.CornerRadius = UDim.new(0, 10)
+
+-- Tiêu đề
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0.12, 0)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.FredokaOne
+titleLabel.TextScaled = true
+titleLabel.TextStrokeTransparency = 0
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 120)
+titleLabel.Text = "🎮 Order Manager Hub"
+
+-- Tên người chơi (hiển thị đầy đủ)
+local nameLabel = Instance.new("TextLabel")
+nameLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+nameLabel.Parent = mainFrame
+nameLabel.Size = UDim2.new(1, 0, 0.1, 0)
+nameLabel.Position = UDim2.new(0, 0, 0.12, 0)
+nameLabel.BackgroundTransparency = 1
+nameLabel.Font = Enum.Font.FredokaOne
+nameLabel.TextScaled = true
+nameLabel.TextStrokeTransparency = 0
+nameLabel.Text = "👤 Tên: " .. LocalPlayer.Name
+
+-- FPS
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Parent = mainFrame
+fpsLabel.Size = UDim2.new(1, 0, 0.1, 0)
+fpsLabel.Position = UDim2.new(0, 0, 0.22, 0)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Font = Enum.Font.FredokaOne
+fpsLabel.TextScaled = true
+fpsLabel.TextStrokeTransparency = 0
+fpsLabel.Text = "FPS: 0"
+
+-- Thời gian server
+local timeLabel = Instance.new("TextLabel")
+timeLabel.Parent = mainFrame
+timeLabel.Size = UDim2.new(1, 0, 0.1, 0)
+timeLabel.Position = UDim2.new(0, 0, 0.32, 0)
+timeLabel.BackgroundTransparency = 1
+timeLabel.Font = Enum.Font.FredokaOne
+timeLabel.TextScaled = true
+timeLabel.TextStrokeTransparency = 0
+timeLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+timeLabel.Text = "🔴 Thời gian ở trong máy chủ: 0s"
+
+-- Scroll Frame cho đơn hàng
+local orderScrollFrame = Instance.new("ScrollingFrame")
+orderScrollFrame.Parent = mainFrame
+orderScrollFrame.Size = UDim2.new(1, -20, 0.35, 0)
+orderScrollFrame.Position = UDim2.new(0, 10, 0.42, 0)
+orderScrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+orderScrollFrame.BackgroundTransparency = 0.3
+orderScrollFrame.BorderSizePixel = 0
+orderScrollFrame.ScrollBarThickness = 8
+orderScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 120)
+
+local scrollCorner = Instance.new("UICorner", orderScrollFrame)
+scrollCorner.CornerRadius = UDim.new(0, 8)
+
+local orderLayout = Instance.new("UIListLayout")
+orderLayout.SortOrder = Enum.SortOrder.LayoutOrder
+orderLayout.Padding = UDim.new(0, 5)
+orderLayout.Parent = orderScrollFrame
+
+-- Cập nhật canvas size
+orderLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    orderScrollFrame.CanvasSize = UDim2.new(0, 0, 0, orderLayout.AbsoluteContentSize.Y + 10)
+end)
+
+-- Trạng thái đơn hàng
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Parent = mainFrame
+statusLabel.Size = UDim2.new(1, 0, 0.08, 0)
+statusLabel.Position = UDim2.new(0, 0, 0.78, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextScaled = true
+statusLabel.TextColor3 = Color3.fromRGB(255, 223, 88)
+statusLabel.Text = "📋 Trạng thái: Chưa tải đơn"
+
+-- Nút tải đơn
+local loadButton = Instance.new("TextButton")
+loadButton.Parent = mainFrame
+loadButton.Size = UDim2.new(0.45, 0, 0.08, 0)
+loadButton.Position = UDim2.new(0.05, 0, 0.87, 0)
+loadButton.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
+loadButton.TextColor3 = Color3.new(1, 1, 1)
+loadButton.Font = Enum.Font.GothamBold
+loadButton.Text = "🔄 Tải đơn (F10)"
+loadButton.TextScaled = true
+loadButton.BorderSizePixel = 0
+
+local loadCorner = Instance.new("UICorner", loadButton)
+loadCorner.CornerRadius = UDim.new(0, 8)
+
+-- Nút xóa workspace
+local clearButton = Instance.new("TextButton")
+clearButton.Parent = mainFrame
+clearButton.Size = UDim2.new(0.45, 0, 0.08, 0)
+clearButton.Position = UDim2.new(0.5, 0, 0.87, 0)
+clearButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+clearButton.TextColor3 = Color3.new(1, 1, 1)
+clearButton.Font = Enum.Font.GothamBold
+clearButton.Text = "🗑️ Xóa WS"
+clearButton.TextScaled = true
+clearButton.BorderSizePixel = 0
+
+local clearCorner = Instance.new("UICorner", clearButton)
+clearCorner.CornerRadius = UDim.new(0, 8)
+
+-- Cập nhật FPS + Thời gian
+local frameCount, lastUpdate, hue = 0, tick(), 0
+local startTime = tick()
+RunService.RenderStepped:Connect(function()
+	frameCount += 1
+	local now = tick()
+	if now - lastUpdate >= 1 then
+		local fps = frameCount / (now - lastUpdate)
+		frameCount = 0
+		lastUpdate = now
+		fpsLabel.Text = string.format("FPS: %d", math.floor(fps))
+	end
+	local elapsed = math.floor(tick() - startTime)
+	local h = math.floor(elapsed / 3600)
+	local m = math.floor((elapsed % 3600) / 60)
+	local s = elapsed % 60
+	timeLabel.Text = string.format("🔴 Thời gian ở trong máy chủ: %02d:%02d:%02d", h, m, s)
+	hue = (hue + 0.005) % 1
+	fpsLabel.TextColor3 = Color3.fromHSV(hue, 1, 1)
+end)
+
+-- 🔘 Toggle GUI button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Parent = nameHub
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(1, -50, 0, 10)
+toggleButton.AnchorPoint = Vector2.new(0, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Text = "❌"
+toggleButton.TextScaled = true
+toggleButton.BorderSizePixel = 0
+toggleButton.Active = true
+toggleButton.Draggable = true
+
+-- Bo góc
+local toggleCorner = Instance.new("UICorner", toggleButton)
+toggleCorner.CornerRadius = UDim.new(1, 0)
+
+-- Animation hover
+local hoverTween = TweenService:Create(toggleButton, TweenInfo.new(0.15), {
+	BackgroundColor3 = Color3.fromRGB(90, 90, 90),
+	Size = UDim2.new(0, 45, 0, 45)
+})
+local leaveTween = TweenService:Create(toggleButton, TweenInfo.new(0.15), {
+	BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+	Size = UDim2.new(0, 40, 0, 40)
+})
+
+toggleButton.MouseEnter:Connect(function()
+	hoverTween:Play()
+end)
+toggleButton.MouseLeave:Connect(function()
+	leaveTween:Play()
+end)
 
 -- Biến lưu trữ
 local currentOrderData = nil
 local completedOrders = {}
-local isGUIVisible = false
-local orderGUI = nil
 local debounce = false
 local SAVE_FILE = "OrderStatus_" .. LocalPlayer.Name .. ".json"
 
@@ -52,7 +224,7 @@ local function saveOrderStatus()
             lastUpdate = os.time(),
             username = LocalPlayer.Name
         }
-        local jsonData = game:GetService("HttpService"):JSONEncode(data)
+        local jsonData = HttpService:JSONEncode(data)
         writefile(SAVE_FILE, jsonData)
     end)
     
@@ -66,7 +238,7 @@ local function loadOrderStatus()
     local success, result = pcall(function()
         if isfile(SAVE_FILE) then
             local fileContent = readfile(SAVE_FILE)
-            local data = game:GetService("HttpService"):JSONDecode(fileContent)
+            local data = HttpService:JSONDecode(fileContent)
             return data
         end
         return nil
@@ -81,95 +253,17 @@ local function loadOrderStatus()
     end
 end
 
--- Hàm tạo hash đơn hàng để theo dõi thay đổi
-local function createOrderHash(orders)
-    if not orders or type(orders) ~= "table" or #orders == 0 then
-        return ""
-    end
-    
-    local orderString = ""
-    for i, order in ipairs(orders) do
-        orderString = orderString .. tostring(order)
-    end
-    
-    -- Tạo hash đơn giản
-    local hash = 0
-    for i = 1, #orderString do
-        hash = (hash * 31 + string.byte(orderString, i)) % 2147483647
-    end
-    
-    return tostring(hash)
-end
-
--- Hàm xóa workspace của acc
-local function clearWorkspace()
-    local success, error = pcall(function()
-        if isfile(SAVE_FILE) then
-            delfile(SAVE_FILE)
-        end
-    end)
-    
-    if success then
-        showNotification("🗑️ Đã xóa workspace", "File lưu trữ đã được xóa do thay đổi đơn hàng", GUI_CONFIG.ACCENT_COLOR)
-    else
-        warn("Lỗi khi xóa workspace: " .. tostring(error))
-    end
-end
-
--- Hàm kiểm tra xem đơn có thay đổi không
-local function checkOrderChanges(newOrders)
-    local newHash = createOrderHash(newOrders)
-    local savedData = loadOrderStatus()
-    
-    if savedData and savedData.orderHash and savedData.orderHash ~= newHash then
-        -- Đơn hàng đã thay đổi, xóa workspace và reset trạng thái
-        clearWorkspace()
-        completedOrders = {}
-        showNotification("🔄 Đơn hàng đã thay đổi", "Workspace đã được xóa và reset trạng thái", GUI_CONFIG.ACCENT_COLOR)
-    end
-    
-    -- Lưu hash mới
-    local dataToSave = {
-        orderHash = newHash,
-        completedOrders = completedOrders,
-        lastUpdate = os.time(),
-        username = LocalPlayer.Name
-    }
-    
-    local success, error = pcall(function()
-        local jsonData = game:GetService("HttpService"):JSONEncode(dataToSave)
-        writefile(SAVE_FILE, jsonData)
-    end)
-    
-    if not success then
-        warn("Lỗi khi lưu trạng thái: " .. tostring(error))
-    end
-end
-
--- Hàm đánh dấu đơn hoàn thành
-local function markOrderComplete(orderIndex)
-    completedOrders[orderIndex] = true
-    saveOrderStatus()
-    
-    -- Cập nhật GUI
-    if orderGUI then
-        displayOrderInfo(currentOrderData)
-    end
-    
-    showNotification("✅ Đã hoàn thành", "Đơn số " .. orderIndex .. " đã được đánh dấu hoàn thành", GUI_CONFIG.SUCCESS_COLOR)
-end
-
 -- Hàm tạo notification
 local function showNotification(title, message, color)
     StarterGui:SetCore("SendNotification", {
         Title = title;
         Text = message;
         Duration = 3;
-        Color = color or GUI_CONFIG.ACCENT_COLOR;
+        Color = color or Color3.fromRGB(0, 162, 255);
     })
 end
 
--- Hàm gọi API sử dụng http_request
+-- Hàm gọi API
 local function callAPI(endpoint, username)
     local success, response = pcall(function()
         return http_request({
@@ -182,7 +276,7 @@ local function callAPI(endpoint, username)
     end)
     
     if success and response and response.Success and response.Body then
-        local decoded = game:GetService("HttpService"):JSONDecode(response.Body)
+        local decoded = HttpService:JSONDecode(response.Body)
         return decoded
     else
         warn("Lỗi kết nối API: " .. (response and response.StatusMessage or tostring(response)))
@@ -190,342 +284,179 @@ local function callAPI(endpoint, username)
     end
 end
 
-local function createOrderGUI()
-    if orderGUI then
-        orderGUI:Destroy()
+-- Hàm tạo item đơn hàng
+local function createOrderItem(orderText, orderIndex, isCompleted)
+    local orderItem = Instance.new("Frame")
+    orderItem.Size = UDim2.new(1, -10, 0, 60)
+    orderItem.BackgroundColor3 = isCompleted and Color3.fromRGB(155, 89, 182) or Color3.fromRGB(50, 50, 50)
+    orderItem.BackgroundTransparency = 0.3
+    orderItem.BorderSizePixel = 0
+    orderItem.Parent = orderScrollFrame
+    
+    local itemCorner = Instance.new("UICorner", orderItem)
+    itemCorner.CornerRadius = UDim.new(0, 5)
+    
+    local orderNumber = Instance.new("TextLabel")
+    orderNumber.Size = UDim2.new(0, 25, 0, 25)
+    orderNumber.Position = UDim2.new(0, 5, 0, 5)
+    orderNumber.BackgroundColor3 = Color3.fromRGB(255, 255, 120)
+    orderNumber.BackgroundTransparency = 0.2
+    orderNumber.Text = tostring(orderIndex)
+    orderNumber.TextColor3 = Color3.fromRGB(0, 0, 0)
+    orderNumber.TextScaled = true
+    orderNumber.Font = Enum.Font.GothamBold
+    orderNumber.BorderSizePixel = 0
+    orderNumber.Parent = orderItem
+    
+    local numCorner = Instance.new("UICorner", orderNumber)
+    numCorner.CornerRadius = UDim.new(1, 0)
+    
+    local orderText = Instance.new("TextLabel")
+    orderText.Size = UDim2.new(1, -100, 0, 30)
+    orderText.Position = UDim2.new(0, 35, 0, 5)
+    orderText.BackgroundTransparency = 1
+    orderText.Text = tostring(orderText)
+    orderText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    orderText.TextScaled = true
+    orderText.TextXAlignment = Enum.TextXAlignment.Left
+    orderText.Font = Enum.Font.Gotham
+    orderText.TextWrapped = true
+    orderText.Parent = orderItem
+    
+    local statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1, -100, 0, 20)
+    statusText.Position = UDim2.new(0, 35, 0, 35)
+    statusText.BackgroundTransparency = 1
+    statusText.Text = isCompleted and "✅ Đã hoàn thành" or "⏳ Chưa hoàn thành"
+    statusText.TextColor3 = isCompleted and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    statusText.TextScaled = true
+    statusText.TextXAlignment = Enum.TextXAlignment.Left
+    statusText.Font = Enum.Font.GothamBold
+    statusText.Parent = orderItem
+    
+    local doneButton = Instance.new("TextButton")
+    doneButton.Size = UDim2.new(0, 60, 0, 30)
+    doneButton.Position = UDim2.new(1, -65, 0, 15)
+    doneButton.BackgroundColor3 = isCompleted and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(155, 89, 182)
+    doneButton.TextColor3 = Color3.new(1, 1, 1)
+    doneButton.Text = isCompleted and "✅" or "Done"
+    doneButton.TextScaled = true
+    doneButton.Font = Enum.Font.GothamBold
+    doneButton.BorderSizePixel = 0
+    doneButton.Active = not isCompleted
+    doneButton.Parent = orderItem
+    
+    local doneCorner = Instance.new("UICorner", doneButton)
+    doneCorner.CornerRadius = UDim.new(0, 5)
+    
+    if not isCompleted then
+        doneButton.MouseButton1Click:Connect(function()
+            completedOrders[orderIndex] = true
+            saveOrderStatus()
+            showNotification("✅ Đã hoàn thành", "Đơn số " .. orderIndex .. " đã được đánh dấu hoàn thành", Color3.fromRGB(46, 204, 113))
+            loadOrders() -- Reload để cập nhật UI
+        end)
     end
     
-    orderGUI = Instance.new("ScreenGui")
-    orderGUI.Name = "BloxFruitOrderManager"
-    orderGUI.ResetOnSpawn = false
-    orderGUI.Parent = PlayerGui
-    
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = GUI_CONFIG.SIZE
-    mainFrame.Position = GUI_CONFIG.POSITION
-    mainFrame.BackgroundColor3 = GUI_CONFIG.BACKGROUND_COLOR
-    mainFrame.BackgroundTransparency = GUI_CONFIG.BACKGROUND_TRANSPARENCY
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Draggable = true
-    mainFrame.Parent = orderGUI
-    
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 10)
-    mainCorner.Parent = mainFrame
-    
-    -- Header
-    local headerFrame = Instance.new("Frame")
-    headerFrame.Name = "Header"
-    headerFrame.Size = UDim2.new(1, 0, 0, 40)
-    headerFrame.Position = UDim2.new(0, 0, 0, 0)
-    headerFrame.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
-    headerFrame.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-    headerFrame.BorderSizePixel = 0
-    headerFrame.Parent = mainFrame
-    
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 10)
-    headerCorner.Parent = headerFrame
-    
-    local headerFix = Instance.new("Frame")
-    headerFix.Size = UDim2.new(1, 0, 0, 10)
-    headerFix.Position = UDim2.new(0, 0, 1, -10)
-    headerFix.BackgroundColor3 = GUI_CONFIG.ACCENT_COLOR
-    headerFix.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-    headerFix.BorderSizePixel = 0
-    headerFix.Parent = headerFrame
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, -110, 1, 0)
-    titleLabel.Position = UDim2.new(0, 10, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "🎮 Đơn Cày Thuê - " .. LocalPlayer.Name
-    titleLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
-    titleLabel.TextScaled = true
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Parent = headerFrame
-    
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -35, 0, 5)
-    closeButton.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
-    closeButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-    closeButton.Text = "✕"
-    closeButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
-    closeButton.TextScaled = true
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.BorderSizePixel = 0
-    closeButton.Parent = headerFrame
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 5)
-    closeCorner.Parent = closeButton
-    
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0, 30, 0, 30)
-    toggleButton.Position = UDim2.new(1, -70, 0, 5)
-    toggleButton.BackgroundColor3 = GUI_CONFIG.SUCCESS_COLOR
-    toggleButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-    toggleButton.Text = "−"
-    toggleButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
-    toggleButton.TextScaled = true
-    toggleButton.Font = Enum.Font.GothamBold
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Parent = headerFrame
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 5)
-    toggleCorner.Parent = toggleButton
-    
-    -- Khu vực nội dung
-    local contentFrame = Instance.new("ScrollingFrame")
-    contentFrame.Name = "Content"
-    contentFrame.Size = UDim2.new(1, -20, 1, -50)
-    contentFrame.Position = UDim2.new(0, 10, 0, 45)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.BorderSizePixel = 0
-    contentFrame.ScrollBarThickness = 5
-    contentFrame.ScrollBarImageColor3 = GUI_CONFIG.ACCENT_COLOR
-    contentFrame.Parent = mainFrame
-    
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, 5)
-    contentLayout.Parent = contentFrame
-    
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        contentFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y)
-    end)
-    
-    closeButton.MouseButton1Click:Connect(function()
-        orderGUI:Destroy()
-        orderGUI = nil
-        isGUIVisible = false
-    end)
-    
-    local isMinimized = false
-    toggleButton.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        local targetSize = isMinimized and UDim2.new(0, 350, 0, 45) or GUI_CONFIG.SIZE
-        toggleButton.Text = isMinimized and "+" or "−"
-        
-        local tween = TweenService:Create(mainFrame, 
-            TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-            {Size = targetSize}
-        )
-        tween:Play()
-    end)
-    
-    return contentFrame
+    return orderItem
 end
 
-function displayOrderInfo(orderData)
-    local contentFrame = createOrderGUI()
-    currentOrderData = orderData
-    
-    if not orderData or type(orderData) ~= "table" or not orderData.success or not orderData.orders or #orderData.orders == 0 then
-        local noOrderLabel = Instance.new("TextLabel")
-        noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
-        noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
-        noOrderLabel.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-        noOrderLabel.Text = "❌ Không tìm thấy đơn cày hoặc dữ liệu không hợp lệ"
-        noOrderLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
-        noOrderLabel.TextScaled = true
-        noOrderLabel.Font = Enum.Font.Gotham
-        noOrderLabel.BorderSizePixel = 0
-        noOrderLabel.Parent = contentFrame
-        
-        local noOrderCorner = Instance.new("UICorner")
-        noOrderCorner.CornerRadius = UDim.new(0, 5)
-        noOrderCorner.Parent = noOrderLabel
-        
-        return
-    end
-    
-    local orders = orderData.orders or {}
-    if type(orders) == "string" then
-        orders = {orders}
-    elseif type(orders) ~= "table" then
-        orders = {}
-    end
-    
-    -- Nếu không có đơn hàng, hiển thị thông báo
-    if #orders == 0 then
-        local noOrderLabel = Instance.new("TextLabel")
-        noOrderLabel.Size = UDim2.new(1, 0, 0, 50)
-        noOrderLabel.BackgroundColor3 = GUI_CONFIG.ERROR_COLOR
-        noOrderLabel.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-        noOrderLabel.Text = "❌ Không tìm thấy đơn cày"
-        noOrderLabel.TextColor3 = GUI_CONFIG.TEXT_COLOR
-        noOrderLabel.TextScaled = true
-        noOrderLabel.Font = Enum.Font.Gotham
-        noOrderLabel.BorderSizePixel = 0
-        noOrderLabel.Parent = contentFrame
-        
-        local noOrderCorner = Instance.new("UICorner")
-        noOrderCorner.CornerRadius = UDim.new(0, 5)
-        noOrderCorner.Parent = noOrderLabel
-        
-        return
-    end
-    
-    -- Kiểm tra thay đổi đơn hàng - làm này trước khi hiển thị
-    checkOrderChanges(orders)
-    
-    for i, order in ipairs(orders) do
-        local isCompleted = completedOrders[i] or false
-        
-        local orderFrame = Instance.new("Frame")
-        orderFrame.Size = UDim2.new(1, 0, 0, 80)
-        orderFrame.BackgroundColor3 = isCompleted and GUI_CONFIG.DONE_COLOR or GUI_CONFIG.BACKGROUND_COLOR
-        orderFrame.BackgroundTransparency = GUI_CONFIG.BACKGROUND_TRANSPARENCY
-        orderFrame.BorderSizePixel = 0
-        orderFrame.Parent = contentFrame
-        
-        local orderCorner = Instance.new("UICorner")
-        orderCorner.CornerRadius = UDim.new(0, 5)
-        orderCorner.Parent = orderFrame
-        
-        local orderNumber = Instance.new("TextLabel")
-        orderNumber.Size = UDim2.new(0, 30, 0, 40)
-        orderNumber.Position = UDim2.new(0, 5, 0, 0)
-        orderNumber.BackgroundTransparency = 1
-        orderNumber.Text = tostring(i)
-        orderNumber.TextColor3 = GUI_CONFIG.ACCENT_COLOR
-        orderNumber.TextScaled = true
-        orderNumber.Font = Enum.Font.GothamBold
-        orderNumber.Parent = orderFrame
-        
-        local orderText = Instance.new("TextLabel")
-        orderText.Size = UDim2.new(1, -110, 0, 40)
-        orderText.Position = UDim2.new(0, 35, 0, 0)
-        orderText.BackgroundTransparency = 1
-        orderText.Text = tostring(order)
-        orderText.TextColor3 = GUI_CONFIG.TEXT_COLOR
-        orderText.TextScaled = true
-        orderText.TextXAlignment = Enum.TextXAlignment.Left
-        orderText.Font = Enum.Font.Gotham
-        orderText.TextWrapped = true
-        orderText.Parent = orderFrame
-        
-        local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(1, -10, 0, 20)
-        statusLabel.Position = UDim2.new(0, 5, 0, 45)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Text = isCompleted and "✅ Đã hoàn thành" or "⏳ Chưa hoàn thành"
-        statusLabel.TextColor3 = isCompleted and GUI_CONFIG.SUCCESS_COLOR or GUI_CONFIG.ERROR_COLOR
-        statusLabel.TextScaled = true
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-        statusLabel.Font = Enum.Font.GothamBold
-        statusLabel.Parent = orderFrame
-        
-        local doneButton = Instance.new("TextButton")
-        doneButton.Size = UDim2.new(0, 65, 0, 30)
-        doneButton.Position = UDim2.new(1, -70, 0, 5)
-        doneButton.BackgroundColor3 = isCompleted and GUI_CONFIG.SUCCESS_COLOR or GUI_CONFIG.DONE_COLOR
-        doneButton.BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY
-        doneButton.Text = isCompleted and "✅" or "Done"
-        doneButton.TextColor3 = GUI_CONFIG.TEXT_COLOR
-        doneButton.TextScaled = true
-        doneButton.Font = Enum.Font.GothamBold
-        doneButton.BorderSizePixel = 0
-        doneButton.Active = not isCompleted
-        doneButton.Parent = orderFrame
-        
-        local doneCorner = Instance.new("UICorner")
-        doneCorner.CornerRadius = UDim.new(0, 5)
-        doneCorner.Parent = doneButton
-        
-        if not isCompleted then
-            doneButton.MouseButton1Click:Connect(function()
-                markOrderComplete(i)
-            end)
-            
-            -- Hiệu ứng hover cho nút Done
-            doneButton.MouseEnter:Connect(function()
-                local tween = TweenService:Create(doneButton,
-                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 0.1}
-                )
-                tween:Play()
-            end)
-            
-            doneButton.MouseLeave:Connect(function()
-                local tween = TweenService:Create(doneButton,
-                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = GUI_CONFIG.ACCENT_TRANSPARENCY}
-                )
-                tween:Play()
-            end)
-        end
-    end
-end
-
-local function checkAndDisplayOrders()
+-- Hàm tải và hiển thị đơn hàng
+function loadOrders()
     if debounce then return end
     debounce = true
     
-    local username = LocalPlayer.Name
-    showNotification("🔄 Đang tải", "Đang kiểm tra đơn cày cho " .. username, GUI_CONFIG.ACCENT_COLOR)
+    statusLabel.Text = "📋 Trạng thái: Đang tải..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 223, 88)
+    
+    -- Xóa tất cả order cũ
+    for _, child in pairs(orderScrollFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
     
     spawn(function()
-        local orderData = callAPI(API_CONFIG.ENDPOINTS.GET_ORDERS, username)
+        local orderData = callAPI(API_CONFIG.ENDPOINTS.GET_ORDERS, LocalPlayer.Name)
         
-        if orderData then
-            if orderData.success then
-                showNotification("✅ Thành công", "Đã tìm thấy đơn cày!", GUI_CONFIG.SUCCESS_COLOR)
-                displayOrderInfo(orderData)
-                isGUIVisible = true
+        if orderData and orderData.success and orderData.orders then
+            local orders = orderData.orders
+            if type(orders) == "string" then
+                orders = {orders}
+            end
+            
+            if #orders > 0 then
+                statusLabel.Text = "📋 Trạng thái: Tìm thấy " .. #orders .. " đơn hàng"
+                statusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+                
+                for i, order in ipairs(orders) do
+                    local isCompleted = completedOrders[i] or false
+                    createOrderItem(order, i, isCompleted)
+                end
+                
+                showNotification("✅ Thành công", "Đã tải " .. #orders .. " đơn hàng!", Color3.fromRGB(46, 204, 113))
             else
-                showNotification("❌ Không có đơn", orderData.message or "Không tìm thấy đơn cày", GUI_CONFIG.ERROR_COLOR)
-                displayOrderInfo(nil)
+                statusLabel.Text = "📋 Trạng thái: Không có đơn hàng"
+                statusLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+                showNotification("❌ Không có đơn", "Không tìm thấy đơn hàng", Color3.fromRGB(231, 76, 60))
             end
         else
-            showNotification("🔌 Lỗi kết nối", "Không thể kết nối đến server API", GUI_CONFIG.ERROR_COLOR)
-            displayOrderInfo(nil)
+            statusLabel.Text = "📋 Trạng thái: Lỗi kết nối API"
+            statusLabel.TextColor3 = Color3.fromRGB(231, 76, 60)
+            showNotification("🔌 Lỗi kết nối", "Không thể kết nối đến server API", Color3.fromRGB(231, 76, 60))
         end
         
-        wait(0.5)
+        wait(1)
         debounce = false
     end)
 end
 
-local function toggleGUI()
-    if debounce then return end
-    debounce = true
+-- Hàm xóa workspace
+local function clearWorkspace()
+    local success, error = pcall(function()
+        if isfile(SAVE_FILE) then
+            delfile(SAVE_FILE)
+        end
+    end)
     
-    if isGUIVisible and orderGUI then
-        orderGUI:Destroy()
-        orderGUI = nil
-        isGUIVisible = false
+    if success then
+        completedOrders = {}
+        showNotification("🗑️ Đã xóa workspace", "File lưu trữ đã được xóa", Color3.fromRGB(231, 76, 60))
+        loadOrders() -- Reload để cập nhật UI
     else
-        checkAndDisplayOrders()
+        warn("Lỗi khi xóa workspace: " .. tostring(error))
     end
-    
-    wait(0.5)
-    debounce = false
 end
 
--- Tải trạng thái đã lưu khi script khởi động
-loadOrderStatus()
+-- Toggle GUI
+local guiVisible = true
+local function toggleGUI()
+	guiVisible = not guiVisible
+	mainFrame.Visible = guiVisible
+	toggleButton.Text = guiVisible and "❌" or "✅"
+end
 
-wait(2) 
-checkAndDisplayOrders()
+-- Sự kiện
+toggleButton.MouseButton1Click:Connect(toggleGUI)
+loadButton.MouseButton1Click:Connect(loadOrders)
+clearButton.MouseButton1Click:Connect(clearWorkspace)
 
-game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F4 then
-        toggleGUI()
-    elseif input.KeyCode == Enum.KeyCode.F10 then
-        checkAndDisplayOrders() 
+-- Phím tắt
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp then
+        if input.KeyCode == Enum.KeyCode.G then
+            toggleGUI()
+        elseif input.KeyCode == Enum.KeyCode.F4 then
+            toggleGUI()
+        elseif input.KeyCode == Enum.KeyCode.F10 then
+            loadOrders()
+        end
     end
 end)
 
-showNotification("🎮 Script Đã Khởi Động!", "F4: Bật/Tắt GUI | F10: Làm mới đơn hàng", GUI_CONFIG.SUCCESS_COLOR)
+-- Tải trạng thái đã lưu và auto-load đơn hàng
+loadOrderStatus()
+wait(2)
+loadOrders()
+
+showNotification("🎮 Script Đã Khởi Động!", "G/F4: Bật/Tắt GUI | F10: Tải đơn hàng", Color3.fromRGB(46, 204, 113))
