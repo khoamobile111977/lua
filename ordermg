@@ -284,8 +284,8 @@ local function callAPI(endpoint, username)
     end
 end
 
--- Hàm tạo item đơn hàng
-local function createOrderItem(orderText, orderIndex, isCompleted)
+-- Hàm tạo item đơn hàng (đã sửa)
+local function createOrderItem(orderContent, orderIndex, isCompleted)
     local orderItem = Instance.new("Frame")
     orderItem.Size = UDim2.new(1, -10, 0, 60)
     orderItem.BackgroundColor3 = isCompleted and Color3.fromRGB(155, 89, 182) or Color3.fromRGB(50, 50, 50)
@@ -311,17 +311,17 @@ local function createOrderItem(orderText, orderIndex, isCompleted)
     local numCorner = Instance.new("UICorner", orderNumber)
     numCorner.CornerRadius = UDim.new(1, 0)
     
-    local orderText = Instance.new("TextLabel")
-    orderText.Size = UDim2.new(1, -100, 0, 30)
-    orderText.Position = UDim2.new(0, 35, 0, 5)
-    orderText.BackgroundTransparency = 1
-    orderText.Text = tostring(orderText)
-    orderText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    orderText.TextScaled = true
-    orderText.TextXAlignment = Enum.TextXAlignment.Left
-    orderText.Font = Enum.Font.Gotham
-    orderText.TextWrapped = true
-    orderText.Parent = orderItem
+    local orderTextLabel = Instance.new("TextLabel")
+    orderTextLabel.Size = UDim2.new(1, -100, 0, 30)
+    orderTextLabel.Position = UDim2.new(0, 35, 0, 5)
+    orderTextLabel.BackgroundTransparency = 1
+    orderTextLabel.Text = tostring(orderContent)
+    orderTextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    orderTextLabel.TextScaled = true
+    orderTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    orderTextLabel.Font = Enum.Font.Gotham
+    orderTextLabel.TextWrapped = true
+    orderTextLabel.Parent = orderItem
     
     local statusText = Instance.new("TextLabel")
     statusText.Size = UDim2.new(1, -100, 0, 20)
