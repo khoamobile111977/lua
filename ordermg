@@ -130,7 +130,7 @@ loadButton.Position = UDim2.new(0.05, 0, 0.87, 0)
 loadButton.BackgroundColor3 = Color3.fromRGB(50, 150, 100)
 loadButton.TextColor3 = Color3.new(1, 1, 1)
 loadButton.Font = Enum.Font.GothamBold
-loadButton.Text = "🔄 Tải đơn (F10)"
+loadButton.Text = "🔄 Tải đơn (F3)"
 loadButton.TextScaled = true
 loadButton.BorderSizePixel = 0
 
@@ -448,7 +448,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
             toggleGUI()
         elseif input.KeyCode == Enum.KeyCode.F4 then
             toggleGUI()
-        elseif input.KeyCode == Enum.KeyCode.F10 then
+        elseif input.KeyCode == Enum.KeyCode.F3 then
             loadOrders()
         end
     end
@@ -459,4 +459,4 @@ loadOrderStatus()
 wait(2)
 loadOrders()
 
-showNotification("🎮 Script Đã Khởi Động!", "G/F4: Bật/Tắt GUI | F10: Tải đơn hàng", Color3.fromRGB(46, 204, 113))
+showNotification("🎮 Script Đã Khởi Động!", "G/F4: Bật/Tắt GUI | F3: Tải đơn hàng", Color3.fromRGB(46, 204, 113))
