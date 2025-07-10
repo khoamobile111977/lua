@@ -1,0 +1,277 @@
+-- Blox Fruits Random Auto Friend Script
+-- Tự động kết bạn random các player trong server
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Cấu hình đơn giản
+local Config = {
+    DelayBetweenRequests = 120,       -- Delay giữa các lần gửi (giây)
+    MaxFriendsPerRound = 5,        -- Số bạn bè tối đa mỗi lần chạy
+    AutoRestart = false,             -- Tự động chạy lại sau khi hoàn thành
+    RestartDelay = 60,              -- Delay trước khi chạy lại (giây)
+    ShowNotifications = false,        -- Hiển thị thông báo
+    RandomOrder = true              -- Thứ tự random khi gửi lời mời
+}
+
+-- Biến theo dõi
+local ProcessedPlayers = {}
+local FriendRequestCount = 0
+local IsRunning = false
+local CurrentRound = 1
+
+-- Hàm hiển thị thông báo
+local function Notify(title, text, duration)
+    if Config.ShowNotifications then
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 4
+        })
+    end
+end
+
+-- Hàm log với timestamp
+local function Log(message)
+    local timeStamp = os.date("[%H:%M:%S]")
+    print(timeStamp .. " " .. message)
+end
+
+-- Hàm kiểm tra xem đã là bạn bè chưa
+local function IsAlreadyFriend(player)
+    if not player or not player.Parent then
+        return false
+    end
+    
+    local success, isFriend = pcall(function()
+        return LocalPlayer:IsFriendsWith(player.UserId)
+    end)
+    
+    return success and isFriend
+end
+
+-- Hàm gửi lời mời kết bạn
+local function SendFriendRequest(player)
+    if not player or not player.Parent then
+        return false
+    end
+    
+    local success, result = pcall(function()
+        return LocalPlayer:RequestFriendship(player)
+    end)
+    
+    if success then
+        Log("✅ Đã gửi lời mời kết bạn cho: " .. player.Name)
+        Notify("Friend Request", "Gửi lời mời cho " .. player.Name, 2)
+        return true
+    else
+        Log("❌ Không thể gửi lời mời cho: " .. player.Name)
+        return false
+    end
+end
+
+-- Hàm lấy danh sách người chơi có thể kết bạn
+local function GetAvailablePlayers()
+    local availablePlayers = {}
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not ProcessedPlayers[player.UserId] then
+            if not IsAlreadyFriend(player) then
+                table.insert(availablePlayers, player)
+            else
+                Log("👥 " .. player.Name .. " đã là bạn bè - bỏ qua")
+                ProcessedPlayers[player.UserId] = true
+            end
+        end
+    end
+    
+    return availablePlayers
+end
+
+-- Hàm xáo trộn mảng (shuffle)
+local function ShuffleArray(array)
+    for i = #array, 2, -1 do
+        local j = math.random(i)
+        array[i], array[j] = array[j], array[i]
+    end
+    return array
+end
+
+-- Hàm chính để gửi lời mời kết bạn
+local function ProcessFriendRequests()
+    if not IsRunning then
+        return
+    end
+    
+    local availablePlayers = GetAvailablePlayers()
+    
+    if #availablePlayers == 0 then
+        Log("⚠️ Không có người chơi nào để kết bạn")
+        Notify("No Players", "Không có người chơi mới", 3)
+        return
+    end
+    
+    -- Xáo trộn thứ tự nếu bật random
+    if Config.RandomOrder then
+        availablePlayers = ShuffleArray(availablePlayers)
+    end
+    
+    Log("🔄 Bắt đầu gửi lời mời cho " .. math.min(#availablePlayers, Config.MaxFriendsPerRound) .. " người chơi")
+    
+    local requestsSent = 0
+    
+    for i, player in pairs(availablePlayers) do
+        if not IsRunning then
+            break
+        end
+        
+        if requestsSent >= Config.MaxFriendsPerRound then
+            Log("⚠️ Đã đạt giới hạn " .. Config.MaxFriendsPerRound .. " lời mời cho round này")
+            break
+        end
+        
+        if SendFriendRequest(player) then
+            requestsSent = requestsSent + 1
+            FriendRequestCount = FriendRequestCount + 1
+            ProcessedPlayers[player.UserId] = true
+        end
+        
+        -- Delay để tránh lag
+        wait(Config.DelayBetweenRequests)
+    end
+    
+    Log("✅ Round " .. CurrentRound .. " hoàn thành - Đã gửi " .. requestsSent .. " lời mời")
+    Notify("Round Complete", "Round " .. CurrentRound .. " - " .. requestsSent .. " lời mời", 3)
+end
+
+-- Hàm xử lý người chơi mới tham gia
+local function OnPlayerAdded(player)
+    if not IsRunning then
+        return
+    end
+    
+    -- Đợi một chút để người chơi load
+    wait(3)
+    
+    if not IsRunning or ProcessedPlayers[player.UserId] then
+        return
+    end
+    
+    Log("🆕 Người chơi mới: " .. player.Name)
+    
+    if not IsAlreadyFriend(player) then
+        if SendFriendRequest(player) then
+            FriendRequestCount = FriendRequestCount + 1
+            ProcessedPlayers[player.UserId] = true
+        end
+    end
+end
+
+-- Hàm bắt đầu script
+local function StartAutoFriend()
+    if IsRunning then
+        Log("⚠️ Script đang chạy rồi!")
+        return
+    end
+    
+    IsRunning = true
+    FriendRequestCount = 0
+    ProcessedPlayers = {}
+    CurrentRound = 1
+    
+    Log("🚀 Bắt đầu Random Auto Friend Script")
+    Notify("Auto Friend Started", "Bắt đầu kết bạn random!", 3)
+    
+    -- Lắng nghe người chơi mới
+    Players.PlayerAdded:Connect(OnPlayerAdded)
+    
+    -- Vòng lặp chính
+    spawn(function()
+        while IsRunning do
+            ProcessFriendRequests()
+            
+            if IsRunning and Config.AutoRestart then
+                Log("⏳ Chờ " .. Config.RestartDelay .. " giây trước round tiếp theo...")
+                wait(Config.RestartDelay)
+                CurrentRound = CurrentRound + 1
+                
+                -- Reset processed players mỗi 3 round để có thể thử lại
+                if CurrentRound % 3 == 0 then
+                    ProcessedPlayers = {}
+                    Log("🔄 Đã reset danh sách người chơi đã xử lý")
+                end
+            else
+                break
+            end
+        end
+    end)
+end
+
+-- Hàm dừng script
+local function StopAutoFriend()
+    if not IsRunning then
+        Log("⚠️ Script chưa chạy!")
+        return
+    end
+    
+    IsRunning = false
+    Log("🛑 Đã dừng Random Auto Friend Script")
+    Notify("Auto Friend Stopped", "Script đã dừng!", 3)
+end
+
+-- Hàm hiển thị thống kê
+local function ShowStats()
+    local totalPlayers = #Players:GetPlayers() - 1 -- Trừ bản thân
+    local processedCount = 0
+    
+    for _ in pairs(ProcessedPlayers) do
+        processedCount = processedCount + 1
+    end
+    
+    local status = IsRunning and "🟢 Đang chạy" or "🔴 Đã dừng"
+    
+    Log("📊 === THỐNG KÊ AUTO FRIEND ===")
+    Log("   Trạng thái: " .. status)
+    Log("   Round hiện tại: " .. CurrentRound)
+    Log("   Tổng lời mời đã gửi: " .. FriendRequestCount)
+    Log("   Người chơi đã xử lý: " .. processedCount .. "/" .. totalPlayers)
+    Log("   Người chơi trong server: " .. totalPlayers)
+    
+    Notify("Stats", "Round " .. CurrentRound .. " - " .. FriendRequestCount .. " lời mời", 4)
+end
+
+-- Xử lý chat commands
+local function OnChatted(message)
+    local msg = message:lower()
+    
+    if msg == "/friend" or msg == "/start" then
+        StartAutoFriend()
+    elseif msg == "/stop" then
+        StopAutoFriend()
+    elseif msg == "/stats" then
+        ShowStats()
+    elseif msg == "/help" then
+        Log("📋 === LỆNH AUTO FRIEND ===")
+        Log("   /friend hoặc /start - Bắt đầu auto friend")
+        Log("   /stop - Dừng auto friend")
+        Log("   /stats - Xem thống kê")
+        Log("   /help - Hiển thị trợ giúp")
+        Notify("Commands", "Xem console để biết lệnh", 3)
+    end
+end
+
+-- Kết nối chat commands
+LocalPlayer.Chatted:Connect(OnChatted)
+
+-- Khởi động
+Log("🎮 Random Auto Friend Script đã tải thành công!")
+Log("💬 Nhập '/friend' hoặc '/start' để bắt đầu")
+Log("💬 Nhập '/help' để xem tất cả lệnh")
+Notify("Script Loaded", "Nhập /friend để bắt đầu", 5)
+
+-- Tự động bắt đầu (bỏ comment nếu muốn)
+-- wait(2)
+-- StartAutoFriend()
