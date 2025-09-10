@@ -205,7 +205,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 Frame.Parent = ScreenGui
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Frame.Position = UDim2.new(0.35, 0, 0.3, 0)
+Frame.Position = UDim2.new(0.02, 0, 0.3, 0)
 Frame.Size = UDim2.new(0, 200, 0, 120)
 
 UICorner.CornerRadius = UDim.new(0, 12)
