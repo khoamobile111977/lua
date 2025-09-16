@@ -531,9 +531,3 @@ StarterGui:SetCore("SendNotification", {
     Duration = 5
 })
 
-print("=== Combined Blox Fruits Tools ===")
-print("Dragon Tab: Dragon Wizard, Buy Draco Race")
-print("Craft Tab: Craft Dragonheart, Craft Dragonstorm") 
-print("Trade Tab: 6 nút cho 3 bàn trade, mỗi bàn 2 ghế")
-print("Nhấn Left Control để ẩn/hiện UI")
-print("UI có thể kéo thả được!")
