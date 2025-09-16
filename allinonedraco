@@ -1,5 +1,3 @@
--- Script tổng hợp: Auto Trade, Craft Items, Race Draco Fix
--- Sử dụng UI từ racedracofix.lua với các chức năng mở rộng
 
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
@@ -7,18 +5,18 @@ local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
--- Kiểm tra team
+
 if not game.Players.LocalPlayer.Team then 
     game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates") 
 end
 repeat wait() until game.Players.LocalPlayer.Team
 
--- Global variables
+
 getgenv().Main = getgenv().Main or {}
 Main.CurrentTween = nil
 Main.IsMoving = false
 
--- NoClip system
+
 game:GetService("RunService").Stepped:Connect(function()
     pcall(function()
         if not (lp.Character and lp.Character:FindFirstChild("Head") and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
@@ -48,7 +46,7 @@ game:GetService("RunService").Stepped:Connect(function()
     end)
 end)
 
--- Portal and teleport system
+
 local w = game.PlaceId
 local distbyp = (w == 2753915549 and 1500) or (w == 4442272183 and 3500) or (w == 7449423635 and 6000)
 local gQ = (w == 2753915549 and {
@@ -67,7 +65,6 @@ local gQ = (w == 2753915549 and {
     Vector3.new(-12463, 374, -7523)
 })
 
--- Trade Tables từ autotrade.lua
 local TradeTables = {
     {
         name = "Bàn 1",
@@ -86,7 +83,7 @@ local TradeTables = {
     }
 }
 
--- Utility functions
+
 local function getPortal(pos)
     if not pos or not gQ then return nil end
     local closest, dist = nil, math.huge
@@ -135,7 +132,7 @@ function request(aJ)
     return success
 end
 
--- Enhanced TP1 function
+
 function TP1(Pos)
     local char = lp.Character
     if not char then 
@@ -205,7 +202,7 @@ function TP1(Pos)
     return true
 end
 
--- Craft functions
+
 local function craftItem(itemName)
     pcall(function()
         local args = {
@@ -223,7 +220,7 @@ local function craftItem(itemName)
     end)
 end
 
--- Dragon functions
+
 function GetDragonWizard()
     for _, f in ipairs({workspace.NPCs, rs.NPCs}) do
         for _, n in ipairs(f:GetChildren()) do
@@ -262,7 +259,6 @@ function BuyDraco()
     rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
 end
 
--- Trade table function
 function TeleportToChair(tableIndex, chairIndex)
     local table = TradeTables[tableIndex]
     if not table then return end
@@ -274,14 +270,12 @@ function TeleportToChair(tableIndex, chairIndex)
     TP1(chairPos)
 end
 
--- Create main UI
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local UICorner = Instance.new("UICorner")
 local UIListLayout = Instance.new("UIListLayout")
 local TitleLabel = Instance.new("TextLabel")
 
--- Tab system
 local TabFrame = Instance.new("Frame")
 local TabLayout = Instance.new("UIListLayout")
 
@@ -307,7 +301,6 @@ TitleLabel.Text = "All In One Draco"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 
--- Tab buttons frame
 TabFrame.Parent = MainFrame
 TabFrame.BackgroundTransparency = 1
 TabFrame.Position = UDim2.new(0, 0, 0, 30)
@@ -319,7 +312,6 @@ TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 TabLayout.Padding = UDim.new(0, 5)
 TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Content frame
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Parent = MainFrame
 ContentFrame.BackgroundTransparency = 1
@@ -332,11 +324,9 @@ ContentLayout.Padding = UDim.new(0, 8)
 ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ContentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Tab system
 local currentTab = "dragon"
 local tabs = {}
 
--- Create tab button
 local function createTabButton(name, text)
     local button = Instance.new("TextButton")
     button.Name = name .. "Tab"
@@ -356,7 +346,6 @@ local function createTabButton(name, text)
     return button
 end
 
--- Create function button
 local function createFunctionButton(text, color)
     local button = Instance.new("TextButton")
     button.Parent = ContentFrame
@@ -375,25 +364,20 @@ local function createFunctionButton(text, color)
     return button
 end
 
--- Tab buttons
 local DragonTab = createTabButton("dragon", "Dragon")
 local CraftTab = createTabButton("craft", "Craft")
 local TradeTab = createTabButton("trade", "Trade")
 
--- Tab content containers
 local dragonContent = {}
 local craftContent = {}
 local tradeContent = {}
 
--- Dragon tab content
 dragonContent[1] = createFunctionButton("To Dragon Wizard", Color3.fromRGB(70, 130, 180))
 dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 150, 70))
 
--- Craft tab content
 craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
 craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
 
--- Trade tab content
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
 tradeContent[2] = createFunctionButton("Bàn 1 - Ghế 2", Color3.fromRGB(70, 130, 180))
 tradeContent[3] = createFunctionButton("Bàn 2 - Ghế 1", Color3.fromRGB(100, 150, 70))
@@ -401,23 +385,19 @@ tradeContent[4] = createFunctionButton("Bàn 2 - Ghế 2", Color3.fromRGB(100, 1
 tradeContent[5] = createFunctionButton("Bàn 3 - Ghế 1", Color3.fromRGB(180, 70, 130))
 tradeContent[6] = createFunctionButton("Bàn 3 - Ghế 2", Color3.fromRGB(180, 70, 130))
 
--- Tab switching function
 local function switchTab(tabName)
     currentTab = tabName
     
-    -- Hide all content
     for _, content in ipairs({dragonContent, craftContent, tradeContent}) do
         for _, button in ipairs(content) do
             button.Visible = false
         end
     end
     
-    -- Update tab button colors
     DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     CraftTab.BackgroundColor3 = tabName == "craft" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     TradeTab.BackgroundColor3 = tabName == "trade" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     
-    -- Show current tab content
     if tabName == "dragon" then
         for _, button in ipairs(dragonContent) do
             button.Visible = true
@@ -433,17 +413,13 @@ local function switchTab(tabName)
     end
 end
 
--- Tab button connections
 DragonTab.MouseButton1Click:Connect(function() switchTab("dragon") end)
 CraftTab.MouseButton1Click:Connect(function() switchTab("craft") end)
 TradeTab.MouseButton1Click:Connect(function() switchTab("trade") end)
 
--- Function button connections
--- Dragon functions
 dragonContent[1].MouseButton1Click:Connect(function() GetDragonWizard() end)
 dragonContent[2].MouseButton1Click:Connect(function() BuyDraco() end)
 
--- Craft functions
 craftContent[1].MouseButton1Click:Connect(function()
     if not checkInventory("Dragonheart") then
         craftItem("Dragonheart")
@@ -468,7 +444,6 @@ craftContent[2].MouseButton1Click:Connect(function()
     end
 end)
 
--- Trade functions
 tradeContent[1].MouseButton1Click:Connect(function() TeleportToChair(1, 1) end)
 tradeContent[2].MouseButton1Click:Connect(function() TeleportToChair(1, 2) end)
 tradeContent[3].MouseButton1Click:Connect(function() TeleportToChair(2, 1) end)
@@ -476,7 +451,6 @@ tradeContent[4].MouseButton1Click:Connect(function() TeleportToChair(2, 2) end)
 tradeContent[5].MouseButton1Click:Connect(function() TeleportToChair(3, 1) end)
 tradeContent[6].MouseButton1Click:Connect(function() TeleportToChair(3, 2) end)
 
--- Dragging system
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -512,7 +486,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle UI visibility with Left Control
 local uiVisible = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftControl then
@@ -521,10 +494,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Initialize with dragon tab
+
 switchTab("dragon")
 
--- Success notification
+
 StarterGui:SetCore("SendNotification", {
     Title = "Combined Tools",
     Text = "Script đã được tải thành công! Nhấn Left Ctrl để ẩn/hiện UI",
