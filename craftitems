@@ -1,0 +1,141 @@
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DragonCraftGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 200, 0, 120)
+mainFrame.Position = UDim2.new(1, -220, 1, -140) -- Góc dưới bên phải
+mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+mainFrame.Parent = screenGui
+
+-- UICorner cho frame chính
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, 0, 0, 25)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Dragon Craft"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+
+local dragonheartButton = Instance.new("TextButton")
+dragonheartButton.Name = "DragonheartButton"
+dragonheartButton.Size = UDim2.new(0.9, 0, 0, 35)
+dragonheartButton.Position = UDim2.new(0.05, 0, 0, 35)
+dragonheartButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+dragonheartButton.Text = "Craft Dragonheart"
+dragonheartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+dragonheartButton.TextScaled = true
+dragonheartButton.Font = Enum.Font.Gotham
+dragonheartButton.Parent = mainFrame
+
+local heartCorner = Instance.new("UICorner")
+heartCorner.CornerRadius = UDim.new(0, 5)
+heartCorner.Parent = dragonheartButton
+
+local dragonstormButton = Instance.new("TextButton")
+dragonstormButton.Name = "DragonstormButton"
+dragonstormButton.Size = UDim2.new(0.9, 0, 0, 35)
+dragonstormButton.Position = UDim2.new(0.05, 0, 0, 80)
+dragonstormButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+dragonstormButton.Text = "Craft Dragonstorm"
+dragonstormButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+dragonstormButton.TextScaled = true
+dragonstormButton.Font = Enum.Font.Gotham
+dragonstormButton.Parent = mainFrame
+
+local stormCorner = Instance.new("UICorner")
+stormCorner.CornerRadius = UDim.new(0, 5)
+stormCorner.Parent = dragonstormButton
+
+local function checkInventory(name)
+    local inv = ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+    if inv then
+        for _, item in ipairs(inv) do
+            if item.Name == name then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function craftItem(itemName)
+    pcall(function()
+        local args = {
+            [1] = "Craft",
+            [2] = itemName,
+            [3] = {}
+        }
+        ReplicatedStorage.Modules.Net:FindFirstChild("RF/Craft"):InvokeServer(unpack(args))
+        
+        -- Thông báo
+        StarterGui:SetCore("SendNotification", {
+            Title = "Dragon Craft",
+            Text = "Đang craft " .. itemName .. "...",
+            Duration = 3
+        })
+    end)
+end
+
+dragonheartButton.MouseButton1Click:Connect(function()
+    if not checkInventory("Dragonheart") then
+        craftItem("Dragonheart")
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Dragon Craft",
+            Text = "Bạn đã có Dragonheart rồi!",
+            Duration = 2
+        })
+    end
+end)
+
+dragonstormButton.MouseButton1Click:Connect(function()
+    if not checkInventory("Dragonstorm") then
+        craftItem("Dragonstorm")
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Dragon Craft",
+            Text = "Bạn đã có Dragonstorm rồi!",
+            Duration = 2
+        })
+    end
+end)
+
+local function addHoverEffect(button, normalColor, hoverColor)
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = hoverColor
+    end)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = normalColor
+    end)
+end
+
+addHoverEffect(dragonheartButton, Color3.fromRGB(220, 53, 69), Color3.fromRGB(200, 35, 51))
+addHoverEffect(dragonstormButton, Color3.fromRGB(40, 167, 69), Color3.fromRGB(34, 139, 58))
+
+StarterGui:SetCore("SendNotification", {
+    Title = "Dragon Craft GUI",
+    Text = "Script đã được tải thành công!",
+    Duration = 3
+})
