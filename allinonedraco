@@ -15,7 +15,6 @@ getgenv().Main = getgenv().Main or {}
 Main.CurrentTween = nil
 Main.IsMoving = false
 
--- NOCLIP RIÊNG CHO SCRIPT NÀY - KHÔNG XUNG ĐỘT
 getgenv().DracoNoClip = getgenv().DracoNoClip or false
 local DracoNoClipConnection
 
@@ -58,7 +57,7 @@ local function disableDracoNoClip()
     end
 end
 
--- Khởi tạo NoClip connection
+
 enableDracoNoClip()
 
 
@@ -162,7 +161,7 @@ function TP1(Pos)
     end
     
     getgenv().Request = false
-    -- BẬT NOCLIP RIÊNG CHO SCRIPT NÀY
+
     getgenv().DracoNoClip = true
     local MyCFrame = hrp.CFrame
     local DistanceToPos = calcpos(MyCFrame, Pos)
@@ -172,7 +171,7 @@ function TP1(Pos)
         Main.CurrentTween = nil
         wait(0.1)
         hrp.CFrame = Pos
-        -- TẮT NOCLIP SAU KHI TWEEN XONG
+
         getgenv().DracoNoClip = false
         disableDracoNoClip()
         return true
@@ -213,7 +212,7 @@ function TP1(Pos)
     Main.CurrentTween.Completed:Connect(function()
         Main.IsMoving = false
         Main.CurrentTween = nil
-        -- TẮT NOCLIP SAU KHI TWEEN XONG
+
         getgenv().DracoNoClip = false
         disableDracoNoClip()
     end)
@@ -240,20 +239,20 @@ local function craftItem(itemName)
     end)
 end
 
--- Hàm equip fruit từ backpack
+
 function EquipFruit(fruitName)
     local tool = lp.Backpack:FindFirstChild(fruitName)
     if tool then
-        tool.Parent = lp.Character -- equip
+        tool.Parent = lp.Character 
         return tool
     end
     return nil
 end
 
--- Danh sách tên fruit đã drop để tránh nhặt lại
+
 local DroppedFruits = {}
 
--- Hàm drop fruit và đổi tên
+
 function DropFruit(fruitName)
     local fruit = EquipFruit(fruitName)
     if fruit and fruit:FindFirstChild("EatRemote") then
@@ -261,15 +260,15 @@ function DropFruit(fruitName)
         fruit.EatRemote:InvokeServer(unpack(args))
         print("Đã drop:", fruitName)
         
-        -- Đợi một chút để fruit xuất hiện trên map
+
         task.wait(1)
         
-        -- Tìm và đổi tên fruit vừa drop
+
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and v.Name == fruitName and v:FindFirstChild("Handle") then
-                local newName = fruitName .. "_DROPPED_" .. tick() -- Thêm hậu tố unique
+                local newName = fruitName .. "_DROPPED_" .. tick() 
                 v.Name = newName
-                DroppedFruits[newName] = true -- Lưu vào danh sách đã drop
+                DroppedFruits[newName] = true 
                 print("Đã đổi tên fruit:", fruitName, "->", newName)
                 break
             end
@@ -279,18 +278,18 @@ function DropFruit(fruitName)
     end
 end
 
--- Drop tất cả fruit trong Backpack
+
 function DropAllFruits()
-    DroppedFruits = {} -- Reset danh sách
+    DroppedFruits = {} 
     for _,v in pairs(lp.Backpack:GetChildren()) do
         if string.find(v.Name, "Fruit") then
             DropFruit(v.Name)
-            task.wait(1) -- Tăng delay để có thời gian đổi tên
+            task.wait(1) 
         end
     end
 end
 
--- Tween về Dojo Trainer và ClaimQuest
+
 function ClaimDojoQuest()
 	local found
 	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
@@ -330,12 +329,12 @@ function ClaimDojoQuest()
 	end
 end
 
--- Tìm fruit ngoài map (Tool/Model có chữ "Fruit") - TRÁNH FRUIT ĐÃ DROP
+
 function GetPathFruit()
     for _, v in next, workspace:GetChildren() do
         if v:IsA("Tool") or v:IsA("Model") then
             if string.find(v.Name, "Fruit") then
-                -- Kiểm tra xem có phải fruit mình đã drop không
+
                 if not DroppedFruits[v.Name] and not string.find(v.Name, "_DROPPED_") then
                     return v
                 end
@@ -345,7 +344,7 @@ function GetPathFruit()
     return nil
 end
 
--- Tween tới fruit gần nhất và chạm để nhặt
+
 function TweenFruit()
     local fruit = GetPathFruit()
     local char = lp.Character or lp.CharacterAdded:Wait()
@@ -357,7 +356,7 @@ function TweenFruit()
                 firetouchinterest(handle, hrp, 0)
                 firetouchinterest(handle, hrp, 1)
             end)
-			-- Sau khi nhặt fruit, quay lại Dojo Trainer và ClaimQuest
+
 			pcall(function()
 				if typeof(ClaimDojoQuest) == "function" then
 					ClaimDojoQuest()
@@ -372,7 +371,7 @@ function TweenFruit()
                     firetouchinterest(handle, hrp, 1)
                 end
             end)
-			-- Sau khi tween đến fruit và nhặt, quay lại Dojo Trainer và ClaimQuest
+	
 			pcall(function()
 				if typeof(ClaimDojoQuest) == "function" then
 					ClaimDojoQuest()
@@ -396,7 +395,7 @@ function randomfruit()
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
 end
 
--- TÍNH NĂNG MỚI: Fully Đai 5 - Làm tất cả trong một lần
+
 function FullyDai5()
     StarterGui:SetCore("SendNotification", {
         Title = "Fully Đai 5",
@@ -404,7 +403,7 @@ function FullyDai5()
         Duration = 3
     })
     
-    -- Bước 1: Đi đến Dojo Trainer và mua random fruit
+
     local found
     for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
         if container then
@@ -424,7 +423,7 @@ function FullyDai5()
         local hrp = char:WaitForChild("HumanoidRootPart")
         repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
         
-        -- Mua random fruit
+
         pcall(function()
             if typeof(randomfruit) == "function" then
                 randomfruit()
@@ -436,7 +435,7 @@ function FullyDai5()
             end
         end)
         
-        -- Bước 2: Đợi 7 giây rồi drop tất cả fruit
+
         task.wait(7)
         StarterGui:SetCore("SendNotification", {
             Title = "Fully Đai 5",
@@ -445,8 +444,8 @@ function FullyDai5()
         })
         DropAllFruits()
         
-        -- Bước 3: Tween đến fruit trên map (tránh fruit đã drop)
-        task.wait(2) -- Tăng thời gian đợi để đảm bảo fruit được drop và đổi tên
+
+        task.wait(2) 
         StarterGui:SetCore("SendNotification", {
             Title = "Fully Đai 5",
             Text = "Đang tìm fruit khác trên map...",
@@ -523,7 +522,7 @@ local UICorner = Instance.new("UICorner")
 local UIListLayout = Instance.new("UIListLayout")
 local TitleLabel = Instance.new("TextLabel")
 
--- THÊM NOCLIP TOGGLE BUTTON
+
 local NoClipToggle = Instance.new("TextButton")
 
 local TabFrame = Instance.new("Frame")
@@ -535,7 +534,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BackgroundTransparency = 0.3 -- CHỈNH TRONG SUỐT
+MainFrame.BackgroundTransparency = 0.3 
 MainFrame.Position = UDim2.new(0.02, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 250, 0, 400)
 MainFrame.BorderSizePixel = 0
@@ -552,7 +551,7 @@ TitleLabel.Text = "All In One Draco"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 
--- THIẾT LẬP NOCLIP TOGGLE BUTTON
+
 NoClipToggle.Parent = MainFrame
 NoClipToggle.Position = UDim2.new(0.7, 0, 0, 0)
 NoClipToggle.Size = UDim2.new(0.3, 0, 0, 30)
@@ -600,7 +599,7 @@ local function createTabButton(name, text)
     button.Parent = TabFrame
     button.Size = UDim2.new(0, 70, 0, 30)
     button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    button.BackgroundTransparency = 0.2 -- CHỈNH TRONG SUỐT CHO TAB
+    button.BackgroundTransparency = 0.2 
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -619,7 +618,7 @@ local function createFunctionButton(text, color)
     button.Parent = ContentFrame
     button.Size = UDim2.new(0, 200, 0, 35)
     button.BackgroundColor3 = color
-    button.BackgroundTransparency = 0.2 -- CHỈNH TRONG SUỐT CHO BUTTON
+    button.BackgroundTransparency = 0.2 
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -646,7 +645,7 @@ dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 15
 
 craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
 craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
--- XÓA NÚT TWEEN FRUIT, CHỈ GIỮ LẠI FULLY ĐAI 5
+
 craftContent[3] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
 
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
@@ -665,7 +664,7 @@ local function switchTab(tabName)
         end
     end
     
-    -- THÊM TRONG SUỐT CHO TAB ACTIVE/INACTIVE
+
     DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     DragonTab.BackgroundTransparency = tabName == "dragon" and 0.1 or 0.3
     
@@ -721,7 +720,7 @@ craftContent[2].MouseButton1Click:Connect(function()
     end
 end)
 
--- KẾT NỐI TÍNH NĂNG MỚI CHO FULLY ĐAI 5
+
 craftContent[3].MouseButton1Click:Connect(function()
     FullyDai5()
 end)
@@ -776,7 +775,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- NOCLIP TOGGLE FUNCTIONALITY
+
 NoClipToggle.MouseButton1Click:Connect(function()
     getgenv().DracoNoClip = not getgenv().DracoNoClip
     
