@@ -240,44 +240,53 @@ local function craftItem(itemName)
     end)
 end
 
+-- Hàm equip fruit từ backpack
+function EquipFruit(fruitName)
+    local tool = lp.Backpack:FindFirstChild(fruitName)
+    if tool then
+        tool.Parent = lp.Character -- equip
+        return tool
+    end
+    return nil
+end
 
--- Tween đến Dojo Trainer rồi mua random fruit bằng randomfruit()
-function GoDojoAndRandomFruit()
-    local found
-    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
-        if container then
-            for _, npc in ipairs(container:GetChildren()) do
-                if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
-                    found = npc
-                    break
-                end
+-- Danh sách tên fruit đã drop để tránh nhặt lại
+local DroppedFruits = {}
+
+-- Hàm drop fruit và đổi tên
+function DropFruit(fruitName)
+    local fruit = EquipFruit(fruitName)
+    if fruit and fruit:FindFirstChild("EatRemote") then
+        local args = {"Drop"}
+        fruit.EatRemote:InvokeServer(unpack(args))
+        print("Đã drop:", fruitName)
+        
+        -- Đợi một chút để fruit xuất hiện trên map
+        task.wait(1)
+        
+        -- Tìm và đổi tên fruit vừa drop
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Tool") and v.Name == fruitName and v:FindFirstChild("Handle") then
+                local newName = fruitName .. "_DROPPED_" .. tick() -- Thêm hậu tố unique
+                v.Name = newName
+                DroppedFruits[newName] = true -- Lưu vào danh sách đã drop
+                print("Đã đổi tên fruit:", fruitName, "->", newName)
+                break
             end
         end
-        if found then break end
-    end
-
-    if found and found:FindFirstChild("HumanoidRootPart") then
-        TP1(CFrame.new(found.HumanoidRootPart.Position))
-        local char = lp.Character or lp.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
-        pcall(function()
-            if typeof(randomfruit) == "function" then
-                randomfruit()
-            else
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Fully Đai 5",
-                    Text = "randomfruit() không tồn tại",
-                    Duration = 3
-                })
-            end
-        end)
     else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fully Đai 5",
-            Text = "Không tìm thấy Dojo Trainer",
-            Duration = 3
-        })
+        warn("Không tìm thấy fruit:", fruitName)
+    end
+end
+
+-- Drop tất cả fruit trong Backpack
+function DropAllFruits()
+    DroppedFruits = {} -- Reset danh sách
+    for _,v in pairs(lp.Backpack:GetChildren()) do
+        if string.find(v.Name, "Fruit") then
+            DropFruit(v.Name)
+            task.wait(1) -- Tăng delay để có thời gian đổi tên
+        end
     end
 end
 
@@ -321,13 +330,19 @@ function ClaimDojoQuest()
 	end
 end
 
--- Tìm fruit ngoài map (Tool/Model có chữ "Fruit")
+-- Tìm fruit ngoài map (Tool/Model có chữ "Fruit") - TRÁNH FRUIT ĐÃ DROP
 function GetPathFruit()
     for _, v in next, workspace:GetChildren() do
-        if v:IsA("Tool") or v:IsA("Model") and string.find(v.Name, "Fruit") then
-            return v
+        if v:IsA("Tool") or v:IsA("Model") then
+            if string.find(v.Name, "Fruit") then
+                -- Kiểm tra xem có phải fruit mình đã drop không
+                if not DroppedFruits[v.Name] and not string.find(v.Name, "_DROPPED_") then
+                    return v
+                end
+            end
         end
     end
+    return nil
 end
 
 -- Tween tới fruit gần nhất và chạm để nhặt
@@ -379,6 +394,78 @@ function randomfruit()
 		"Buy"
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end
+
+-- TÍNH NĂNG MỚI: Fully Đai 5 - Làm tất cả trong một lần
+function FullyDai5()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Fully Đai 5",
+        Text = "Bắt đầu quá trình Fully Đai 5...",
+        Duration = 3
+    })
+    
+    -- Bước 1: Đi đến Dojo Trainer và mua random fruit
+    local found
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
+                    found = npc
+                    break
+                end
+            end
+        end
+        if found then break end
+    end
+
+    if found and found:FindFirstChild("HumanoidRootPart") then
+        TP1(CFrame.new(found.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
+        
+        -- Mua random fruit
+        pcall(function()
+            if typeof(randomfruit) == "function" then
+                randomfruit()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Fully Đai 5",
+                    Text = "Đã mua random fruit, đợi 7 giây...",
+                    Duration = 3
+                })
+            end
+        end)
+        
+        -- Bước 2: Đợi 7 giây rồi drop tất cả fruit
+        task.wait(7)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Fully Đai 5",
+            Text = "Đang drop tất cả fruit...",
+            Duration = 3
+        })
+        DropAllFruits()
+        
+        -- Bước 3: Tween đến fruit trên map (tránh fruit đã drop)
+        task.wait(2) -- Tăng thời gian đợi để đảm bảo fruit được drop và đổi tên
+        StarterGui:SetCore("SendNotification", {
+            Title = "Fully Đai 5",
+            Text = "Đang tìm fruit khác trên map...",
+            Duration = 3
+        })
+        TweenFruit()
+        
+        StarterGui:SetCore("SendNotification", {
+            Title = "Fully Đai 5",
+            Text = "Hoàn thành Fully Đai 5!",
+            Duration = 5
+        })
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Fully Đai 5",
+            Text = "Không tìm thấy Dojo Trainer",
+            Duration = 3
+        })
+    end
 end
 
 function GetDragonWizard()
@@ -559,8 +646,8 @@ dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 15
 
 craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
 craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
+-- XÓA NÚT TWEEN FRUIT, CHỈ GIỮ LẠI FULLY ĐAI 5
 craftContent[3] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
-craftContent[4] = createFunctionButton("Tween Fruit", Color3.fromRGB(100, 149, 237))
 
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
 tradeContent[2] = createFunctionButton("Bàn 1 - Ghế 2", Color3.fromRGB(70, 130, 180))
@@ -634,12 +721,9 @@ craftContent[2].MouseButton1Click:Connect(function()
     end
 end)
 
+-- KẾT NỐI TÍNH NĂNG MỚI CHO FULLY ĐAI 5
 craftContent[3].MouseButton1Click:Connect(function()
-    GoDojoAndRandomFruit()
-end)
-
-craftContent[4].MouseButton1Click:Connect(function()
-    TweenFruit()
+    FullyDai5()
 end)
 
 tradeContent[1].MouseButton1Click:Connect(function() TeleportToChair(1, 1) end)
@@ -722,6 +806,6 @@ switchTab("dragon")
 
 StarterGui:SetCore("SendNotification", {
     Title = "Combined Tools",
-    Text = "Script đã tải thành công! NoClip riêng không xung đột với script khác. Left Ctrl để ẩn/hiện",
+    Text = "Script đã tải thành công! Tính năng Fully Đai 5 đã được nâng cấp. Left Ctrl để ẩn/hiện",
     Duration = 5
 })
