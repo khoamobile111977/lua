@@ -1,4 +1,3 @@
-
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
 local ts = game:GetService("TweenService")
@@ -16,35 +15,51 @@ getgenv().Main = getgenv().Main or {}
 Main.CurrentTween = nil
 Main.IsMoving = false
 
+-- NOCLIP RIÊNG CHO SCRIPT NÀY - KHÔNG XUNG ĐỘT
+getgenv().DracoNoClip = getgenv().DracoNoClip or false
+local DracoNoClipConnection
 
-game:GetService("RunService").Stepped:Connect(function()
-    pcall(function()
-        if not (lp.Character and lp.Character:FindFirstChild("Head") and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
-        if getgenv().NoClip then
-            if not lp.Character.Head:FindFirstChild("BodyClip") then
+local function enableDracoNoClip()
+    if DracoNoClipConnection then return end
+    
+    DracoNoClipConnection = game:GetService("RunService").Stepped:Connect(function()
+        pcall(function()
+            if not getgenv().DracoNoClip then return end
+            if not (lp.Character and lp.Character:FindFirstChild("Head") and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
+            
+            if not lp.Character.Head:FindFirstChild("DracoBodyClip") then
                 local bv = Instance.new("BodyVelocity")
-                bv.Name = "BodyClip"
+                bv.Name = "DracoBodyClip"
                 bv.Velocity = Vector3.new(0, 0, 0)
                 bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
                 bv.P = 15000
                 bv.Parent = lp.Character.Head
             end
+            
             for _, v in ipairs(lp.Character:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide = false
                 end
             end
-        else
-            local clip = lp.Character.Head:FindFirstChild("BodyClip")
-            if clip then clip:Destroy() end
-            for _, v in ipairs(lp.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = true
-                end
+        end)
+    end)
+end
+
+local function disableDracoNoClip()
+    if lp.Character and lp.Character:FindFirstChild("Head") then
+        local clip = lp.Character.Head:FindFirstChild("DracoBodyClip")
+        if clip then clip:Destroy() end
+        
+        for _, v in ipairs(lp.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+                v.CanCollide = true
             end
         end
-    end)
-end)
+    end
+end
+
+-- Khởi tạo NoClip connection
+enableDracoNoClip()
 
 
 local w = game.PlaceId
@@ -147,7 +162,8 @@ function TP1(Pos)
     end
     
     getgenv().Request = false
-    getgenv().NoClip = true
+    -- BẬT NOCLIP RIÊNG CHO SCRIPT NÀY
+    getgenv().DracoNoClip = true
     local MyCFrame = hrp.CFrame
     local DistanceToPos = calcpos(MyCFrame, Pos)
 
@@ -156,7 +172,9 @@ function TP1(Pos)
         Main.CurrentTween = nil
         wait(0.1)
         hrp.CFrame = Pos
-        getgenv().NoClip = false
+        -- TẮT NOCLIP SAU KHI TWEEN XONG
+        getgenv().DracoNoClip = false
+        disableDracoNoClip()
         return true
     end
 
@@ -195,7 +213,9 @@ function TP1(Pos)
     Main.CurrentTween.Completed:Connect(function()
         Main.IsMoving = false
         Main.CurrentTween = nil
-        getgenv().NoClip = false
+        -- TẮT NOCLIP SAU KHI TWEEN XONG
+        getgenv().DracoNoClip = false
+        disableDracoNoClip()
     end)
     Main.CurrentTween:Play()
     hrp.CFrame = CFrame.new(hrp.Position.X, Pos.Y, hrp.Position.Z)
@@ -276,6 +296,9 @@ local UICorner = Instance.new("UICorner")
 local UIListLayout = Instance.new("UIListLayout")
 local TitleLabel = Instance.new("TextLabel")
 
+-- THÊM NOCLIP TOGGLE BUTTON
+local NoClipToggle = Instance.new("TextButton")
+
 local TabFrame = Instance.new("Frame")
 local TabLayout = Instance.new("UIListLayout")
 
@@ -285,6 +308,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BackgroundTransparency = 0.3 -- CHỈNH TRONG SUỐT
 MainFrame.Position = UDim2.new(0.02, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 250, 0, 400)
 MainFrame.BorderSizePixel = 0
@@ -295,11 +319,27 @@ UICorner.Parent = MainFrame
 TitleLabel.Parent = MainFrame
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 0, 0, 0)
-TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+TitleLabel.Size = UDim2.new(0.7, 0, 0, 30)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Text = "All In One Draco"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
+
+-- THIẾT LẬP NOCLIP TOGGLE BUTTON
+NoClipToggle.Parent = MainFrame
+NoClipToggle.Position = UDim2.new(0.7, 0, 0, 0)
+NoClipToggle.Size = UDim2.new(0.3, 0, 0, 30)
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+NoClipToggle.BackgroundTransparency = 0.2
+NoClipToggle.Font = Enum.Font.Gotham
+NoClipToggle.Text = "NoClip: OFF"
+NoClipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoClipToggle.TextSize = 10
+NoClipToggle.BorderSizePixel = 0
+
+local noClipCorner = Instance.new("UICorner")
+noClipCorner.CornerRadius = UDim.new(0, 4)
+noClipCorner.Parent = NoClipToggle
 
 TabFrame.Parent = MainFrame
 TabFrame.BackgroundTransparency = 1
@@ -333,6 +373,7 @@ local function createTabButton(name, text)
     button.Parent = TabFrame
     button.Size = UDim2.new(0, 70, 0, 30)
     button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    button.BackgroundTransparency = 0.2 -- CHỈNH TRONG SUỐT CHO TAB
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -351,6 +392,7 @@ local function createFunctionButton(text, color)
     button.Parent = ContentFrame
     button.Size = UDim2.new(0, 200, 0, 35)
     button.BackgroundColor3 = color
+    button.BackgroundTransparency = 0.2 -- CHỈNH TRONG SUỐT CHO BUTTON
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -394,9 +436,15 @@ local function switchTab(tabName)
         end
     end
     
+    -- THÊM TRONG SUỐT CHO TAB ACTIVE/INACTIVE
     DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
+    DragonTab.BackgroundTransparency = tabName == "dragon" and 0.1 or 0.3
+    
     CraftTab.BackgroundColor3 = tabName == "craft" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
+    CraftTab.BackgroundTransparency = tabName == "craft" and 0.1 or 0.3
+    
     TradeTab.BackgroundColor3 = tabName == "trade" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
+    TradeTab.BackgroundTransparency = tabName == "trade" and 0.1 or 0.3
     
     if tabName == "dragon" then
         for _, button in ipairs(dragonContent) do
@@ -494,13 +542,36 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- NOCLIP TOGGLE FUNCTIONALITY
+NoClipToggle.MouseButton1Click:Connect(function()
+    getgenv().DracoNoClip = not getgenv().DracoNoClip
+    
+    if getgenv().DracoNoClip then
+        NoClipToggle.Text = "NoClip: ON"
+        NoClipToggle.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Draco NoClip",
+            Text = "NoClip đã được BẬT",
+            Duration = 2
+        })
+    else
+        NoClipToggle.Text = "NoClip: OFF"
+        NoClipToggle.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+        disableDracoNoClip()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Draco NoClip",
+            Text = "NoClip đã được TẮT",
+            Duration = 2
+        })
+    end
+end)
+
 
 switchTab("dragon")
 
 
 StarterGui:SetCore("SendNotification", {
     Title = "Combined Tools",
-    Text = "Script đã được tải thành công! Nhấn Left Ctrl để ẩn/hiện UI",
+    Text = "Script đã tải thành công! NoClip riêng không xung đột với script khác. Left Ctrl để ẩn/hiện",
     Duration = 5
 })
-
