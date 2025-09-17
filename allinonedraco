@@ -241,6 +241,146 @@ local function craftItem(itemName)
 end
 
 
+-- Tween đến Dojo Trainer rồi mua random fruit bằng randomfruit()
+function GoDojoAndRandomFruit()
+    local found
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
+                    found = npc
+                    break
+                end
+            end
+        end
+        if found then break end
+    end
+
+    if found and found:FindFirstChild("HumanoidRootPart") then
+        TP1(CFrame.new(found.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
+        pcall(function()
+            if typeof(randomfruit) == "function" then
+                randomfruit()
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Fully Đai 5",
+                    Text = "randomfruit() không tồn tại",
+                    Duration = 3
+                })
+            end
+        end)
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Fully Đai 5",
+            Text = "Không tìm thấy Dojo Trainer",
+            Duration = 3
+        })
+    end
+end
+
+-- Tween về Dojo Trainer và ClaimQuest
+function ClaimDojoQuest()
+	local found
+	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+		if container then
+			for _, npc in ipairs(container:GetChildren()) do
+				if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
+					found = npc
+					break
+				end
+			end
+		end
+		if found then break end
+	end
+
+	if found and found:FindFirstChild("HumanoidRootPart") then
+		TP1(CFrame.new(found.HumanoidRootPart.Position))
+		local char = lp.Character or lp.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
+		pcall(function()
+			local args = {
+				[1] = {
+					NPC = "Dojo Trainer",
+					Command = "ClaimQuest"
+				}
+			}
+			rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
+		end)
+		return true
+	else
+		StarterGui:SetCore("SendNotification", {
+			Title = "Dojo Trainer",
+			Text = "Không tìm thấy Dojo Trainer",
+			Duration = 3
+		})
+		return false
+	end
+end
+
+-- Tìm fruit ngoài map (Tool/Model có chữ "Fruit")
+function GetPathFruit()
+    for _, v in next, workspace:GetChildren() do
+        if v:IsA("Tool") or v:IsA("Model") and string.find(v.Name, "Fruit") then
+            return v
+        end
+    end
+end
+
+-- Tween tới fruit gần nhất và chạm để nhặt
+function TweenFruit()
+    local fruit = GetPathFruit()
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    if fruit and fruit:FindFirstChild("Handle") then
+        local handle = fruit.Handle
+		if (handle.Position - hrp.Position).Magnitude <= 5 then
+            pcall(function()
+                firetouchinterest(handle, hrp, 0)
+                firetouchinterest(handle, hrp, 1)
+            end)
+			-- Sau khi nhặt fruit, quay lại Dojo Trainer và ClaimQuest
+			pcall(function()
+				if typeof(ClaimDojoQuest) == "function" then
+					ClaimDojoQuest()
+				end
+			end)
+        else
+            TP1(handle.CFrame)
+            repeat task.wait() until (handle.Position - hrp.Position).Magnitude <= 5 or not fruit.Parent
+            pcall(function()
+                if handle.Parent then
+                    firetouchinterest(handle, hrp, 0)
+                    firetouchinterest(handle, hrp, 1)
+                end
+            end)
+			-- Sau khi tween đến fruit và nhặt, quay lại Dojo Trainer và ClaimQuest
+			pcall(function()
+				if typeof(ClaimDojoQuest) == "function" then
+					ClaimDojoQuest()
+				end
+			end)
+        end
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Tween Fruit",
+            Text = "Không tìm thấy fruit",
+            Duration = 3
+        })
+    end
+end
+
+function randomfruit()
+	local args = {
+		"Cousin",
+		"Buy"
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end
+
 function GetDragonWizard()
     for _, f in ipairs({workspace.NPCs, rs.NPCs}) do
         for _, n in ipairs(f:GetChildren()) do
@@ -419,6 +559,8 @@ dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 15
 
 craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
 craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
+craftContent[3] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
+craftContent[4] = createFunctionButton("Tween Fruit", Color3.fromRGB(100, 149, 237))
 
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
 tradeContent[2] = createFunctionButton("Bàn 1 - Ghế 2", Color3.fromRGB(70, 130, 180))
@@ -490,6 +632,14 @@ craftContent[2].MouseButton1Click:Connect(function()
             Duration = 2
         })
     end
+end)
+
+craftContent[3].MouseButton1Click:Connect(function()
+    GoDojoAndRandomFruit()
+end)
+
+craftContent[4].MouseButton1Click:Connect(function()
+    TweenFruit()
 end)
 
 tradeContent[1].MouseButton1Click:Connect(function() TeleportToChair(1, 1) end)
