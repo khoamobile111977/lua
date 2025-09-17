@@ -423,6 +423,17 @@ function FullyDai5()
         local hrp = char:WaitForChild("HumanoidRootPart")
         repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
         
+        
+        pcall(function()
+            local args = {
+                [1] = {
+                    NPC = "Dojo Trainer",
+                    Command = "ClaimQuest"
+                }
+            }
+            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
+        end)
+        
 
         pcall(function()
             if typeof(randomfruit) == "function" then
