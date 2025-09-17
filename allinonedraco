@@ -356,7 +356,7 @@ function TweenFruit()
                 firetouchinterest(handle, hrp, 0)
                 firetouchinterest(handle, hrp, 1)
             end)
-
+			task.wait(1)
 			pcall(function()
 				if typeof(ClaimDojoQuest) == "function" then
 					ClaimDojoQuest()
