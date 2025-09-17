@@ -601,6 +601,50 @@ ContentLayout.Padding = UDim.new(0, 8)
 ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ContentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
+-- Belt status display
+local BeltStatus = Instance.new("TextLabel")
+BeltStatus.Name = "BeltStatus"
+BeltStatus.Parent = ContentFrame
+BeltStatus.Size = UDim2.new(0, 220, 0, 24)
+BeltStatus.BackgroundTransparency = 0.15
+BeltStatus.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BeltStatus.Text = "Đai: Đang kiểm tra..."
+BeltStatus.Font = Enum.Font.Gotham
+BeltStatus.TextSize = 12
+BeltStatus.TextColor3 = Color3.fromRGB(255, 215, 0)
+BeltStatus.BorderSizePixel = 0
+BeltStatus.LayoutOrder = 0
+
+do
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = BeltStatus
+end
+
+local function updateBeltStatus()
+    local ok = false
+    pcall(function()
+        ok = checkInventory("Dojo Belt (Blue)")
+    end)
+    if ok then
+        BeltStatus.Text = "Đai: Dojo Belt (Blue) - CÓ"
+        BeltStatus.TextColor3 = Color3.fromRGB(40, 167, 69)
+        BeltStatus.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+    else
+        BeltStatus.Text = "Đai: Dojo Belt (Blue) - CHƯA CÓ"
+        BeltStatus.TextColor3 = Color3.fromRGB(220, 53, 69)
+        BeltStatus.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+    end
+end
+
+updateBeltStatus()
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(10)
+        updateBeltStatus()
+    end
+end)
+
 local currentTab = "dragon"
 local tabs = {}
 
