@@ -5,10 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
 
-if not game.Players.LocalPlayer.Team then 
-    game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates") 
-end
-repeat wait() until game.Players.LocalPlayer.Team
+
 
 
 getgenv().Main = getgenv().Main or {}
