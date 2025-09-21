@@ -4,15 +4,12 @@ local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
-
-
-
-
 getgenv().Main = getgenv().Main or {}
 Main.CurrentTween = nil
 Main.IsMoving = false
 
 getgenv().DracoNoClip = getgenv().DracoNoClip or false
+getgenv().FullyDai5Active = getgenv().FullyDai5Active or false
 local DracoNoClipConnection
 
 local function enableDracoNoClip()
@@ -54,9 +51,7 @@ local function disableDracoNoClip()
     end
 end
 
-
 enableDracoNoClip()
-
 
 local w = game.PlaceId
 local distbyp = (w == 2753915549 and 1500) or (w == 4442272183 and 3500) or (w == 7449423635 and 6000)
@@ -94,7 +89,6 @@ local TradeTables = {
     }
 }
 
-
 local function getPortal(pos)
     if not pos or not gQ then return nil end
     local closest, dist = nil, math.huge
@@ -125,6 +119,16 @@ local function checkInventory(name)
     return false
 end
 
+-- Hàm mới để đếm số lượng item
+function checkcountitem(x, xx)
+    for i, v in next, game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory") do
+        if v.Name == x and v.Count >= xx then
+            return true
+        end
+    end
+    return false
+end
+
 function request(aJ)
     local success = false
     for i = 1, 2 do
@@ -142,7 +146,6 @@ function request(aJ)
     end
     return success
 end
-
 
 function TP1(Pos)
     local char = lp.Character
@@ -218,7 +221,6 @@ function TP1(Pos)
     return true
 end
 
-
 local function craftItem(itemName)
     pcall(function()
         local args = {
@@ -236,7 +238,6 @@ local function craftItem(itemName)
     end)
 end
 
-
 function EquipFruit(fruitName)
     local tool = lp.Backpack:FindFirstChild(fruitName)
     if tool then
@@ -246,9 +247,7 @@ function EquipFruit(fruitName)
     return nil
 end
 
-
 local DroppedFruits = {}
-
 
 function DropFruit(fruitName)
     local fruit = EquipFruit(fruitName)
@@ -257,10 +256,8 @@ function DropFruit(fruitName)
         fruit.EatRemote:InvokeServer(unpack(args))
         print("Đã drop:", fruitName)
         
-
         task.wait(1)
         
-
         for _, v in pairs(workspace:GetChildren()) do
             if v:IsA("Tool") and v.Name == fruitName and v:FindFirstChild("Handle") then
                 local newName = fruitName .. "_DROPPED_" .. tick() 
@@ -275,7 +272,6 @@ function DropFruit(fruitName)
     end
 end
 
-
 function DropAllFruits()
     DroppedFruits = {} 
     for _,v in pairs(lp.Backpack:GetChildren()) do
@@ -285,7 +281,6 @@ function DropAllFruits()
         end
     end
 end
-
 
 function ClaimDojoQuest()
 	local found
@@ -326,12 +321,10 @@ function ClaimDojoQuest()
 	end
 end
 
-
 function GetPathFruit()
     for _, v in next, workspace:GetChildren() do
         if v:IsA("Tool") or v:IsA("Model") then
             if string.find(v.Name, "Fruit") then
-
                 if not DroppedFruits[v.Name] and not string.find(v.Name, "_DROPPED_") then
                     return v
                 end
@@ -341,47 +334,64 @@ function GetPathFruit()
     return nil
 end
 
-
+-- Cải tiến TweenFruit với giới hạn khoảng cách và loop
 function TweenFruit()
-    local fruit = GetPathFruit()
     local char = lp.Character or lp.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
-    if fruit and fruit:FindFirstChild("Handle") then
-        local handle = fruit.Handle
-		if (handle.Position - hrp.Position).Magnitude <= 5 then
-            pcall(function()
-                firetouchinterest(handle, hrp, 0)
-                firetouchinterest(handle, hrp, 1)
-            end)
-			task.wait(1)
-			pcall(function()
-				if typeof(ClaimDojoQuest) == "function" then
-					ClaimDojoQuest()
-				end
-			end)
-        else
-            TP1(handle.CFrame)
-            repeat task.wait() until (handle.Position - hrp.Position).Magnitude <= 5 or not fruit.Parent
-            pcall(function()
-                if handle.Parent then
-                    firetouchinterest(handle, hrp, 0)
-                    firetouchinterest(handle, hrp, 1)
+    
+    repeat
+        local fruit = GetPathFruit()
+        if fruit and fruit:FindFirstChild("Handle") then
+            local handle = fruit.Handle
+            local distance = (handle.Position - hrp.Position).Magnitude
+            
+            if distance <= 100 then
+                if distance <= 5 then
+                    pcall(function()
+                        firetouchinterest(handle, hrp, 0)
+                        firetouchinterest(handle, hrp, 1)
+                    end)
+                    task.wait(1)
+                    pcall(function()
+                        if typeof(ClaimDojoQuest) == "function" then
+                            ClaimDojoQuest()
+                        end
+                    end)
+                    break
+                else
+                    TP1(handle.CFrame)
+                    repeat task.wait() until (handle.Position - hrp.Position).Magnitude <= 5 or not fruit.Parent
+                    pcall(function()
+                        if handle.Parent then
+                            firetouchinterest(handle, hrp, 0)
+                            firetouchinterest(handle, hrp, 1)
+                        end
+                    end)
+                    
+                    pcall(function()
+                        if typeof(ClaimDojoQuest) == "function" then
+                            ClaimDojoQuest()
+                        end
+                    end)
+                    break
                 end
-            end)
-	
-			pcall(function()
-				if typeof(ClaimDojoQuest) == "function" then
-					ClaimDojoQuest()
-				end
-			end)
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tween Fruit",
+                    Text = "Fruit quá xa (" .. math.floor(distance) .. "m). Đang tìm fruit khác...",
+                    Duration = 2
+                })
+                task.wait(2)
+            end
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Tween Fruit",
+                Text = "Không tìm thấy fruit, đang đợi...",
+                Duration = 2
+            })
+            task.wait(5)
         end
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Tween Fruit",
-            Text = "Không tìm thấy fruit",
-            Duration = 3
-        })
-    end
+    until false
 end
 
 function randomfruit()
@@ -392,86 +402,80 @@ function randomfruit()
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
 end
 
-
-function FullyDai5()
-    StarterGui:SetCore("SendNotification", {
-        Title = "Fully Đai 5",
-        Text = "Bắt đầu quá trình Fully Đai 5...",
-        Duration = 3
-    })
-    
-
-    local found
-    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
-        if container then
-            for _, npc in ipairs(container:GetChildren()) do
-                if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
-                    found = npc
-                    break
+-- Cải tiến FullyDai5 với chế độ bật/tắt
+function FullyDai5Loop()
+    while getgenv().FullyDai5Active do
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Fully Đai 5",
+            Text = "Đang thực hiện chu kỳ Fully Đai 5...",
+            Duration = 3
+        })
+        
+        local found
+        for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+            if container then
+                for _, npc in ipairs(container:GetChildren()) do
+                    if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
+                        found = npc
+                        break
+                    end
                 end
             end
+            if found then break end
         end
-        if found then break end
-    end
 
-    if found and found:FindFirstChild("HumanoidRootPart") then
-        TP1(CFrame.new(found.HumanoidRootPart.Position))
-        local char = lp.Character or lp.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
-        
-        
-        pcall(function()
-            local args = {
-                [1] = {
-                    NPC = "Dojo Trainer",
-                    Command = "ClaimQuest"
+        if found and found:FindFirstChild("HumanoidRootPart") then
+            TP1(CFrame.new(found.HumanoidRootPart.Position))
+            local char = lp.Character or lp.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            repeat task.wait() until (hrp.Position - found.HumanoidRootPart.Position).Magnitude <= 5
+            
+            pcall(function()
+                local args = {
+                    [1] = {
+                        NPC = "Dojo Trainer",
+                        Command = "ClaimQuest"
+                    }
                 }
-            }
-            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
-        end)
+                rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
+            end)
+            
+            pcall(function()
+                if typeof(randomfruit) == "function" then
+                    randomfruit()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Auto Fully Đai 5",
+                        Text = "Đã mua random fruit, đợi 7 giây...",
+                        Duration = 3
+                    })
+                end
+            end)
+            
+            task.wait(7)
+            DropAllFruits()
+            
+            task.wait(2) 
+            TweenFruit()
+            
+            StarterGui:SetCore("SendNotification", {
+                Title = "Auto Fully Đai 5",
+                Text = "Hoàn thành 1 chu kỳ, đang tiếp tục...",
+                Duration = 3
+            })
+            
+            task.wait(5)
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Auto Fully Đai 5",
+                Text = "Không tìm thấy Dojo Trainer, thử lại sau 10 giây...",
+                Duration = 3
+            })
+            task.wait(10)
+        end
         
-
-        pcall(function()
-            if typeof(randomfruit) == "function" then
-                randomfruit()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Fully Đai 5",
-                    Text = "Đã mua random fruit, đợi 7 giây...",
-                    Duration = 3
-                })
-            end
-        end)
-        
-
-        task.wait(7)
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fully Đai 5",
-            Text = "Đang drop tất cả fruit...",
-            Duration = 3
-        })
-        DropAllFruits()
-        
-
-        task.wait(2) 
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fully Đai 5",
-            Text = "Đang tìm fruit khác trên map...",
-            Duration = 3
-        })
-        TweenFruit()
-        
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fully Đai 5",
-            Text = "Hoàn thành Fully Đai 5!",
-            Duration = 5
-        })
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Fully Đai 5",
-            Text = "Không tìm thấy Dojo Trainer",
-            Duration = 3
-        })
+        if not getgenv().FullyDai5Active then
+            break
+        end
     end
 end
 
@@ -524,13 +528,11 @@ function TeleportToChair(tableIndex, chairIndex)
     TP1(chairPos)
 end
 
+-- Tạo GUI
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local UICorner = Instance.new("UICorner")
-local UIListLayout = Instance.new("UIListLayout")
 local TitleLabel = Instance.new("TextLabel")
-
-
 local NoClipToggle = Instance.new("TextButton")
 
 local TabFrame = Instance.new("Frame")
@@ -543,8 +545,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BackgroundTransparency = 0.3 
-MainFrame.Position = UDim2.new(0.02, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 250, 0, 400)
+MainFrame.Position = UDim2.new(1, -280, 1, -450)
+MainFrame.Size = UDim2.new(0, 280, 0, 450)
 MainFrame.BorderSizePixel = 0
 
 UICorner.CornerRadius = UDim.new(0, 12)
@@ -555,10 +557,9 @@ TitleLabel.BackgroundTransparency = 1
 TitleLabel.Position = UDim2.new(0, 0, 0, 0)
 TitleLabel.Size = UDim2.new(0.7, 0, 0, 30)
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "All In One Draco"
+TitleLabel.Text = "All In One Draco V2"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
-
 
 NoClipToggle.Parent = MainFrame
 NoClipToggle.Position = UDim2.new(0.7, 0, 0, 0)
@@ -583,7 +584,7 @@ TabFrame.Size = UDim2.new(1, 0, 0, 40)
 TabLayout.Parent = TabFrame
 TabLayout.FillDirection = Enum.FillDirection.Horizontal
 TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabLayout.Padding = UDim.new(0, 5)
+TabLayout.Padding = UDim.new(0, 3)
 TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local ContentFrame = Instance.new("Frame")
@@ -594,68 +595,23 @@ ContentFrame.Size = UDim2.new(1, 0, 1, -70)
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.Parent = ContentFrame
-ContentLayout.Padding = UDim.new(0, 8)
+ContentLayout.Padding = UDim.new(0, 6)
 ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ContentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Belt status display
-local BeltStatus = Instance.new("TextLabel")
-BeltStatus.Name = "BeltStatus"
-BeltStatus.Parent = ContentFrame
-BeltStatus.Size = UDim2.new(0, 220, 0, 24)
-BeltStatus.BackgroundTransparency = 0.15
-BeltStatus.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-BeltStatus.Text = "Đai: Đang kiểm tra..."
-BeltStatus.Font = Enum.Font.Gotham
-BeltStatus.TextSize = 12
-BeltStatus.TextColor3 = Color3.fromRGB(255, 215, 0)
-BeltStatus.BorderSizePixel = 0
-BeltStatus.LayoutOrder = 0
-
-do
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = BeltStatus
-end
-
-local function updateBeltStatus()
-    local ok = false
-    pcall(function()
-        ok = checkInventory("Dojo Belt (Blue)")
-    end)
-    if ok then
-        BeltStatus.Text = "Đai: Dojo Belt (Blue) - CÓ"
-        BeltStatus.TextColor3 = Color3.fromRGB(40, 167, 69)
-        BeltStatus.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
-    else
-        BeltStatus.Text = "Đai: Dojo Belt (Blue) - CHƯA CÓ"
-        BeltStatus.TextColor3 = Color3.fromRGB(220, 53, 69)
-        BeltStatus.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
-    end
-end
-
-updateBeltStatus()
-task.spawn(function()
-    while ScreenGui.Parent do
-        task.wait(10)
-        updateBeltStatus()
-    end
-end)
-
 local currentTab = "dragon"
-local tabs = {}
 
 local function createTabButton(name, text)
     local button = Instance.new("TextButton")
     button.Name = name .. "Tab"
     button.Parent = TabFrame
-    button.Size = UDim2.new(0, 70, 0, 30)
+    button.Size = UDim2.new(0, 65, 0, 30)
     button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     button.BackgroundTransparency = 0.2 
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 12
+    button.TextSize = 11
     button.BorderSizePixel = 0
     
     local corner = Instance.new("UICorner")
@@ -668,13 +624,13 @@ end
 local function createFunctionButton(text, color)
     local button = Instance.new("TextButton")
     button.Parent = ContentFrame
-    button.Size = UDim2.new(0, 200, 0, 35)
+    button.Size = UDim2.new(0, 240, 0, 32)
     button.BackgroundColor3 = color
     button.BackgroundTransparency = 0.2 
     button.Font = Enum.Font.Gotham
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 12
+    button.TextSize = 11
     button.BorderSizePixel = 0
     
     local corner = Instance.new("UICorner")
@@ -684,22 +640,47 @@ local function createFunctionButton(text, color)
     return button
 end
 
+local function createStatusLabel(text, color)
+    local label = Instance.new("TextLabel")
+    label.Parent = ContentFrame
+    label.Size = UDim2.new(0, 240, 0, 22)
+    label.BackgroundColor3 = color
+    label.BackgroundTransparency = 0.15
+    label.Font = Enum.Font.Gotham
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 10
+    label.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = label
+    
+    return label
+end
+
+-- Tạo các tab
 local DragonTab = createTabButton("dragon", "Dragon")
 local CraftTab = createTabButton("craft", "Craft")
 local TradeTab = createTabButton("trade", "Trade")
+local CheckTab = createTabButton("check", "Check")
 
+-- Khởi tạo nội dung các tab
 local dragonContent = {}
 local craftContent = {}
 local tradeContent = {}
+local checkContent = {}
 
+-- Dragon tab content
 dragonContent[1] = createFunctionButton("To Dragon Wizard", Color3.fromRGB(70, 130, 180))
 dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 150, 70))
 
+-- Craft tab content
 craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
 craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
+craftContent[3] = createFunctionButton("Auto Fully Đai 5: OFF", Color3.fromRGB(255, 165, 0))
 
-craftContent[3] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
-
+-- Trade tab content
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
 tradeContent[2] = createFunctionButton("Bàn 1 - Ghế 2", Color3.fromRGB(70, 130, 180))
 tradeContent[3] = createFunctionButton("Bàn 2 - Ghế 1", Color3.fromRGB(100, 150, 70))
@@ -707,16 +688,77 @@ tradeContent[4] = createFunctionButton("Bàn 2 - Ghế 2", Color3.fromRGB(100, 1
 tradeContent[5] = createFunctionButton("Bàn 3 - Ghế 1", Color3.fromRGB(180, 70, 130))
 tradeContent[6] = createFunctionButton("Bàn 3 - Ghế 2", Color3.fromRGB(180, 70, 130))
 
+-- Check tab content - Danh sách các item cần check
+local itemsToCheck = {
+    "Dojo Belt (Blue)", "Dojo Belt (White)", "Dojo Belt (Yellow)",
+    "Dojo Belt (Orange)", "Dojo Belt (Green)", "Dojo Belt (Red)",
+    "Dojo Belt (Purple)", "Dojo Belt (Black)", "Dragon Egg"
+}
+
+-- Tạo status labels cho check tab
+for i, itemName in ipairs(itemsToCheck) do
+    if itemName == "Dragon Egg" then
+        checkContent[i] = createStatusLabel("Dragon Egg: Đang kiểm tra...", Color3.fromRGB(60, 60, 60))
+    else
+        checkContent[i] = createStatusLabel(itemName .. ": Đang kiểm tra...", Color3.fromRGB(60, 60, 60))
+    end
+end
+
+-- Hàm cập nhật trạng thái items
+local function updateItemStatus()
+    for i, itemName in ipairs(itemsToCheck) do
+        local label = checkContent[i]
+        if itemName == "Dragon Egg" then
+            local hasEnough = checkcountitem("Dragon Egg", 1)
+            local count = 0
+            pcall(function()
+                local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
+                if inv then
+                    for _, item in ipairs(inv) do
+                        if item.Name == "Dragon Egg" then
+                            count = item.Count or 0
+                            break
+                        end
+                    end
+                end
+            end)
+            
+            if count > 0 then
+                label.Text = "Dragon Egg: " .. count .. " cái"
+                label.TextColor3 = Color3.fromRGB(40, 167, 69)
+                label.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+            else
+                label.Text = "Dragon Egg: 0 cái"
+                label.TextColor3 = Color3.fromRGB(220, 53, 69)
+                label.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+            end
+        else
+            local hasItem = checkInventory(itemName)
+            if hasItem then
+                label.Text = itemName .. ": CÓ"
+                label.TextColor3 = Color3.fromRGB(40, 167, 69)
+                label.BackgroundColor3 = Color3.fromRGB(30, 60, 30)
+            else
+                label.Text = itemName .. ": CHƯA CÓ"
+                label.TextColor3 = Color3.fromRGB(220, 53, 69)
+                label.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+            end
+        end
+    end
+end
+
+-- Hàm chuyển đổi tab
 local function switchTab(tabName)
     currentTab = tabName
     
-    for _, content in ipairs({dragonContent, craftContent, tradeContent}) do
+    -- Ẩn tất cả nội dung
+    for _, content in ipairs({dragonContent, craftContent, tradeContent, checkContent}) do
         for _, button in ipairs(content) do
             button.Visible = false
         end
     end
     
-
+    -- Cập nhật màu tab
     DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     DragonTab.BackgroundTransparency = tabName == "dragon" and 0.1 or 0.3
     
@@ -726,6 +768,10 @@ local function switchTab(tabName)
     TradeTab.BackgroundColor3 = tabName == "trade" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
     TradeTab.BackgroundTransparency = tabName == "trade" and 0.1 or 0.3
     
+    CheckTab.BackgroundColor3 = tabName == "check" and Color3.fromRGB(70, 130, 180) or Color3.fromRGB(40, 40, 40)
+    CheckTab.BackgroundTransparency = tabName == "check" and 0.1 or 0.3
+    
+    -- Hiển thị nội dung tab được chọn
     if tabName == "dragon" then
         for _, button in ipairs(dragonContent) do
             button.Visible = true
@@ -738,16 +784,25 @@ local function switchTab(tabName)
         for _, button in ipairs(tradeContent) do
             button.Visible = true
         end
+    elseif tabName == "check" then
+        for _, label in ipairs(checkContent) do
+            label.Visible = true
+        end
+        updateItemStatus() -- Cập nhật ngay khi mở tab
     end
 end
 
+-- Kết nối sự kiện tab
 DragonTab.MouseButton1Click:Connect(function() switchTab("dragon") end)
 CraftTab.MouseButton1Click:Connect(function() switchTab("craft") end)
 TradeTab.MouseButton1Click:Connect(function() switchTab("trade") end)
+CheckTab.MouseButton1Click:Connect(function() switchTab("check") end)
 
+-- Kết nối sự kiện Dragon tab
 dragonContent[1].MouseButton1Click:Connect(function() GetDragonWizard() end)
 dragonContent[2].MouseButton1Click:Connect(function() BuyDraco() end)
 
+-- Kết nối sự kiện Craft tab
 craftContent[1].MouseButton1Click:Connect(function()
     if not checkInventory("Dragonheart") then
         craftItem("Dragonheart")
@@ -772,11 +827,31 @@ craftContent[2].MouseButton1Click:Connect(function()
     end
 end)
 
-
+-- Kết nối sự kiện Auto Fully Đai 5 (toggle)
 craftContent[3].MouseButton1Click:Connect(function()
-    FullyDai5()
+    getgenv().FullyDai5Active = not getgenv().FullyDai5Active
+    
+    if getgenv().FullyDai5Active then
+        craftContent[3].Text = "Auto Fully Đai 5: ON"
+        craftContent[3].BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Fully Đai 5",
+            Text = "Auto Fully Đai 5 đã được BẬT",
+            Duration = 3
+        })
+        task.spawn(FullyDai5Loop)
+    else
+        craftContent[3].Text = "Auto Fully Đai 5: OFF"
+        craftContent[3].BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Fully Đai 5",
+            Text = "Auto Fully Đai 5 đã được TẮT",
+            Duration = 3
+        })
+    end
 end)
 
+-- Kết nối sự kiện Trade tab
 tradeContent[1].MouseButton1Click:Connect(function() TeleportToChair(1, 1) end)
 tradeContent[2].MouseButton1Click:Connect(function() TeleportToChair(1, 2) end)
 tradeContent[3].MouseButton1Click:Connect(function() TeleportToChair(2, 1) end)
@@ -784,6 +859,7 @@ tradeContent[4].MouseButton1Click:Connect(function() TeleportToChair(2, 2) end)
 tradeContent[5].MouseButton1Click:Connect(function() TeleportToChair(3, 1) end)
 tradeContent[6].MouseButton1Click:Connect(function() TeleportToChair(3, 2) end)
 
+-- Thêm tính năng kéo thả GUI
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -819,6 +895,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- Phím tắt ẩn/hiện GUI
 local uiVisible = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftControl then
@@ -827,7 +904,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-
+-- Kết nối sự kiện NoClip Toggle
 NoClipToggle.MouseButton1Click:Connect(function()
     getgenv().DracoNoClip = not getgenv().DracoNoClip
     
@@ -851,12 +928,22 @@ NoClipToggle.MouseButton1Click:Connect(function()
     end
 end)
 
-
+-- Khởi tạo tab mặc định
 switchTab("dragon")
 
+-- Auto cập nhật Check tab mỗi 15 giây
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(15)
+        if currentTab == "check" then
+            updateItemStatus()
+        end
+    end
+end)
 
+-- Thông báo khởi động
 StarterGui:SetCore("SendNotification", {
-    Title = "Combined Tools",
-    Text = "Script đã tải thành công! Tính năng Fully Đai 5 đã được nâng cấp. Left Ctrl để ẩn/hiện",
+    Title = "All In One Draco V2",
+    Text = "Script đã tải thành công! Thêm tab Check Item và cải tiến Auto Fully Đai 5. Left Ctrl để ẩn/hiện",
     Duration = 5
 })
