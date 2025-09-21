@@ -944,6 +944,6 @@ end)
 -- Thông báo khởi động
 StarterGui:SetCore("SendNotification", {
     Title = "All In One Draco V2",
-    Text = "Script đã tải thành công! Thêm tab Check Item và cải tiến Auto Fully Đai 5. Left Ctrl để ẩn/hiện",
+    Text = "Script đã tải thành công!",
     Duration = 5
 })
