@@ -617,6 +617,48 @@ function meleesword()
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
 end
 
+function craftDragonItems()
+    local hasHeart = checkInventory("Dragonheart")
+    local hasStorm = checkInventory("Dragonstorm")
+    
+    if not hasHeart then
+        craftItem("Dragonheart")
+        task.wait(2)
+    end
+
+    if not hasStorm then
+        craftItem("Dragonstorm")
+        task.wait(2)
+    end
+    
+    if hasHeart and hasStorm then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Weapons Craft",
+            Text = "Bạn đã có cả Dragonheart và Dragonstorm!",
+            Duration = 3
+        })
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Weapons Craft",
+            Text = "Đã craft",
+            Duration = 3
+        })
+    end
+end
+
+function buySanguineArt()
+    local args = {
+        "BuySanguineArt"
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    
+    StarterGui:SetCore("SendNotification", {
+        Title = "Sanguine Art",
+        Text = "Đã mua Sanguine Art!",
+        Duration = 3
+    })
+end
+
 function TeleportToChair(tableIndex, chairIndex)
     local table = TradeTables[tableIndex]
     if not table then return end
@@ -801,10 +843,10 @@ dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 15
 dragonContent[3] = createFunctionButton("Stat Gun+Sword", Color3.fromRGB(255, 165, 0))
 dragonContent[4] = createFunctionButton("Stat Melee+Sword", Color3.fromRGB(220, 20, 147))
 
-craftContent[1] = createFunctionButton("Craft Dragonheart", Color3.fromRGB(220, 53, 69))
-craftContent[2] = createFunctionButton("Craft Dragonstorm", Color3.fromRGB(40, 167, 69))
+craftContent[1] = createFunctionButton("Craft Dragon Heart&Storm", Color3.fromRGB(138, 43, 226))
 
-craftContent[3] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
+craftContent[2] = createFunctionButton("Fully Đai 5", Color3.fromRGB(255, 165, 0))
+craftContent[3] = createFunctionButton("Buy Sanguine Art", Color3.fromRGB(128, 0, 128))
 
 tradeContent[1] = createFunctionButton("Bàn 1 - Ghế 1", Color3.fromRGB(70, 130, 180))
 tradeContent[2] = createFunctionButton("Bàn 1 - Ghế 2", Color3.fromRGB(70, 130, 180))
@@ -871,32 +913,16 @@ dragonContent[4].MouseButton1Click:Connect(function()
 end)
 
 craftContent[1].MouseButton1Click:Connect(function()
-    if not checkInventory("Dragonheart") then
-        craftItem("Dragonheart")
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Dragon Craft",
-            Text = "Bạn đã có Dragonheart rồi!",
-            Duration = 2
-        })
-    end
+    craftDragonItems()
 end)
+
 
 craftContent[2].MouseButton1Click:Connect(function()
-    if not checkInventory("Dragonstorm") then
-        craftItem("Dragonstorm")
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Dragon Craft", 
-            Text = "Bạn đã có Dragonstorm rồi!",
-            Duration = 2
-        })
-    end
+    FullyDai5()
 end)
 
-
 craftContent[3].MouseButton1Click:Connect(function()
-    FullyDai5()
+    buySanguineArt()
 end)
 
 tradeContent[1].MouseButton1Click:Connect(function() TeleportToChair(1, 1) end)
