@@ -116,7 +116,7 @@ end
 local function checkInventory(name)
     local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
     if inv then
-        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
+        for _, item in pairs(inv) do 
             if type(item) == "table" and item.Name == name then
                 return true
             end
@@ -126,8 +126,8 @@ local function checkInventory(name)
 end
 
 function checkcountitem(x, xx)
-    for i, v in next, game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory") do
-        if v.Name == x and v.Count >= xx then
+    for _, v in pairs(game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")) do 
+        if type(v) == "table" and v.Name == x and v.Count >= xx then
             return true
         end
     end
@@ -148,11 +148,10 @@ function getDojoBeltCount()
     
     local totalBelts = 0
     
-    -- Dùng pcall để tránh lỗi
     pcall(function()
         local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
         if inv then
-            for _, item in pairs(inv) do  -- Dùng pairs thay vì ipairs
+            for _, item in pairs(inv) do
                 if type(item) == "table" and item.Name then
                     for _, belt in ipairs(belts) do
                         if item.Name == belt then
@@ -168,16 +167,15 @@ function getDojoBeltCount()
     return totalBelts
 end
 
--- Hàm đếm Dragon Egg dựa trên checkcountitem
 function getDragonEggCount()
     local eggCount = 0
     
     pcall(function()
         local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
         if inv then
-            for _, item in pairs(inv) do  -- Dùng pairs thay vì ipairs
+            for _, item in pairs(inv) do
                 if type(item) == "table" and item.Name == "Dragon Egg" then
-                    eggCount = item.Count or 1
+                    eggCount = item.Count or 0
                     break
                 end
             end
@@ -975,15 +973,6 @@ local fullyDai5Corner = Instance.new("UICorner")
 fullyDai5Corner.CornerRadius = UDim.new(0, 8)
 fullyDai5Corner.Parent = FullyDai5Toggle
 
-local function updateCheckDisplay()
-    task.spawn(function()
-        local beltCount = getDojoBeltCount()
-        local eggCount = getDragonEggCount()
-        
-        DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
-        DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
-    end)
-end
 
 local DojoBeltDisplay = Instance.new("TextLabel")
 DojoBeltDisplay.Name = "DojoBeltDisplay"
@@ -1024,6 +1013,16 @@ do
     corner.Parent = DragonEggDisplay
 end
 
+
+local function updateCheckDisplay()
+    task.spawn(function()
+        local beltCount = getDojoBeltCount()
+        local eggCount = getDragonEggCount()
+        
+        DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
+        DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
+    end)
+end
 
 local DragonTab = createTabButton("dragon", "Dragon")
 local CraftTab = createTabButton("craft", "Craft")
