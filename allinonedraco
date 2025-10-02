@@ -150,11 +150,13 @@ function getDojoBeltCount()
     local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
     
     if inv then
-        for _, item in ipairs(inv) do
-            for _, belt in ipairs(belts) do
-                if item.Name == belt then
-                    totalBelts = totalBelts + (item.Count or 1)
-                    break
+        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
+            if type(item) == "table" and item.Name then  -- THÊM kiểm tra type
+                for _, belt in ipairs(belts) do
+                    if item.Name == belt then
+                        totalBelts = totalBelts + (item.Count or 1)
+                        break
+                    end
                 end
             end
         end
@@ -167,9 +169,11 @@ function getDragonEggCount()
     local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
     
     if inv then
-        for _, item in ipairs(inv) do
-            if item.Name == "Dragon Egg" then
-                return item.Count or 1
+        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
+            if type(item) == "table" and item.Name then  -- THÊM kiểm tra type
+                if item.Name == "Dragon Egg" then
+                    return item.Count or 1
+                end
             end
         end
     end
