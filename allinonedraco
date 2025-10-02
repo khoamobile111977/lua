@@ -816,15 +816,7 @@ function buySanguineArt()
     })
 end
 
-local function updateCheckDisplay()
-    task.spawn(function()
-        local beltCount = getDojoBeltCount()
-        local eggCount = getDragonEggCount()
-        
-        DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
-        DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
-    end)
-end
+
 
 function TeleportToChair(tableIndex, chairIndex)
     local table = TradeTables[tableIndex]
@@ -972,6 +964,16 @@ FullyDai5Toggle.LayoutOrder = 2
 local fullyDai5Corner = Instance.new("UICorner")
 fullyDai5Corner.CornerRadius = UDim.new(0, 8)
 fullyDai5Corner.Parent = FullyDai5Toggle
+
+local function updateCheckDisplay()
+    task.spawn(function()
+        local beltCount = getDojoBeltCount()
+        local eggCount = getDragonEggCount()
+        
+        DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
+        DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
+    end)
+end
 
 local DojoBeltDisplay = Instance.new("TextLabel")
 DojoBeltDisplay.Name = "DojoBeltDisplay"
