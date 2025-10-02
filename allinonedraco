@@ -116,8 +116,8 @@ end
 local function checkInventory(name)
     local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
     if inv then
-        for _, item in ipairs(inv) do
-            if item.Name == name then
+        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
+            if type(item) == "table" and item.Name == name then
                 return true
             end
         end
@@ -147,38 +147,44 @@ function getDojoBeltCount()
     }
     
     local totalBelts = 0
-    local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
     
-    if inv then
-        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
-            if type(item) == "table" and item.Name then  -- THÊM kiểm tra type
-                for _, belt in ipairs(belts) do
-                    if item.Name == belt then
-                        totalBelts = totalBelts + (item.Count or 1)
-                        break
+    -- Dùng pcall để tránh lỗi
+    pcall(function()
+        local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do  -- Dùng pairs thay vì ipairs
+                if type(item) == "table" and item.Name then
+                    for _, belt in ipairs(belts) do
+                        if item.Name == belt then
+                            totalBelts = totalBelts + (item.Count or 1)
+                            break
+                        end
                     end
                 end
             end
         end
-    end
+    end)
     
     return totalBelts
 end
 
+-- Hàm đếm Dragon Egg dựa trên checkcountitem
 function getDragonEggCount()
-    local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+    local eggCount = 0
     
-    if inv then
-        for _, item in pairs(inv) do  -- ĐỔI ipairs THÀNH pairs
-            if type(item) == "table" and item.Name then  -- THÊM kiểm tra type
-                if item.Name == "Dragon Egg" then
-                    return item.Count or 1
+    pcall(function()
+        local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do  -- Dùng pairs thay vì ipairs
+                if type(item) == "table" and item.Name == "Dragon Egg" then
+                    eggCount = item.Count or 1
+                    break
                 end
             end
         end
-    end
+    end)
     
-    return 0
+    return eggCount
 end
 
 function request(aJ)
