@@ -1,0 +1,79 @@
+-- Script Luau để hiển thị tên account ở góc trên bên trái
+-- Đặt script này vào StarterGui hoặc StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Tạo ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AccountNameDisplay"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Tạo Frame chứa tên
+local frame = Instance.new("Frame")
+frame.Name = "AccountFrame"
+frame.Size = UDim2.new(0, 250, 0, 80)
+frame.Position = UDim2.new(0, 20, 0, 20)
+frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+frame.BackgroundTransparency = 0.1
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+-- Thêm bo góc
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.Parent = frame
+
+-- Thêm đổ bóng
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Color = Color3.fromRGB(200, 200, 200)
+uiStroke.Thickness = 2
+uiStroke.Transparency = 0.5
+uiStroke.Parent = frame
+
+-- Tạo TextLabel cho nhãn "Account"
+local labelText = Instance.new("TextLabel")
+labelText.Name = "Label"
+labelText.Size = UDim2.new(1, -20, 0, 25)
+labelText.Position = UDim2.new(0, 10, 0, 10)
+labelText.BackgroundTransparency = 1
+labelText.Text = "Account:"
+labelText.TextColor3 = Color3.fromRGB(100, 100, 100)
+labelText.Font = Enum.Font.GothamBold
+labelText.TextSize = 16
+labelText.TextXAlignment = Enum.TextXAlignment.Left
+labelText.Parent = frame
+
+-- Tạo TextLabel cho tên người chơi
+local nameText = Instance.new("TextLabel")
+nameText.Name = "PlayerName"
+nameText.Size = UDim2.new(1, -20, 0, 35)
+nameText.Position = UDim2.new(0, 10, 0, 35)
+nameText.BackgroundTransparency = 1
+nameText.Text = player.Name
+nameText.TextColor3 = Color3.fromRGB(102, 126, 234)
+nameText.Font = Enum.Font.GothamBold
+nameText.TextSize = 28
+nameText.TextXAlignment = Enum.TextXAlignment.Left
+nameText.TextScaled = false
+nameText.Parent = frame
+
+-- Thêm hiệu ứng fade in
+frame.BackgroundTransparency = 1
+nameText.TextTransparency = 1
+labelText.TextTransparency = 1
+
+local TweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local frameTween = TweenService:Create(frame, tweenInfo, {BackgroundTransparency = 0.1})
+local nameTween = TweenService:Create(nameText, tweenInfo, {TextTransparency = 0})
+local labelTween = TweenService:Create(labelText, tweenInfo, {TextTransparency = 0})
+
+frameTween:Play()
+nameTween:Play()
+labelTween:Play()
+
+print("Đã hiển thị tên account: " .. player.Name)
