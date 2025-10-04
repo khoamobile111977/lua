@@ -3,9 +3,12 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AccountNameDisplay"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 999999 -- Đặt cao nhất để luôn ở trên cùng
 screenGui.Parent = playerGui
 
 local frame = Instance.new("Frame")
@@ -15,6 +18,7 @@ frame.Position = UDim2.new(0, 20, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
+frame.ZIndex = 10000 -- ZIndex cao để luôn ở trên
 frame.Parent = screenGui
 
 
@@ -40,6 +44,7 @@ labelText.TextColor3 = Color3.fromRGB(100, 100, 100)
 labelText.Font = Enum.Font.GothamBold
 labelText.TextSize = 16
 labelText.TextXAlignment = Enum.TextXAlignment.Left
+labelText.ZIndex = 10001
 labelText.Parent = frame
 
 local nameText = Instance.new("TextLabel")
@@ -53,7 +58,9 @@ nameText.Font = Enum.Font.GothamBold
 nameText.TextSize = 28
 nameText.TextXAlignment = Enum.TextXAlignment.Left
 nameText.TextScaled = false
+nameText.ZIndex = 10001
 nameText.Parent = frame
+
 
 frame.BackgroundTransparency = 1
 nameText.TextTransparency = 1
@@ -69,3 +76,4 @@ local labelTween = TweenService:Create(labelText, tweenInfo, {TextTransparency =
 frameTween:Play()
 nameTween:Play()
 labelTween:Play()
+
