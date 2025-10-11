@@ -311,22 +311,14 @@ end
 
 function LoadWeaponToBackpack(weaponName)
     pcall(function()
-        if not (lp.Character:FindFirstChild(weaponName) or lp.Backpack:FindFirstChild(weaponName)) then
-            rs.Remotes.CommF_:InvokeServer("LoadItem", weaponName)
-            task.wait(1)
-            
-            StarterGui:SetCore("SendNotification", {
-                Title = "Load Weapon",
-                Text = "Đã load " .. weaponName .. " vào backpack",
-                Duration = 2
-            })
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "Load Weapon",
-                Text = weaponName .. " đã có sẵn",
-                Duration = 2
-            })
-        end
+        rs.Remotes.CommF_:InvokeServer("LoadItem", weaponName)
+        task.wait(1)
+        
+        StarterGui:SetCore("SendNotification", {
+            Title = "Load Weapon",
+            Text = "Đã load " .. weaponName .. " vào backpack",
+            Duration = 2
+        })
     end)
 end
 
@@ -813,14 +805,14 @@ function craftDragonItems()
     if not hasHeart then
         craftItem("Dragonheart")
         task.wait(3)
-        LoadWeaponToBackpack("Dragonheart")  
+        LoadWeaponToBackpack("Dragonheart")  -- ← Load luôn sau craft
         task.wait(1)
     end
 
     if not hasStorm then
         craftItem("Dragonstorm")
         task.wait(3)
-        LoadWeaponToBackpack("Dragonstorm")  
+        LoadWeaponToBackpack("Dragonstorm")  -- ← Load luôn sau craft
         task.wait(1)
     end
     
@@ -830,10 +822,6 @@ function craftDragonItems()
             Text = "Bạn đã có cả Dragonheart và Dragonstorm!",
             Duration = 3
         })
-        -- Load cả 2 nếu đã có sẵn
-        LoadWeaponToBackpack("Dragonheart")  
-        task.wait(0.5)
-        LoadWeaponToBackpack("Dragonstorm")  
     else
         StarterGui:SetCore("SendNotification", {
             Title = "Weapons Craft",
