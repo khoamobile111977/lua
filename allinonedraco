@@ -309,6 +309,27 @@ function EquipFruit(fruitName)
 end
 
 
+function LoadWeaponToBackpack(weaponName)
+    pcall(function()
+        if not (lp.Character:FindFirstChild(weaponName) or lp.Backpack:FindFirstChild(weaponName)) then
+            rs.Remotes.CommF_:InvokeServer("LoadItem", weaponName)
+            task.wait(1)
+            
+            StarterGui:SetCore("SendNotification", {
+                Title = "Load Weapon",
+                Text = "Đã load " .. weaponName .. " vào backpack",
+                Duration = 2
+            })
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Load Weapon",
+                Text = weaponName .. " đã có sẵn",
+                Duration = 2
+            })
+        end
+    end)
+end
+
 local DroppedFruits = {}
 
 function DropFruit(fruitName)
@@ -357,7 +378,7 @@ function DropAllFruits()
     
     -- Tạo vị trí ngẫu nhiên xa ít nhất 10m (từ 10-30m)
     local randomAngle = math.random() * 2 * math.pi
-    local randomDistance = math.random(150, 300) -- Khoảng cách từ 10-30m
+    local randomDistance = math.random(100, 200) -- Khoảng cách từ 10-30m
     local randomOffset = Vector3.new(
         math.cos(randomAngle) * randomDistance,
         0,
@@ -470,8 +491,14 @@ function TweenFruit()
             local handle = fruit.Handle
             local distance = (handle.Position - hrp.Position).Magnitude
             
-            -- Chỉ tween đến fruit không quá 500m
-            if distance <= 1000 then
+            if DroppedFruits[fruit.Name] then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tween Fruit",
+                    Text = "Bỏ qua fruit vừa drop: " .. fruit.Name,
+                    Duration = 2
+                })
+                task.wait(3)
+            elseif distance <= 1000 then
                 StarterGui:SetCore("SendNotification", {
                     Title = "Tween Fruit",
                     Text = "Đã tìm thấy fruit: " .. fruit.Name .. " (khoảng cách: " .. math.floor(distance) .. "m)",
@@ -495,7 +522,7 @@ function TweenFruit()
                         Text = "Đã nhặt được fruit!",
                         Duration = 3
                     })
-                    return true -- Thành công
+                    return true
                 else
                     TP1(handle.CFrame)
                     repeat 
@@ -524,18 +551,17 @@ function TweenFruit()
                         Text = "Đã nhặt được fruit!",
                         Duration = 3
                     })
-                    return true -- Thành công
+                    return true
                 end
             else
                 StarterGui:SetCore("SendNotification", {
                     Title = "Tween Fruit",
-                    Text = "Fruit quá xa (" .. math.floor(distance) .. "m > 500m), bỏ qua...",
+                    Text = "Fruit quá xa (" .. math.floor(distance) .. "m > 1000m), bỏ qua...",
                     Duration = 3
                 })
                 task.wait(3)
             end
         else
-            -- Không tìm thấy fruit, thử lại sau 3 giây
             StarterGui:SetCore("SendNotification", {
                 Title = "Tween Fruit",
                 Text = "Không tìm thấy fruit, đợi 3s và thử lại...",
@@ -544,7 +570,7 @@ function TweenFruit()
             task.wait(3)
         end
     end
-    return false -- Dừng do toggle OFF
+    return false
 end
 
 function randomfruit()
@@ -564,7 +590,6 @@ function FullyDai5Loop()
             Duration = 3
         })
         
-        -- Tìm Dojo Trainer
         local found
         for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
             if container then
@@ -586,7 +611,6 @@ function FullyDai5Loop()
             
             if not getgenv().FullyDai5Running then break end
             
-            -- Claim quest
             pcall(function()
                 local args = {
                     [1] = {
@@ -597,23 +621,22 @@ function FullyDai5Loop()
                 rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
             end)
             
-            -- Mua random fruit
             pcall(function()
                 if typeof(randomfruit) == "function" then
                     randomfruit()
                     StarterGui:SetCore("SendNotification", {
                         Title = "Fully Đai 5",
-                        Text = "Đã mua random fruit, đợi 7 giây...",
+                        Text = "Đã mua random fruit, đợi 10 giây...",
                         Duration = 3
                     })
                 end
             end)
             
-            task.wait(7)
+            task.wait(10)
             
             if not getgenv().FullyDai5Running then break end
             
-            -- Drop all fruits
+
             StarterGui:SetCore("SendNotification", {
                 Title = "Fully Đai 5",
                 Text = "Đang drop tất cả fruit...",
@@ -625,7 +648,6 @@ function FullyDai5Loop()
             
             if not getgenv().FullyDai5Running then break end
             
-            -- Tìm fruit khác trên map với lặp vô hạn
             StarterGui:SetCore("SendNotification", {
                 Title = "Fully Đai 5",
                 Text = "Đang tìm fruit khác trên map...",
@@ -790,12 +812,16 @@ function craftDragonItems()
     
     if not hasHeart then
         craftItem("Dragonheart")
-        task.wait(2)
+        task.wait(3)
+        LoadWeaponToBackpack("Dragonheart")  
+        task.wait(1)
     end
 
     if not hasStorm then
         craftItem("Dragonstorm")
-        task.wait(2)
+        task.wait(3)
+        LoadWeaponToBackpack("Dragonstorm")  
+        task.wait(1)
     end
     
     if hasHeart and hasStorm then
@@ -804,10 +830,14 @@ function craftDragonItems()
             Text = "Bạn đã có cả Dragonheart và Dragonstorm!",
             Duration = 3
         })
+        -- Load cả 2 nếu đã có sẵn
+        LoadWeaponToBackpack("Dragonheart")  
+        task.wait(0.5)
+        LoadWeaponToBackpack("Dragonstorm")  
     else
         StarterGui:SetCore("SendNotification", {
             Title = "Weapons Craft",
-            Text = "Đã craft",
+            Text = "Đã craft và load vào backpack!",
             Duration = 3
         })
     end
