@@ -805,21 +805,23 @@ function craftDragonItems()
     if not hasHeart then
         craftItem("Dragonheart")
         task.wait(3)
-        LoadWeaponToBackpack("Dragonheart")  -- ← Load luôn sau craft
-        task.wait(1)
     end
+    
+    LoadWeaponToBackpack("Dragonheart")
+    task.wait(1)
 
     if not hasStorm then
         craftItem("Dragonstorm")
         task.wait(3)
-        LoadWeaponToBackpack("Dragonstorm")  -- ← Load luôn sau craft
-        task.wait(1)
     end
+    
+    LoadWeaponToBackpack("Dragonstorm")
+    task.wait(1)
     
     if hasHeart and hasStorm then
         StarterGui:SetCore("SendNotification", {
             Title = "Weapons Craft",
-            Text = "Bạn đã có cả Dragonheart và Dragonstorm!",
+            Text = "Đã load Dragonheart & Dragonstorm vào backpack!",
             Duration = 3
         })
     else
