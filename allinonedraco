@@ -187,6 +187,42 @@ function getDragonEggCount()
     return eggCount
 end
 
+function getDragonScaleCount()
+    local scaleCount = 0
+    
+    pcall(function()
+        local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do
+                if type(item) == "table" and item.Name == "Dragon Scale" then
+                    scaleCount = item.Count or 0
+                    break
+                end
+            end
+        end
+    end)
+    
+    return scaleCount
+end
+
+function getBlazeEmberCount()
+    local emberCount = 0
+    
+    pcall(function()
+        local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do
+                if type(item) == "table" and item.Name == "Blaze Ember" then
+                    emberCount = item.Count or 0
+                    break
+                end
+            end
+        end
+    end)
+    
+    return emberCount
+end 
+
 function request(aJ)
     local success = false
     for i = 1, 2 do
@@ -1035,14 +1071,55 @@ do
     corner.Parent = DragonEggDisplay
 end
 
+local DragonScaleDisplay = Instance.new("TextLabel")
+DragonScaleDisplay.Name = "DragonScaleDisplay"
+DragonScaleDisplay.Parent = ContentFrame
+DragonScaleDisplay.Size = UDim2.new(0, 220, 0, 30)
+DragonScaleDisplay.BackgroundTransparency = 0.15
+DragonScaleDisplay.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+DragonScaleDisplay.Text = "Dragon Scale: 0"
+DragonScaleDisplay.Font = Enum.Font.Gotham
+DragonScaleDisplay.TextSize = 14
+DragonScaleDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+DragonScaleDisplay.BorderSizePixel = 0
+DragonScaleDisplay.LayoutOrder = 3
+
+do
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = DragonScaleDisplay
+end
+
+local BlazeEmberDisplay = Instance.new("TextLabel")
+BlazeEmberDisplay.Name = "BlazeEmberDisplay"
+BlazeEmberDisplay.Parent = ContentFrame
+BlazeEmberDisplay.Size = UDim2.new(0, 220, 0, 30)
+BlazeEmberDisplay.BackgroundTransparency = 0.15
+BlazeEmberDisplay.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
+BlazeEmberDisplay.Text = "Blaze Ember: 0"
+BlazeEmberDisplay.Font = Enum.Font.Gotham
+BlazeEmberDisplay.TextSize = 14
+BlazeEmberDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+BlazeEmberDisplay.BorderSizePixel = 0
+BlazeEmberDisplay.LayoutOrder = 4
+
+do
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = BlazeEmberDisplay
+end
 
 local function updateCheckDisplay()
     task.spawn(function()
         local beltCount = getDojoBeltCount()
         local eggCount = getDragonEggCount()
+        local scaleCount = getDragonScaleCount()
+        local emberCount = getBlazeEmberCount()
         
         DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
         DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
+        DragonScaleDisplay.Text = "Dragon Scale: " .. scaleCount
+        BlazeEmberDisplay.Text = "Blaze Ember: " .. emberCount
     end)
 end
 
@@ -1058,6 +1135,8 @@ local checkContent = {}
 
 checkContent[1] = DojoBeltDisplay
 checkContent[2] = DragonEggDisplay
+checkContent[3] = DragonScaleDisplay
+checkContent[4] = BlazeEmberDisplay
 
 dragonContent[1] = createFunctionButton("Talk Dragon Wizard", Color3.fromRGB(70, 130, 180))
 dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 150, 70))
