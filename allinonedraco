@@ -406,14 +406,13 @@ function DropAllFruits()
     
     -- Tạo vị trí ngẫu nhiên xa ít nhất 10m (từ 10-30m)
     local randomAngle = math.random() * 2 * math.pi
-    local randomDistance = math.random(100, 200) -- Khoảng cách từ 10-30m
+    local randomDistance = math.random(50, 200) -- Khoảng cách từ 10-30m
     local randomOffset = Vector3.new(
         math.cos(randomAngle) * randomDistance,
         0,
         math.sin(randomAngle) * randomDistance
     )
     
-    -- SỬA LẠI: Tạo CFrame đúng cách
     local newPosition = fixedPosition.Position + randomOffset
     local randomPosition = CFrame.new(newPosition.X, newPosition.Y, newPosition.Z)
     
@@ -424,13 +423,13 @@ function DropAllFruits()
     })
     
     print("Fixed Position:", fixedPosition.Position)
-    print("Random Position:", randomPosition.Position) -- Thêm debug print
+    print("Random Position:", randomPosition.Position)
     print("Distance between positions:", (randomPosition.Position - fixedPosition.Position).Magnitude)
     
     TP1(randomPosition)
     repeat task.wait() until (hrp.Position - randomPosition.Position).Magnitude <= 5
     
-    task.wait(1)
+    task.wait(3)
     
     StarterGui:SetCore("SendNotification", {
         Title = "Drop All Fruits",
@@ -533,54 +532,29 @@ function TweenFruit()
                     Duration = 3
                 })
                 
-                if distance <= 50 then
-                    pcall(function()
-                        firetouchinterest(handle, hrp, 0)
-                        firetouchinterest(handle, hrp, 1)
-                    end)
-
-                    pcall(function()
-                        if typeof(ClaimDojoQuest) == "function" then
-                            ClaimDojoQuest()
-                        end
-                    end)
-                    
-                    StarterGui:SetCore("SendNotification", {
-                        Title = "Tween Fruit",
-                        Text = "Đã nhặt được fruit!",
-                        Duration = 3
-                    })
-                    return true
-                else
-                    TP1(handle.CFrame)
-                    repeat 
-                        task.wait(0.5) 
-                    until (handle.Position - hrp.Position).Magnitude <= 50 or not fruit.Parent or not getgenv().FullyDai5Running
-                    
-                    if not getgenv().FullyDai5Running then
-                        return false
-                    end
-                    
-                    pcall(function()
-                        if handle.Parent then
-                            firetouchinterest(handle, hrp, 0)
-                            firetouchinterest(handle, hrp, 1)
-                        end
-                    end)
-            
-                    pcall(function()
-                        if typeof(ClaimDojoQuest) == "function" then
-                            ClaimDojoQuest()
-                        end
-                    end)
-                    
-                    StarterGui:SetCore("SendNotification", {
-                        Title = "Tween Fruit",
-                        Text = "Đã nhặt được fruit!",
-                        Duration = 3
-                    })
-                    return true
+                TP1(handle.CFrame)
+                repeat 
+                    task.wait(0.5) 
+                until (handle.Position - hrp.Position).Magnitude <= 50 or not fruit.Parent or not getgenv().FullyDai5Running
+                
+                if not getgenv().FullyDai5Running then
+                    return false
                 end
+                
+                task.wait(5)
+        
+                pcall(function()
+                    if typeof(ClaimDojoQuest) == "function" then
+                        ClaimDojoQuest()
+                    end
+                end)
+                
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tween Fruit",
+                    Text = "Đã nhặt được fruit!",
+                    Duration = 3
+                })
+                return true
             else
                 StarterGui:SetCore("SendNotification", {
                     Title = "Tween Fruit",
