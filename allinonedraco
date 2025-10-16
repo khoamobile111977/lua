@@ -404,9 +404,8 @@ function DropAllFruits()
     
     task.wait(1)
     
-    -- Tạo vị trí ngẫu nhiên xa ít nhất 10m (từ 10-30m)
-    local randomAngle = math.random() * 2 * math.pi
-    local randomDistance = math.random(50, 200) -- Khoảng cách từ 10-30m
+    local randomAngle = math.random() * 2 * math.pi -- tạo vị trí ngẫu nhiên
+    local randomDistance = math.random(50, 200) -- khoảng cách
     local randomOffset = Vector3.new(
         math.cos(randomAngle) * randomDistance,
         0,
@@ -507,6 +506,16 @@ function GetPathFruit()
     return nil
 end
 
+function GetPathFruitIncludeDropped()
+    for _, v in next, workspace:GetChildren() do
+        if v:IsA("Tool") or v:IsA("Model") then
+            if string.find(v.Name, "Fruit") then
+                return v
+            end
+        end
+    end
+    return nil
+end
 
 function TweenFruit()
     while getgenv().FullyDai5Running do
@@ -549,12 +558,39 @@ function TweenFruit()
                     end
                 end)
                 
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Tween Fruit",
-                    Text = "Đã nhặt được fruit!",
-                    Duration = 3
-                })
-                return true
+                task.wait(2)
+                
+                if checkInventory("Dojo Belt (Blue)") then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "Đã có Dojo Belt (Blue)! Drop fruit và tắt Fully Đai 5...",
+                        Duration = 5
+                    })
+                    
+                    DropAllFruits()
+                    task.wait(2)
+                    
+                    getgenv().FullyDai5Running = false
+                    
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "Đã hoàn thành! Tự động tắt.",
+                        Duration = 5
+                    })
+                    
+                    return true
+                else
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "Chưa có Dojo Belt (Blue), chuyển sang tìm tất cả fruit...",
+                        Duration = 3
+                    })
+                    
+                    DropAllFruits()
+                    task.wait(2)
+                    
+                    return "switch_mode"
+                end
             else
                 StarterGui:SetCore("SendNotification", {
                     Title = "Tween Fruit",
@@ -567,6 +603,92 @@ function TweenFruit()
             StarterGui:SetCore("SendNotification", {
                 Title = "Tween Fruit",
                 Text = "Không tìm thấy fruit, đợi 3s và thử lại...",
+                Duration = 3
+            })
+            task.wait(3)
+        end
+    end
+    return false
+end
+
+function TweenFruitIncludeDropped()
+    while getgenv().FullyDai5Running do
+        local fruit = GetPathFruitIncludeDropped() 
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        
+        if fruit and fruit:FindFirstChild("Handle") then
+            local handle = fruit.Handle
+            local distance = (handle.Position - hrp.Position).Magnitude
+            
+            if distance <= 1000 then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tween Fruit",
+                    Text = "Tìm thấy fruit: " .. fruit.Name .. " (khoảng cách: " .. math.floor(distance) .. "m)",
+                    Duration = 3
+                })
+                
+                TP1(handle.CFrame)
+                repeat 
+                    task.wait(0.5) 
+                until (handle.Position - hrp.Position).Magnitude <= 50 or not fruit.Parent or not getgenv().FullyDai5Running
+                
+                if not getgenv().FullyDai5Running then
+                    return false
+                end
+                
+                task.wait(5)
+        
+                pcall(function()
+                    if typeof(ClaimDojoQuest) == "function" then
+                        ClaimDojoQuest()
+                    end
+                end)
+                
+                task.wait(2)
+                
+                if checkInventory("Dojo Belt (Blue)") then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "đã có đai 5, Drop fruit và tắt Fully",
+                        Duration = 5
+                    })
+                    
+                    DropAllFruits()
+                    task.wait(2)
+                    
+                    getgenv().FullyDai5Running = false
+                    
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "Đã hoàn thành! Tự động tắt.",
+                        Duration = 5
+                    })
+                    
+                    return true
+                else
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Fully Đai 5",
+                        Text = "Chưa có Dojo Belt (Blue), drop fruit và tìm lại...",
+                        Duration = 3
+                    })
+                    
+                    DropAllFruits()
+                    task.wait(2)
+                    
+                end
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tween Fruit (Include Dropped)",
+                    Text = "Fruit quá xa (" .. math.floor(distance) .. "m > 1000m), bỏ qua...",
+                    Duration = 3
+                })
+                task.wait(3)
+            end
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "Tween Fruit",
+                Text = "Không tìm thấy fruit, đợi 3s và thử lại",
                 Duration = 3
             })
             task.wait(3)
@@ -637,7 +759,6 @@ function FullyDai5Loop()
             task.wait(10)
             
             if not getgenv().FullyDai5Running then break end
-            
 
             StarterGui:SetCore("SendNotification", {
                 Title = "Fully Đai 5",
@@ -652,11 +773,25 @@ function FullyDai5Loop()
             
             StarterGui:SetCore("SendNotification", {
                 Title = "Fully Đai 5",
-                Text = "Đang tìm fruit khác trên map...",
+                Text = "Đang tìm fruit mới trên map...",
                 Duration = 3
             })
             
-            TweenFruit() -- Sẽ lặp cho đến khi tìm thấy fruit hoặc toggle OFF
+            local result = TweenFruit()
+            
+            if result == "switch_mode" and getgenv().FullyDai5Running then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Fully Đai 5",
+                    Text = "Chuyển sang chế độ nhặt tất cả fruit...",
+                    Duration = 3
+                })
+                
+                TweenFruitIncludeDropped()
+            end
+            
+            if not getgenv().FullyDai5Running then
+                break
+            end
             
             if getgenv().FullyDai5Running then
                 StarterGui:SetCore("SendNotification", {
@@ -664,7 +799,7 @@ function FullyDai5Loop()
                     Text = "Hoàn thành 1 chu kỳ, bắt đầu chu kỳ mới...",
                     Duration = 3
                 })
-                task.wait(2) -- Nghỉ 2 giây trước chu kỳ mới
+                task.wait(2)
             end
         else
             StarterGui:SetCore("SendNotification", {
@@ -674,6 +809,11 @@ function FullyDai5Loop()
             })
             task.wait(5)
         end
+    end
+    
+    if craftContent[2] then
+        craftContent[2].Text = "Fully Đai 5: OFF"
+        craftContent[2].BackgroundColor3 = Color3.fromRGB(220, 53, 69)
     end
     
     StarterGui:SetCore("SendNotification", {
@@ -692,7 +832,6 @@ function ToggleFullyDai5()
             Text = "Đã BẬT Fully Đai 5!",
             Duration = 3
         })
-        -- Chạy trong coroutine để không block UI
         task.spawn(FullyDai5Loop)
     else
         StarterGui:SetCore("SendNotification", {
@@ -992,7 +1131,7 @@ end
 local FullyDai5Toggle = Instance.new("TextButton")
 FullyDai5Toggle.Parent = ContentFrame
 FullyDai5Toggle.Size = UDim2.new(0, 200, 0, 35)
-FullyDai5Toggle.BackgroundColor3 = Color3.fromRGB(220, 53, 69) -- Màu đỏ khi OFF
+FullyDai5Toggle.BackgroundColor3 = Color3.fromRGB(220, 53, 69) 
 FullyDai5Toggle.BackgroundTransparency = 0.2
 FullyDai5Toggle.Font = Enum.Font.Gotham
 FullyDai5Toggle.Text = "Fully Đai 5: OFF"
@@ -1204,13 +1343,12 @@ end)
 craftContent[2].MouseButton1Click:Connect(function()
     ToggleFullyDai5()
     
-    -- Cập nhật giao diện button
     if getgenv().FullyDai5Running then
         craftContent[2].Text = "Fully Đai 5: ON"
-        craftContent[2].BackgroundColor3 = Color3.fromRGB(40, 167, 69) -- Màu xanh khi ON
+        craftContent[2].BackgroundColor3 = Color3.fromRGB(40, 167, 69) 
     else
         craftContent[2].Text = "Fully Đai 5: OFF"
-        craftContent[2].BackgroundColor3 = Color3.fromRGB(220, 53, 69) -- Màu đỏ khi OFF
+        craftContent[2].BackgroundColor3 = Color3.fromRGB(220, 53, 69) 
     end
 end)
 
