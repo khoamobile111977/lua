@@ -223,6 +223,24 @@ function getBlazeEmberCount()
     return emberCount
 end 
 
+function getDinosaurBonesCount()
+    local bonesCount = 0
+    
+    pcall(function()
+        local inv = game.ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do
+                if type(item) == "table" and item.Name == "Dinosaur Bones" then
+                    bonesCount = item.Count or 0
+                    break
+                end
+            end
+        end
+    end)
+    
+    return bonesCount
+end
+
 function request(aJ)
     local success = false
     for i = 1, 2 do
@@ -1222,17 +1240,38 @@ do
     corner.Parent = BlazeEmberDisplay
 end
 
+local DinosaurBonesDisplay = Instance.new("TextLabel")
+DinosaurBonesDisplay.Name = "DinosaurBonesDisplay"
+DinosaurBonesDisplay.Parent = ContentFrame
+DinosaurBonesDisplay.Size = UDim2.new(0, 220, 0, 30)
+DinosaurBonesDisplay.BackgroundTransparency = 0.15
+DinosaurBonesDisplay.BackgroundColor3 = Color3.fromRGB(139, 69, 19)
+DinosaurBonesDisplay.Text = "Dinosaur Bones: 0"
+DinosaurBonesDisplay.Font = Enum.Font.Gotham
+DinosaurBonesDisplay.TextSize = 14
+DinosaurBonesDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+DinosaurBonesDisplay.BorderSizePixel = 0
+DinosaurBonesDisplay.LayoutOrder = 5
+
+do
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = DinosaurBonesDisplay
+end
+
 local function updateCheckDisplay()
     task.spawn(function()
         local beltCount = getDojoBeltCount()
         local eggCount = getDragonEggCount()
         local scaleCount = getDragonScaleCount()
         local emberCount = getBlazeEmberCount()
+        local bonesCount = getDinosaurBonesCount()
         
         DojoBeltDisplay.Text = "Dojo Belt: " .. beltCount
         DragonEggDisplay.Text = "Dragon Egg: " .. eggCount
         DragonScaleDisplay.Text = "Dragon Scale: " .. scaleCount
         BlazeEmberDisplay.Text = "Blaze Ember: " .. emberCount
+        DinosaurBonesDisplay.Text = "Dinosaur Bones: " .. bonesCount
     end)
 end
 
@@ -1250,6 +1289,7 @@ checkContent[1] = DojoBeltDisplay
 checkContent[2] = DragonEggDisplay
 checkContent[3] = DragonScaleDisplay
 checkContent[4] = BlazeEmberDisplay
+checkContent[5] = DinosaurBonesDisplay 
 
 dragonContent[1] = createFunctionButton("Talk Dragon Wizard", Color3.fromRGB(70, 130, 180))
 dragonContent[2] = createFunctionButton("Buy Draco Race", Color3.fromRGB(100, 150, 70))
