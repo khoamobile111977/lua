@@ -862,14 +862,53 @@ end
 
 
 function GetDragonWizard()
-    for _, f in ipairs({workspace.NPCs, rs.NPCs}) do
-        for _, n in ipairs(f:GetChildren()) do
-            if n.Name == "Dragon Wizard" and n:FindFirstChild("HumanoidRootPart") then
-                TP1(CFrame.new(n.HumanoidRootPart.Position))
+    local dojoTrainer
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == "Dojo Trainer" and npc:FindFirstChild("HumanoidRootPart") then
+                    dojoTrainer = npc
+                    break
+                end
+            end
+        end
+        if dojoTrainer then break end
+    end
+    
+    if dojoTrainer and dojoTrainer:FindFirstChild("HumanoidRootPart") then
+        TP1(CFrame.new(dojoTrainer.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - dojoTrainer.HumanoidRootPart.Position).Magnitude <= 5
+        
+        task.wait(2)
+        
+        local args = {
+            {
+                NPC = "Dojo Trainer",
+                Command = "ClaimQuest"
+            }
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
+        
+        task.wait(1)
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Dragon Wizard",
+            Text = "Không tìm thấy Dojo Trainer!",
+            Duration = 3
+        })
+    end
+    
+    for _, container in ipairs({workspace.NPCs, rs.NPCs}) do
+        for _, npc in ipairs(container:GetChildren()) do
+            if npc.Name == "Dragon Wizard" and npc:FindFirstChild("HumanoidRootPart") then
+                TP1(CFrame.new(npc.HumanoidRootPart.Position))
                 local char = lp.Character or lp.CharacterAdded:Wait()
                 local hrp = char:WaitForChild("HumanoidRootPart")
-                repeat task.wait() until (hrp.Position - n.HumanoidRootPart.Position).Magnitude <= 5
+                repeat task.wait() until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5
                 task.wait(0.1)
+                
                 local args = {
                     [1] = {
                         NPC = "Dragon Wizard",
@@ -877,10 +916,22 @@ function GetDragonWizard()
                     }
                 }
                 rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer(unpack(args))
+                
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Dragon Wizard",
+                    Text = "Đã claim quest và học Tether!",
+                    Duration = 3
+                })
                 return
             end
         end
     end
+    
+    StarterGui:SetCore("SendNotification", {
+        Title = "Dragon Wizard",
+        Text = "Không tìm thấy Dragon Wizard!",
+        Duration = 3
+    })
 end
 
 function BuyDraco()
