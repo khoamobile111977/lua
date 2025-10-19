@@ -957,7 +957,7 @@ function statgunsword()
 		"2"
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
@@ -965,7 +965,7 @@ function statgunsword()
 		9999999999
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
@@ -973,7 +973,7 @@ function statgunsword()
 		9999999999
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
@@ -990,7 +990,7 @@ function meleesword()
 		"2"
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	tast.wait(0.2)
 	
 	local args = {
 		"AddPoint",
@@ -998,7 +998,7 @@ function meleesword()
 		9999999999
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
@@ -1006,7 +1006,7 @@ function meleesword()
 		9999999999
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
