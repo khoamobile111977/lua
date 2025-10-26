@@ -990,7 +990,7 @@ function meleesword()
 		"2"
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-	tast.wait(0.2)
+	task.wait(0.2)
 	
 	local args = {
 		"AddPoint",
