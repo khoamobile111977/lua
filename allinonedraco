@@ -716,11 +716,46 @@ function TweenFruitIncludeDropped()
 end
 
 function randomfruit()
+	-- Tìm NPC Blox Fruit Gacha
+	local gachaNPC
+	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+		if container then
+			for _, npc in ipairs(container:GetChildren()) do
+				if npc.Name == "Blox Fruit Gacha" and npc:FindFirstChild("HumanoidRootPart") then
+					gachaNPC = npc
+					break
+				end
+			end
+		end
+		if gachaNPC then break end
+	end
+	
+	if gachaNPC and gachaNPC:FindFirstChild("HumanoidRootPart") then
+		StarterGui:SetCore("SendNotification", {
+			Title = "Random Fruit",
+			Text = "Đang tween đến Blox Fruit Gacha...",
+			Duration = 2
+		})
+		
+		TP1(CFrame.new(gachaNPC.HumanoidRootPart.Position))
+		local char = lp.Character or lp.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		repeat task.wait() until (hrp.Position - gachaNPC.HumanoidRootPart.Position).Magnitude <= 5
+		
+		task.wait(0.5)
+	end
+	
 	local args = {
 		"Cousin",
 		"Buy"
 	}
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+	
+	StarterGui:SetCore("SendNotification", {
+		Title = "Random Fruit",
+		Text = "Đã mua random fruit!",
+		Duration = 2
+	})
 end
 
 
@@ -951,6 +986,35 @@ function BuyDraco()
 end
 
 function statgunsword()
+	-- Tìm NPC Plokster
+	local ploksterNPC
+	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+		if container then
+			for _, npc in ipairs(container:GetChildren()) do
+				if npc.Name == "Plokster" and npc:FindFirstChild("HumanoidRootPart") then
+					ploksterNPC = npc
+					break
+				end
+			end
+		end
+		if ploksterNPC then break end
+	end
+	
+	if ploksterNPC and ploksterNPC:FindFirstChild("HumanoidRootPart") then
+		StarterGui:SetCore("SendNotification", {
+			Title = "Stat Reset",
+			Text = "Đang tween đến Plokster...",
+			Duration = 2
+		})
+		
+		TP1(CFrame.new(ploksterNPC.HumanoidRootPart.Position))
+		local char = lp.Character or lp.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		repeat task.wait() until (hrp.Position - ploksterNPC.HumanoidRootPart.Position).Magnitude <= 5
+		
+		task.wait(0.5)
+	end
+	
 	local args = {
 		"BlackbeardReward",
 		"Refund",
@@ -984,6 +1048,35 @@ function statgunsword()
 end
 
 function meleesword()
+	-- Tìm NPC Plokster
+	local ploksterNPC
+	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+		if container then
+			for _, npc in ipairs(container:GetChildren()) do
+				if npc.Name == "Plokster" and npc:FindFirstChild("HumanoidRootPart") then
+					ploksterNPC = npc
+					break
+				end
+			end
+		end
+		if ploksterNPC then break end
+	end
+	
+	if ploksterNPC and ploksterNPC:FindFirstChild("HumanoidRootPart") then
+		StarterGui:SetCore("SendNotification", {
+			Title = "Stat Reset",
+			Text = "Đang tween đến Plokster...",
+			Duration = 2
+		})
+		
+		TP1(CFrame.new(ploksterNPC.HumanoidRootPart.Position))
+		local char = lp.Character or lp.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		repeat task.wait() until (hrp.Position - ploksterNPC.HumanoidRootPart.Position).Magnitude <= 5
+		
+		task.wait(0.5)
+	end
+	
 	local args = {
 		"BlackbeardReward",
 		"Refund",
@@ -1017,6 +1110,35 @@ function meleesword()
 end
 
 function craftDragonItems()
+    -- Tìm NPC Dragon Hunter
+    local dragonHunterNPC
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == "Dragon Hunter" and npc:FindFirstChild("HumanoidRootPart") then
+                    dragonHunterNPC = npc
+                    break
+                end
+            end
+        end
+        if dragonHunterNPC then break end
+    end
+    
+    if dragonHunterNPC and dragonHunterNPC:FindFirstChild("HumanoidRootPart") then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Dragon Craft",
+            Text = "Đang tween đến Dragon Hunter...",
+            Duration = 2
+        })
+        
+        TP1(CFrame.new(dragonHunterNPC.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - dragonHunterNPC.HumanoidRootPart.Position).Magnitude <= 5
+        
+        task.wait(0.5)
+    end
+    
     local hasHeart = checkInventory("Dragonheart")
     local hasStorm = checkInventory("Dragonstorm")
     
@@ -1052,6 +1174,35 @@ function craftDragonItems()
 end
 
 function buySanguineArt()
+    -- Tìm NPC Shafi
+    local shafiNPC
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == "Shafi" and npc:FindFirstChild("HumanoidRootPart") then
+                    shafiNPC = npc
+                    break
+                end
+            end
+        end
+        if shafiNPC then break end
+    end
+    
+    if shafiNPC and shafiNPC:FindFirstChild("HumanoidRootPart") then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Sanguine Art",
+            Text = "Đang tween đến Shafi...",
+            Duration = 2
+        })
+        
+        TP1(CFrame.new(shafiNPC.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - shafiNPC.HumanoidRootPart.Position).Magnitude <= 5
+        
+        task.wait(0.5)
+    end
+    
     local args = {
         "BuySanguineArt"
     }
