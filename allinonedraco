@@ -716,7 +716,6 @@ function TweenFruitIncludeDropped()
 end
 
 function randomfruit()
-	-- Tìm NPC Blox Fruit Gacha
 	local gachaNPC
 	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
 		if container then
@@ -986,7 +985,6 @@ function BuyDraco()
 end
 
 function statgunsword()
-	-- Tìm NPC Plokster
 	local ploksterNPC
 	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
 		if container then
@@ -1048,7 +1046,6 @@ function statgunsword()
 end
 
 function meleesword()
-	-- Tìm NPC Plokster
 	local ploksterNPC
 	for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
 		if container then
@@ -1110,7 +1107,6 @@ function meleesword()
 end
 
 function craftDragonItems()
-    -- Tìm NPC Dragon Hunter
     local dragonHunterNPC
     for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
         if container then
@@ -1174,7 +1170,6 @@ function craftDragonItems()
 end
 
 function buySanguineArt()
-    -- Tìm NPC Shafi
     local shafiNPC
     for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
         if container then
