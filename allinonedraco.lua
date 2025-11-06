@@ -412,7 +412,6 @@ function TweenFruitIncludeDropped()
 end
 
 function randomfruit()
-    if tpToNPC("Blox Fruit Gacha") then task.wait(0.5) end
     rs.Remotes.CommF_:InvokeServer("Cousin", "Buy")
 end
 
