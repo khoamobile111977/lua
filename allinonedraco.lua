@@ -501,7 +501,6 @@ function meleesword()
 end
 
 function craftDragonItems()
-    if tpToNPC("Dragon Hunter") then task.wait(0.5) end
     
     local hasHeart = checkInventory("Dragonheart")
     local hasStorm = checkInventory("Dragonstorm")
@@ -518,7 +517,6 @@ function craftDragonItems()
 end
 
 function buySanguineArt()
-    if tpToNPC("Shafi") then task.wait(0.5) end
     rs.Remotes.CommF_:InvokeServer("BuySanguineArt")
     StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Sanguine Art!", Duration = 2})
 end
