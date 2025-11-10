@@ -527,13 +527,13 @@ function TeleportToChair(tableIndex, chairIndex)
     TP1(chairPos)
 end
 
--- UI MỚI - NHỎ GỌN VÀ ĐẸP MẮT
+-- UI CHUYÊN NGHIỆP - MINIMAL & CLEAN
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local UICorner = Instance.new("UICorner")
 local HeaderFrame = Instance.new("Frame")
 local TitleLabel = Instance.new("TextLabel")
-local MinimizeBtn = Instance.new("TextButton")
+local NoClipBtn = Instance.new("TextButton")
 local TabContainer = Instance.new("Frame")
 local ContentScroll = Instance.new("ScrollingFrame")
 
@@ -542,79 +542,97 @@ ScreenGui.Parent = lp:WaitForChild("PlayerGui")
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
--- Main Frame - Nhỏ gọn hơn
+-- Main Frame - Thiết kế tối giản
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(1, -230, 1, -320)
-MainFrame.Size = UDim2.new(0, 220, 0, 310)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 20)
+MainFrame.Position = UDim2.new(1, -215, 1, -300)
+MainFrame.Size = UDim2.new(0, 210, 0, 295)
 MainFrame.BorderSizePixel = 0
 
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
--- Header với gradient
+-- Shadow effect
+local Shadow = Instance.new("Frame")
+Shadow.Parent = MainFrame
+Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Shadow.BackgroundTransparency = 0.7
+Shadow.Position = UDim2.new(0, 2, 0, 2)
+Shadow.Size = UDim2.new(1, 0, 1, 0)
+Shadow.ZIndex = 0
+local ShadowCorner = Instance.new("UICorner")
+ShadowCorner.CornerRadius = UDim.new(0, 8)
+ShadowCorner.Parent = Shadow
+
+-- Header - Clean design
 HeaderFrame.Parent = MainFrame
-HeaderFrame.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
-HeaderFrame.Size = UDim2.new(1, 0, 0, 32)
+HeaderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+HeaderFrame.Size = UDim2.new(1, 0, 0, 36)
 HeaderFrame.BorderSizePixel = 0
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 10)
+HeaderCorner.CornerRadius = UDim.new(0, 8)
 HeaderCorner.Parent = HeaderFrame
 
-local HeaderGradient = Instance.new("UIGradient")
-HeaderGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(99, 102, 241)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 92, 246))
-}
-HeaderGradient.Rotation = 45
-HeaderGradient.Parent = HeaderFrame
+-- Accent line
+local AccentLine = Instance.new("Frame")
+AccentLine.Parent = HeaderFrame
+AccentLine.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+AccentLine.BorderSizePixel = 0
+AccentLine.Position = UDim2.new(0, 0, 1, -2)
+AccentLine.Size = UDim2.new(1, 0, 0, 2)
 
 TitleLabel.Parent = HeaderFrame
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+TitleLabel.Size = UDim2.new(0.6, 0, 1, 0)
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.Text = "🐉 Draco Tools"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 13
+TitleLabel.Text = "DRACO"
+TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+TitleLabel.TextSize = 12
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 
-MinimizeBtn.Parent = HeaderFrame
-MinimizeBtn.BackgroundTransparency = 1
-MinimizeBtn.Position = UDim2.new(1, -32, 0, 0)
-MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Text = "_"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.TextSize = 18
+-- NoClip toggle minimal
+NoClipBtn.Parent = HeaderFrame
+NoClipBtn.BackgroundColor3 = Color3.fromRGB(220, 38, 38)
+NoClipBtn.Position = UDim2.new(1, -55, 0, 8)
+NoClipBtn.Size = UDim2.new(0, 45, 0, 20)
+NoClipBtn.Font = Enum.Font.GothamMedium
+NoClipBtn.Text = "CLIP"
+NoClipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoClipBtn.TextSize = 8
+NoClipBtn.BorderSizePixel = 0
 
--- Tab Container - Compact
+local NoClipCorner = Instance.new("UICorner")
+NoClipCorner.CornerRadius = UDim.new(0, 4)
+NoClipCorner.Parent = NoClipBtn
+
+-- Tab Container
 TabContainer.Parent = MainFrame
 TabContainer.BackgroundTransparency = 1
-TabContainer.Position = UDim2.new(0, 0, 0, 36)
-TabContainer.Size = UDim2.new(1, 0, 0, 28)
+TabContainer.Position = UDim2.new(0, 8, 0, 42)
+TabContainer.Size = UDim2.new(1, -16, 0, 26)
 
 local TabLayout = Instance.new("UIListLayout")
 TabLayout.Parent = TabContainer
 TabLayout.FillDirection = Enum.FillDirection.Horizontal
-TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabLayout.Padding = UDim.new(0, 4)
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+TabLayout.Padding = UDim.new(0, 6)
 
--- Content với Scroll
+-- Content Scroll
 ContentScroll.Parent = MainFrame
 ContentScroll.BackgroundTransparency = 1
-ContentScroll.Position = UDim2.new(0, 5, 0, 68)
-ContentScroll.Size = UDim2.new(1, -10, 1, -73)
+ContentScroll.Position = UDim2.new(0, 8, 0, 74)
+ContentScroll.Size = UDim2.new(1, -16, 1, -80)
 ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentScroll.ScrollBarThickness = 4
+ContentScroll.ScrollBarThickness = 3
 ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(99, 102, 241)
+ContentScroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 65)
 
 local ContentLayout = Instance.new("UIListLayout")
 ContentLayout.Parent = ContentScroll
-ContentLayout.Padding = UDim.new(0, 6)
-ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ContentLayout.Padding = UDim.new(0, 5)
+ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 
 ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ContentScroll.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 5)
@@ -896,13 +914,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if uiVisible then
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "UI Hiển thị ✓", 
+                Text = "hienthi", 
                 Duration = 1
             })
         else
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "UI Ẩn ✓", 
+                Text = "hide ui", 
                 Duration = 1
             })
         end
