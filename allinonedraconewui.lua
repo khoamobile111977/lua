@@ -639,100 +639,92 @@ ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 local currentTab = "dragon"
-local isMinimized = false
 
--- Tạo Tab Button compact
-local function createTab(name, icon, order)
+-- Tạo Tab Button minimal
+local function createTab(name, text, order)
     local btn = Instance.new("TextButton")
     btn.Name = name .. "Tab"
     btn.Parent = TabContainer
-    btn.Size = UDim2.new(0, 48, 0, 24)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-    btn.Font = Enum.Font.GothamBold
-    btn.Text = icon
-    btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-    btn.TextSize = 11
+    btn.Size = UDim2.new(0, 42, 0, 22)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 33)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(140, 140, 145)
+    btn.TextSize = 9
     btn.BorderSizePixel = 0
     btn.LayoutOrder = order
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = btn
     
     return btn
 end
 
--- Tạo Button compact với icon
-local function createBtn(text, icon, color)
+-- Tạo Button minimal
+local function createBtn(text, color)
     local btn = Instance.new("TextButton")
     btn.Parent = ContentScroll
-    btn.Size = UDim2.new(0, 200, 0, 30)
+    btn.Size = UDim2.new(0, 194, 0, 28)
     btn.BackgroundColor3 = color
-    btn.Font = Enum.Font.Gotham
-    btn.Text = icon .. " " .. text
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 11
+    btn.TextSize = 10
     btn.BorderSizePixel = 0
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 5)
     corner.Parent = btn
     
     return btn
 end
 
--- Tạo Toggle Button
-local function createToggle(text, icon, color)
+-- Tạo Toggle minimal
+local function createToggle(text, color)
     local btn = Instance.new("TextButton")
     btn.Parent = ContentScroll
-    btn.Size = UDim2.new(0, 200, 0, 30)
+    btn.Size = UDim2.new(0, 194, 0, 28)
     btn.BackgroundColor3 = color
     btn.Font = Enum.Font.GothamBold
-    btn.Text = icon .. " " .. text
+    btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 11
+    btn.TextSize = 10
     btn.BorderSizePixel = 0
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 5)
     corner.Parent = btn
     
     return btn
 end
 
--- Tạo Info Label compact
+-- Tạo Info Label minimal
 local function createInfo(text, color, order)
     local lbl = Instance.new("TextLabel")
     lbl.Parent = ContentScroll
-    lbl.Size = UDim2.new(0, 200, 0, 24)
+    lbl.Size = UDim2.new(0, 194, 0, 22)
     lbl.BackgroundColor3 = color
-    lbl.BackgroundTransparency = 0.3
+    lbl.BackgroundTransparency = 0.4
     lbl.Text = text
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 10
-    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 9
+    lbl.TextColor3 = Color3.fromRGB(210, 210, 215)
     lbl.BorderSizePixel = 0
     lbl.LayoutOrder = order
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 5)
     corner.Parent = lbl
     
     return lbl
 end
 
 -- Tabs
-local DragonTab = createTab("dragon", "🐲", 1)
-local CraftTab = createTab("craft", "⚒️", 2)
-local TradeTab = createTab("trade", "💺", 3)
-local CheckTab = createTab("check", "📊", 4)
-
--- NoClip Toggle (góc trên phải)
-local NoClipToggle = createToggle("OFF", "👻", Color3.fromRGB(239, 68, 68))
-NoClipToggle.Parent = HeaderFrame
-NoClipToggle.Position = UDim2.new(1, -70, 0, 4)
-NoClipToggle.Size = UDim2.new(0, 60, 0, 24)
-NoClipToggle.TextSize = 9
+local DragonTab = createTab("dragon", "Dragon", 1)
+local CraftTab = createTab("craft", "Craft", 2)
+local TradeTab = createTab("trade", "Trade", 3)
+local CheckTab = createTab("check", "Info", 4)
 
 -- Content containers
 local dragonContent = {}
@@ -741,16 +733,16 @@ local tradeContent = {}
 local checkContent = {}
 
 -- Dragon Tab Content
-dragonContent[1] = createBtn("Dragon Wizard", "🧙", Color3.fromRGB(59, 130, 246))
-dragonContent[2] = createBtn("Buy Draco", "💎", Color3.fromRGB(16, 185, 129))
-dragonContent[3] = createBtn("Gun+Sword", "🔫", Color3.fromRGB(245, 158, 11))
-dragonContent[4] = createBtn("Melee+Sword", "⚔️", Color3.fromRGB(236, 72, 153))
+dragonContent[1] = createBtn("Dragon Wizard", Color3.fromRGB(59, 130, 246))
+dragonContent[2] = createBtn("Buy Draco Race", Color3.fromRGB(16, 185, 129))
+dragonContent[3] = createBtn("Reset Gun+Sword", Color3.fromRGB(245, 158, 11))
+dragonContent[4] = createBtn("Reset Melee+Sword", Color3.fromRGB(236, 72, 153))
 
 -- Craft Tab Content
-craftContent[1] = createBtn("Craft Weapons", "🔨", Color3.fromRGB(139, 92, 246))
-FullyDai5Toggle = createToggle("Đai 5: OFF", "🥋", Color3.fromRGB(239, 68, 68))
+craftContent[1] = createBtn("Craft Dragon Items", Color3.fromRGB(139, 92, 246))
+FullyDai5Toggle = createToggle("Fully Đai 5: OFF", Color3.fromRGB(220, 38, 38))
 craftContent[2] = FullyDai5Toggle
-craftContent[3] = createBtn("Sanguine Art", "🩸", Color3.fromRGB(168, 85, 247))
+craftContent[3] = createBtn("Buy Sanguine Art", Color3.fromRGB(168, 85, 247))
 
 -- Trade Tab Content
 local tradeColors = {
@@ -761,24 +753,24 @@ local tradeColors = {
 for i = 1, 3 do
     for j = 1, 2 do
         local idx = (i-1)*2 + j
-        tradeContent[idx] = createBtn("Bàn " .. i .. " G" .. j, "💺", tradeColors[i])
+        tradeContent[idx] = createBtn("Table " .. i .. " - Chair " .. j, tradeColors[i])
     end
 end
 
 -- Check Tab Content
-checkContent[1] = createInfo("🥋 Đai: 0", Color3.fromRGB(139, 92, 246), 1)
-checkContent[2] = createInfo("🥚 Egg: 0", Color3.fromRGB(245, 158, 11), 2)
-checkContent[3] = createInfo("⚖️ Scale: 0", Color3.fromRGB(16, 185, 129), 3)
-checkContent[4] = createInfo("🔥 Ember: 0", Color3.fromRGB(239, 68, 68), 4)
-checkContent[5] = createInfo("🦴 Bones: 0", Color3.fromRGB(120, 113, 108), 5)
+checkContent[1] = createInfo("Dojo Belt: 0", Color3.fromRGB(139, 92, 246), 1)
+checkContent[2] = createInfo("Dragon Egg: 0", Color3.fromRGB(245, 158, 11), 2)
+checkContent[3] = createInfo("Dragon Scale: 0", Color3.fromRGB(16, 185, 129), 3)
+checkContent[4] = createInfo("Blaze Ember: 0", Color3.fromRGB(220, 38, 38), 4)
+checkContent[5] = createInfo("Dinosaur Bones: 0", Color3.fromRGB(100, 100, 105), 5)
 
 local function updateCheckDisplay()
     task.spawn(function()
-        checkContent[1].Text = "🥋 Đai: " .. getDojoBeltCount()
-        checkContent[2].Text = "🥚 Egg: " .. getItemCount("Dragon Egg")
-        checkContent[3].Text = "⚖️ Scale: " .. getItemCount("Dragon Scale")
-        checkContent[4].Text = "🔥 Ember: " .. getItemCount("Blaze Ember")
-        checkContent[5].Text = "🦴 Bones: " .. getItemCount("Dinosaur Bones")
+        checkContent[1].Text = "Dojo Belt: " .. getDojoBeltCount()
+        checkContent[2].Text = "Dragon Egg: " .. getItemCount("Dragon Egg")
+        checkContent[3].Text = "Dragon Scale: " .. getItemCount("Dragon Scale")
+        checkContent[4].Text = "Blaze Ember: " .. getItemCount("Blaze Ember")
+        checkContent[5].Text = "Dinosaur Bones: " .. getItemCount("Dinosaur Bones")
     end)
 end
 
@@ -791,18 +783,18 @@ local function switchTab(tabName)
         end
     end
     
-    -- Update tab colors
-    DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(99, 102, 241) or Color3.fromRGB(35, 35, 40)
-    DragonTab.TextColor3 = tabName == "dragon" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    -- Update tab style
+    DragonTab.BackgroundColor3 = tabName == "dragon" and Color3.fromRGB(88, 101, 242) or Color3.fromRGB(30, 30, 33)
+    DragonTab.TextColor3 = tabName == "dragon" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     
-    CraftTab.BackgroundColor3 = tabName == "craft" and Color3.fromRGB(99, 102, 241) or Color3.fromRGB(35, 35, 40)
-    CraftTab.TextColor3 = tabName == "craft" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    CraftTab.BackgroundColor3 = tabName == "craft" and Color3.fromRGB(88, 101, 242) or Color3.fromRGB(30, 30, 33)
+    CraftTab.TextColor3 = tabName == "craft" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     
-    TradeTab.BackgroundColor3 = tabName == "trade" and Color3.fromRGB(99, 102, 241) or Color3.fromRGB(35, 35, 40)
-    TradeTab.TextColor3 = tabName == "trade" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    TradeTab.BackgroundColor3 = tabName == "trade" and Color3.fromRGB(88, 101, 242) or Color3.fromRGB(30, 30, 33)
+    TradeTab.TextColor3 = tabName == "trade" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     
-    CheckTab.BackgroundColor3 = tabName == "check" and Color3.fromRGB(99, 102, 241) or Color3.fromRGB(35, 35, 40)
-    CheckTab.TextColor3 = tabName == "check" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    CheckTab.BackgroundColor3 = tabName == "check" and Color3.fromRGB(88, 101, 242) or Color3.fromRGB(30, 30, 33)
+    CheckTab.TextColor3 = tabName == "check" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 145)
     
     if tabName == "dragon" then
         for _, item in ipairs(dragonContent) do item.Visible = true end
@@ -833,11 +825,11 @@ craftContent[1].MouseButton1Click:Connect(function() craftDragonItems() end)
 craftContent[2].MouseButton1Click:Connect(function()
     ToggleFullyDai5()
     if getgenv().FullyDai5Running then
-        craftContent[2].Text = "🥋 Đai 5: ON"
+        craftContent[2].Text = "Fully Đai 5: ON"
         craftContent[2].BackgroundColor3 = Color3.fromRGB(16, 185, 129)
     else
-        craftContent[2].Text = "🥋 Đai 5: OFF"
-        craftContent[2].BackgroundColor3 = Color3.fromRGB(239, 68, 68)
+        craftContent[2].Text = "Fully Đai 5: OFF"
+        craftContent[2].BackgroundColor3 = Color3.fromRGB(220, 38, 38)
     end
 end)
 craftContent[3].MouseButton1Click:Connect(function() buySanguineArt() end)
@@ -852,27 +844,15 @@ for i = 1, 6 do
 end
 
 -- NoClip Toggle
-NoClipToggle.MouseButton1Click:Connect(function()
+NoClipBtn.MouseButton1Click:Connect(function()
     getgenv().DracoNoClip = not getgenv().DracoNoClip
     if getgenv().DracoNoClip then
-        NoClipToggle.Text = "👻 ON"
-        NoClipToggle.BackgroundColor3 = Color3.fromRGB(16, 185, 129)
+        NoClipBtn.Text = "NOCLIP"
+        NoClipBtn.BackgroundColor3 = Color3.fromRGB(16, 185, 129)
     else
-        NoClipToggle.Text = "👻 OFF"
-        NoClipToggle.BackgroundColor3 = Color3.fromRGB(239, 68, 68)
+        NoClipBtn.Text = "CLIP"
+        NoClipBtn.BackgroundColor3 = Color3.fromRGB(220, 38, 38)
         disableDracoNoClip()
-    end
-end)
-
--- Minimize Function
-MinimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 32), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-        MinimizeBtn.Text = "+"
-    else
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 310), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-        MinimizeBtn.Text = "_"
     end
 end)
 
@@ -908,41 +888,44 @@ end)
 -- Toggle UI với phím ALT
 local uiVisible = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftAlt then
+    if input.KeyCode == Enum.KeyCode.LeftAlt and not gameProcessed then
         uiVisible = not uiVisible
-        ScreenGui.Enabled = uiVisible
+        MainFrame.Visible = uiVisible
+        
         if uiVisible then
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "hienthi", 
+                Text = "UI Hiển thị", 
                 Duration = 1
             })
         else
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "hide ui", 
+                Text = "UI Ẩn", 
                 Duration = 1
             })
         end
     end
 end)
 
--- Initialize
-switchTab("dragon")
+-- Initialize - Hiển thị tab Check đầu tiên
+switchTab("check")
+updateCheckDisplay()
 
--- Auto update check tab
+-- Auto update
 task.spawn(function()
     while ScreenGui.Parent do
         task.wait(10)
-        if currentTab == "check" and uiVisible then 
+        if currentTab == "check" and uiVisible and MainFrame.Visible then 
             updateCheckDisplay() 
         end
     end
 end)
 
--- Notification khi load
+-- Load notification
+task.wait(0.5)
 StarterGui:SetCore("SendNotification", {
-    Title = "🐉 Draco Tools Loaded", 
+    Title = "Draco Tools", 
     Text = "Nhấn ALT để ẩn/hiện UI", 
     Duration = 3
 })
