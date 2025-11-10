@@ -895,13 +895,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if uiVisible then
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "UI Hiển thị", 
+                Text = "hiện", 
                 Duration = 1
             })
         else
             StarterGui:SetCore("SendNotification", {
                 Title = "Draco Tools", 
-                Text = "UI Ẩn", 
+                Text = "ẩn", 
                 Duration = 1
             })
         end
@@ -929,3 +929,4 @@ StarterGui:SetCore("SendNotification", {
     Text = "Nhấn ALT để ẩn/hiện UI", 
     Duration = 3
 })
+
