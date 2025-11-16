@@ -516,8 +516,11 @@ function craftDragonItems()
 end
 
 function buySanguineArt()
-    rs.Remotes.CommF_:InvokeServer("BuySanguineArt")
-    StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Sanguine Art!", Duration = 2})
+    if tpToNPC("Shafi") then
+        task.wait(2)
+        rs.Remotes.CommF_:InvokeServer("BuySanguineArt")
+        StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Sanguine Art!", Duration = 2})
+    end
 end
 
 function TeleportToChair(tableIndex, chairIndex)
@@ -929,4 +932,5 @@ StarterGui:SetCore("SendNotification", {
     Text = "Nhấn ALT để ẩn/hiện UI", 
     Duration = 3
 })
+
 
