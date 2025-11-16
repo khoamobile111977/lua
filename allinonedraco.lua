@@ -521,6 +521,7 @@ function buySanguineArt()
         task.wait(2)
     rs.Remotes.CommF_:InvokeServer("BuySanguineArt")
     StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Sanguine Art!", Duration = 2})
+    end
 end
 
 function TeleportToChair(tableIndex, chairIndex)
