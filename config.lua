@@ -16,6 +16,7 @@ end
 local scriptString = nil
 local scriptType = nil
 
+-- Tìm script phù hợp với tên tài khoản
 for configName, accounts in pairs(getgenv().Config) do
     if type(accounts) == "table" then
         for _, accountName in ipairs(accounts) do
@@ -32,22 +33,26 @@ end
 if scriptString then
     print("Set up config: " .. scriptType)
     
+    -- XỬ LÝ: Tách script thành các phần
     local function processScript(script)
-        script = script:gsub("repeat%s+wait%(%)%s+until%s+game:IsLoaded%(%)%s+and%s+game%.Players%.LocalPlayer%s*", "")
+        -- Tìm và tách URL từ loadstring(game:HttpGet("..."))
         local url = script:match('loadstring%s*%(%s*game:HttpGet%s*%(%s*["\'](.-)["\']]%s*%)%s*%)%s*%(%s*%)')
         
         if url then
+            -- Xóa dòng loadstring khỏi script
             script = script:gsub('loadstring%s*%(%s*game:HttpGet%s*%([^%)]+%)%s*%)%s*%(%s*%)', "")
             
             return script, url
         else
+            -- Nếu không tìm thấy loadstring, trả về script gốc
             return script, nil
         end
     end
     
     local configPart, mainUrl = processScript(scriptString)
     
-    if configPart and configPart:match("%S") then 
+    -- Bước 1: Chạy phần config (set Key, Setting, etc.)
+    if configPart and configPart:match("%S") then -- Kiểm tra không phải chuỗi rỗng
         local success1, error1 = pcall(function()
             loadstring(configPart)()
         end)
@@ -63,6 +68,7 @@ if scriptString then
         end
     end
     
+    -- Bước 2: Chạy script chính từ URL
     if mainUrl then
         print("✓ Đang load script từ: " .. mainUrl)
         local success2, error2 = pcall(function()
@@ -76,6 +82,7 @@ if scriptString then
             warn(error2)
         end
     else
+        -- Nếu không có URL, chạy toàn bộ script
         local success, errorMsg = pcall(function()
             loadstring(scriptString)()
         end)
