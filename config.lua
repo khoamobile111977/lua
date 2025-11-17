@@ -33,62 +33,42 @@ end
 if scriptString then
     print("Set up config: " .. scriptType)
     
-    -- XỬ LÝ: Tách script thành các phần
-    local function processScript(script)
-        -- Tìm và tách URL từ loadstring(game:HttpGet("..."))
-        local url = script:match('loadstring%s*%(%s*game:HttpGet%s*%(%s*["\'](.-)["\']]%s*%)%s*%)%s*%(%s*%)')
-        
-        if url then
-            -- Xóa dòng loadstring khỏi script
-            script = script:gsub('loadstring%s*%(%s*game:HttpGet%s*%([^%)]+%)%s*%)%s*%(%s*%)', "")
-            
-            return script, url
-        else
-            -- Nếu không tìm thấy loadstring, trả về script gốc
-            return script, nil
-        end
+    -- QUAN TRỌNG: Tìm Key trong script và set TRƯỚC KHI chạy script
+    local keyMatch = scriptString:match('getgenv%(%%)%.Key%s*=%s*["\']([^"\']+)["\']')
+    if keyMatch then
+        getgenv().Key = keyMatch
+        print("✓ Key đã được set: " .. keyMatch)
     end
     
-    local configPart, mainUrl = processScript(scriptString)
+    -- QUAN TRỌNG: Tìm URL và CHẠY TRỰC TIẾP từ URL, bỏ qua script wrapper
+    local urlMatch = scriptString:match('game:HttpGet%s*%(%s*["\']([^"\']+)["\']')
     
-    -- Bước 1: Chạy phần config (set Key, Setting, etc.)
-    if configPart and configPart:match("%S") then -- Kiểm tra không phải chuỗi rỗng
-        local success1, error1 = pcall(function()
-            loadstring(configPart)()
+    if urlMatch then
+        -- Nếu tìm thấy URL, load trực tiếp từ URL
+        print("✓ Đang load script từ: " .. urlMatch)
+        
+        local success, errorMsg = pcall(function()
+            loadstring(game:HttpGet(urlMatch))()
         end)
         
-        if success1 then
-            print("✓ Config đã được load")
-            if getgenv().Key then
-                print("✓ Key: " .. getgenv().Key)
-            end
-        else
-            warn("⚠ Lỗi khi load config:")
-            warn(error1)
-        end
-    end
-    
-    -- Bước 2: Chạy script chính từ URL
-    if mainUrl then
-        print("✓ Đang load script từ: " .. mainUrl)
-        local success2, error2 = pcall(function()
-            loadstring(game:HttpGet(mainUrl))()
-        end)
-        
-        if success2 then
+        if success then
             print("✓ Script đã chạy thành công!")
         else
-            warn("⚠ Lỗi khi chạy script chính:")
-            warn(error2)
+            warn("⚠ Lỗi khi chạy script:")
+            warn(errorMsg)
         end
     else
-        -- Nếu không có URL, chạy toàn bộ script
+        -- Nếu không có URL (script đơn giản), chạy toàn bộ script
+        print("✓ Đang chạy script trực tiếp")
+        
         local success, errorMsg = pcall(function()
             loadstring(scriptString)()
         end)
         
-        if not success then
-            warn("Error execute script:")
+        if success then
+            print("✓ Script đã chạy thành công!")
+        else
+            warn("⚠ Lỗi khi chạy script:")
             warn(errorMsg)
         end
     end
