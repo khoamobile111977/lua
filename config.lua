@@ -35,18 +35,16 @@ if scriptString then
     
     -- KIỂM TRA NẾU LÀ BANANAHUB - CẦN XỬ LÝ ĐỘC BIỆT
     if scriptType == "bananahub" then
-        print("✓ Phát hiện BananaHub - Đang load settings từ file...")
+        print("✓ Phát hiện BananaHub - Đang setup environment...")
         
-        -- 1. SET KEY TRƯỚC
+        -- 1. SET KEY
         getgenv().Key = "261a29dc3b0a9a3f3a54ac0c"
-        _G.Key = "261a29dc3b0a9a3f3a54ac0c"
-        shared.Key = "261a29dc3b0a9a3f3a54ac0c"
-        
         print("✓ Key đã set: " .. getgenv().Key)
         
-        -- 2. LOAD SETTINGS TỪ FILE (nếu có)
+        -- 2. PRE-LOAD SETTINGS VÀO MEMORY
         local settingsFileName = playerName .. "-BloxFruitBNNC.json"
         local settingsPath = "Banana Cat Hub/" .. settingsFileName
+        local cachedSettings = nil
         
         if readfile and isfile and isfile(settingsPath) then
             local success, settingsData = pcall(function()
@@ -55,99 +53,110 @@ if scriptString then
             end)
             
             if success and settingsData then
-                getgenv().Setting = settingsData
-                _G.Setting = settingsData
-                shared.Setting = settingsData
-                print("✅ Đã load settings cũ từ file: " .. settingsFileName)
-                
-                -- In ra một số settings quan trọng để kiểm tra
-                if settingsData.Main then
-                    print("  → Main settings loaded")
-                end
-                if settingsData.AutoFarm then
-                    print("  → AutoFarm settings loaded")
-                end
-            else
-                print("⚠ Không thể đọc settings từ file, sẽ dùng settings mặc định")
+                cachedSettings = settingsData
+                print("✅ Đã cache settings từ file: " .. settingsFileName)
             end
-        else
-            print("ℹ Chưa có file settings, BananaHub sẽ tạo settings mới")
         end
         
-        -- 3. ĐỢI 1 GIÂY để settings được apply hoàn toàn
-        print("⏳ Đang đợi settings được apply...")
+        -- 3. HOOK READFILE để BananaHub đọc đúng settings
+        if cachedSettings and readfile then
+            local originalReadfile = readfile
+            local hookedPaths = {}
+            
+            -- Hook readfile để intercept khi BananaHub đọc file
+            local function customReadfile(path)
+                -- Nếu BananaHub đọc file settings của nó
+                if path:match("Banana Cat Hub") and path:match(playerName) and path:match("%.json$") then
+                    if not hookedPaths[path] then
+                        hookedPaths[path] = true
+                        print("🎯 INTERCEPTED: BananaHub đang đọc " .. path)
+                        print("✅ Trả về settings đã cache")
+                    end
+                    
+                    -- Trả về settings đã cache
+                    return game:GetService("HttpService"):JSONEncode(cachedSettings)
+                end
+                
+                -- Các file khác thì đọc bình thường
+                return originalReadfile(path)
+            end
+            
+            -- Replace readfile với version đã hook
+            if hookfunction then
+                hookfunction(readfile, customReadfile)
+                print("✅ Đã hook readfile thành công")
+            elseif getgenv then
+                getgenv().readfile = customReadfile
+                _G.readfile = customReadfile
+                print("✅ Đã override readfile trong getgenv")
+            end
+        end
+        
+        -- 4. ĐỢI 1 GIÂY
         task.wait(1)
         
-        -- 4. LOAD SCRIPT CHÍNH
+        -- 5. LOAD BANANAHUB
         print("✓ Đang load BananaHub script...")
         local success, error = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/main/BananaHub.lua"))()
         end)
         
         if success then
-            print("✅ BananaHub đã chạy thành công với settings cũ!")
+            print("✅ BananaHub đã chạy!")
+            print("⏳ Đang đợi BananaHub load settings...")
+            
+            -- Đợi BananaHub load UI và settings
+            task.wait(3)
+            
+            -- Verify settings đã được apply
+            task.spawn(function()
+                task.wait(5)
+                if getgenv().Setting then
+                    print("✅ VERIFIED: Settings đã được BananaHub load!")
+                    if getgenv().Setting.Main then
+                        print("  → Main settings: OK")
+                    end
+                    if getgenv().Setting.AutoFarm then
+                        print("  → AutoFarm settings: OK")
+                    end
+                else
+                    warn("⚠ WARNING: Settings chưa được load vào getgenv().Setting")
+                end
+            end)
         else
             warn("❌ Lỗi khi chạy BananaHub:")
             warn(error)
         end
         
     else
-        -- XỬ LÝ CHO CÁC SCRIPT KHÁC (AllInOne, v.v.)
+        -- XỬ LÝ CHO CÁC SCRIPT KHÁC
         local hasHttpGet = scriptString:match('loadstring%s*%(%s*game:HttpGet')
         
         if hasHttpGet then
-            print("✓ Phát hiện script có HttpGet, đang xử lý...")
+            print("✓ Phát hiện script có HttpGet")
             
-            -- Tìm code TRƯỚC loadstring
             local beforeLoadstring = scriptString:match('(.-)loadstring%s*%(%s*game:HttpGet')
             
             if beforeLoadstring and beforeLoadstring:match('%S') then
-                local success1, error1 = pcall(function()
+                pcall(function()
                     loadstring(beforeLoadstring)()
                 end)
-                
-                if success1 then
-                    print("✓ Đã load settings")
-                    task.wait(1)
-                else
-                    warn("⚠ Lỗi khi load settings:")
-                    warn(error1)
-                end
+                task.wait(1)
             end
             
-            -- Tìm URL và load
             local url = scriptString:match('game:HttpGet%s*%(%s*["\']([^"\']+)["\']')
             
             if url then
                 print("✓ Đang load script từ: " .. url)
-                
-                local success2, error2 = pcall(function()
+                pcall(function()
                     loadstring(game:HttpGet(url))()
                 end)
-                
-                if success2 then
-                    print("✅ Script đã chạy thành công!")
-                else
-                    warn("❌ Lỗi khi chạy script:")
-                    warn(error2)
-                end
-            else
-                warn("⚠ Không tìm thấy URL trong script")
             end
         else
-            -- Script đơn giản
             print("✓ Script đơn giản, chạy trực tiếp")
-            
-            local success, errorMsg = pcall(function()
+            pcall(function()
                 loadstring(scriptString)()
             end)
-            
-            if success then
-                print("✅ Script đã chạy thành công!")
-            else
-                warn("❌ Lỗi khi chạy script:")
-                warn(errorMsg)
-            end
         end
     end
 else
