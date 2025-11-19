@@ -29,10 +29,17 @@ if not scriptString then
     return
 end
 
-if scriptType == "bananahub" or scriptType == "bananalevi" then
+if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "bananakaitun" then
     getgenv().Key = "261a29dc3b0a9a3f3a54ac0c"
     
-    local settingsFileName = scriptType == "bananahub" and playerName .. "-BloxFruitBNNC.json" or playerName .. "-KaitunLeviathan.json"
+    local settingsFileName
+    if scriptType == "bananahub" then
+        settingsFileName = playerName .. "-BloxFruitBNNC.json"
+    elseif scriptType == "bananalevi" then
+        settingsFileName = playerName .. "-KaitunLeviathan.json"
+    elseif scriptType == "bananakaitun" then
+        settingsFileName = playerName .. "-BloxFruitKaitun.json"
+    end
     local settingsPath = "Banana Cat Hub/" .. settingsFileName
     local cachedSettings = nil
     
