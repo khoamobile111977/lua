@@ -29,8 +29,8 @@ if not scriptString then
     return
 end
 
-if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "bananakaitun" then
-    getgenv().Key = "caidaubuoi"
+if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "bananakaitun" or scriptType == "bananav4" then
+    getgenv().Key = "concu"
     
     local settingsFileName
     if scriptType == "bananahub" then
@@ -39,6 +39,8 @@ if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "ban
         settingsFileName = playerName .. "-KaitunLeviathan.json"
     elseif scriptType == "bananakaitun" then
         settingsFileName = playerName .. "-BloxFruitKaitun.json"
+    elseif scriptType == "bananav4" then
+        settingsFileName = playerName .. "-NewKaitunV4.json"
     end
     
     local settingsPath = "Banana Cat Hub/" .. settingsFileName
