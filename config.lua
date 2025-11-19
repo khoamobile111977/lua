@@ -79,6 +79,8 @@ if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "ban
         scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"
     elseif scriptType == "bananakaitun" then
         scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/main/BananaCat-kaitunBF.lua"
+    elseif scriptType == "bananav4" then
+        scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/NewV4Config.lua"
     end
     
     pcall(function()
