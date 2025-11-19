@@ -30,7 +30,7 @@ if not scriptString then
 end
 
 if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "bananakaitun" then
-    getgenv().Key = "261a29dc3b0a9a3f3a54ac0c"
+    getgenv().Key = "caidaubuoi"
     
     local settingsFileName
     if scriptType == "bananahub" then
@@ -40,6 +40,7 @@ if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "ban
     elseif scriptType == "bananakaitun" then
         settingsFileName = playerName .. "-BloxFruitKaitun.json"
     end
+    
     local settingsPath = "Banana Cat Hub/" .. settingsFileName
     local cachedSettings = nil
     
@@ -69,7 +70,14 @@ if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "ban
     
     task.wait(1)
     
-    local scriptUrl = scriptType == "bananahub" and "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/main/BananaHub.lua" or "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"
+    local scriptUrl
+    if scriptType == "bananahub" then
+        scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/main/BananaHub.lua"
+    elseif scriptType == "bananalevi" then
+        scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"
+    elseif scriptType == "bananakaitun" then
+        scriptUrl = "https://raw.githubusercontent.com/obiiyeuem/vthangsitink/main/BananaCat-kaitunBF.lua"
+    end
     
     pcall(function()
         loadstring(game:HttpGet(scriptUrl))()
