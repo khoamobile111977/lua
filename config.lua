@@ -30,8 +30,6 @@ if not scriptString then
 end
 
 if scriptType == "bananahub" or scriptType == "bananalevi" or scriptType == "bananakaitun" or scriptType == "bananav4" then
-    getgenv().Key = "concu"
-    
     local settingsFileName
     if scriptType == "bananahub" then
         settingsFileName = playerName .. "-BloxFruitBNNC.json"
