@@ -48,46 +48,34 @@ Players.PlayerRemoving:Connect(updatePlayerCount)
 
 -- ===== UI HIỂN THỊ PLACE ID (GÓC TRÊN PHẢI) =====
 local placeIdFrame = Instance.new("Frame")
-placeIdFrame.Size = UDim2.new(0, 200, 0, 50)
-placeIdFrame.Position = UDim2.new(1, -210, 0, 10)
+placeIdFrame.Size = UDim2.new(0, 140, 0, 30)
+placeIdFrame.Position = UDim2.new(1, -150, 0, 10)
 placeIdFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 placeIdFrame.BorderSizePixel = 0
 placeIdFrame.Parent = screenGui
 
 local placeIdCorner = Instance.new("UICorner")
-placeIdCorner.CornerRadius = UDim.new(0, 8)
+placeIdCorner.CornerRadius = UDim.new(0, 6)
 placeIdCorner.Parent = placeIdFrame
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -10, 0, 20)
-titleLabel.Position = UDim2.new(0, 5, 0, 5)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Place ID:"
-titleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-titleLabel.TextSize = 12
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = placeIdFrame
-
 local placeIdLabel = Instance.new("TextLabel")
-placeIdLabel.Size = UDim2.new(1, -10, 0, 20)
-placeIdLabel.Position = UDim2.new(0, 5, 0, 25)
+placeIdLabel.Size = UDim2.new(1, -35, 1, 0)
+placeIdLabel.Position = UDim2.new(0, 5, 0, 0)
 placeIdLabel.BackgroundTransparency = 1
-placeIdLabel.Text = tostring(game.PlaceId)
+placeIdLabel.Text = "🏷️ " .. tostring(game.PlaceId)
 placeIdLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-placeIdLabel.TextSize = 14
+placeIdLabel.TextSize = 11
 placeIdLabel.Font = Enum.Font.GothamBold
 placeIdLabel.TextXAlignment = Enum.TextXAlignment.Left
 placeIdLabel.Parent = placeIdFrame
 
 local copyPlaceIdBtn = Instance.new("TextButton")
-copyPlaceIdBtn.Size = UDim2.new(0, 40, 0, 20)
-copyPlaceIdBtn.Position = UDim2.new(1, -45, 0, 25)
+copyPlaceIdBtn.Size = UDim2.new(0, 28, 0, 22)
+copyPlaceIdBtn.Position = UDim2.new(1, -32, 0.5, -11)
 copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 copyPlaceIdBtn.BorderSizePixel = 0
-copyPlaceIdBtn.Text = "Copy"
-copyPlaceIdBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyPlaceIdBtn.TextSize = 10
+copyPlaceIdBtn.Text = "📋"
+copyPlaceIdBtn.TextSize = 12
 copyPlaceIdBtn.Font = Enum.Font.Gotham
 copyPlaceIdBtn.Parent = placeIdFrame
 
@@ -100,16 +88,18 @@ copyPlaceIdBtn.MouseButton1Click:Connect(function()
     copyPlaceIdBtn.Text = "✓"
     copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
     wait(1)
-    copyPlaceIdBtn.Text = "Copy"
+    copyPlaceIdBtn.Text = "📋"
     copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 end)
 
 copyPlaceIdBtn.MouseEnter:Connect(function()
-    copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    if copyPlaceIdBtn.Text == "📋" then
+        copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
 end)
 
 copyPlaceIdBtn.MouseLeave:Connect(function()
-    if copyPlaceIdBtn.Text == "Copy" then
+    if copyPlaceIdBtn.Text == "📋" then
         copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
@@ -335,5 +325,3 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
-print("Server Hopper UI đã được tải thành công!")
