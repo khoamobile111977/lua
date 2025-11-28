@@ -1,5 +1,4 @@
 repeat wait() until game:IsLoaded()
-repeat wait() until game.Players and game.Players.LocalPlayer
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
