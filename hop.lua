@@ -1,4 +1,5 @@
 repeat wait() until game:IsLoaded()
+repeat wait() until game.Players and game.Players.LocalPlayer
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -7,13 +8,11 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Tạo ScreenGui chính
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ServerHopperGui"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
--- ===== UI HIỂN THỊ SỐ PLAYER (GIỮA TRÊN CÙNG) =====
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
@@ -34,7 +33,6 @@ playerCountLabel.TextSize = 12
 playerCountLabel.Font = Enum.Font.GothamBold
 playerCountLabel.Parent = playerCountFrame
 
--- Cập nhật số player
 local function updatePlayerCount()
     local currentPlayers = #Players:GetPlayers()
     local maxPlayers = Players.MaxPlayers
@@ -45,65 +43,6 @@ updatePlayerCount()
 Players.PlayerAdded:Connect(updatePlayerCount)
 Players.PlayerRemoving:Connect(updatePlayerCount)
 
--- ===== UI HIỂN THỊ PLACE ID (GÓC TRÊN PHẢI) =====
-local placeIdFrame = Instance.new("Frame")
-placeIdFrame.Size = UDim2.new(0, 140, 0, 30)
-placeIdFrame.Position = UDim2.new(1, -150, 0, 10)
-placeIdFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-placeIdFrame.BorderSizePixel = 0
-placeIdFrame.Parent = screenGui
-
-local placeIdCorner = Instance.new("UICorner")
-placeIdCorner.CornerRadius = UDim.new(0, 6)
-placeIdCorner.Parent = placeIdFrame
-
-local placeIdLabel = Instance.new("TextLabel")
-placeIdLabel.Size = UDim2.new(1, -35, 1, 0)
-placeIdLabel.Position = UDim2.new(0, 5, 0, 0)
-placeIdLabel.BackgroundTransparency = 1
-placeIdLabel.Text = "🏷️ " .. tostring(game.PlaceId)
-placeIdLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-placeIdLabel.TextSize = 11
-placeIdLabel.Font = Enum.Font.GothamBold
-placeIdLabel.TextXAlignment = Enum.TextXAlignment.Left
-placeIdLabel.Parent = placeIdFrame
-
-local copyPlaceIdBtn = Instance.new("TextButton")
-copyPlaceIdBtn.Size = UDim2.new(0, 28, 0, 22)
-copyPlaceIdBtn.Position = UDim2.new(1, -32, 0.5, -11)
-copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-copyPlaceIdBtn.BorderSizePixel = 0
-copyPlaceIdBtn.Text = "📋"
-copyPlaceIdBtn.TextSize = 12
-copyPlaceIdBtn.Font = Enum.Font.Gotham
-copyPlaceIdBtn.Parent = placeIdFrame
-
-local copyPlaceIdCorner = Instance.new("UICorner")
-copyPlaceIdCorner.CornerRadius = UDim.new(0, 4)
-copyPlaceIdCorner.Parent = copyPlaceIdBtn
-
-copyPlaceIdBtn.MouseButton1Click:Connect(function()
-    setclipboard(tostring(game.PlaceId))
-    copyPlaceIdBtn.Text = "✓"
-    copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    wait(1)
-    copyPlaceIdBtn.Text = "📋"
-    copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-end)
-
-copyPlaceIdBtn.MouseEnter:Connect(function()
-    if copyPlaceIdBtn.Text == "📋" then
-        copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    end
-end)
-
-copyPlaceIdBtn.MouseLeave:Connect(function()
-    if copyPlaceIdBtn.Text == "📋" then
-        copyPlaceIdBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    end
-end)
-
--- ===== UI SERVER HOPPER (GÓC TRÊN TRÁI) =====
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 140, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -119,8 +58,8 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 18)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 title.BorderSizePixel = 0
-title.Text = "⚡ Server Hopper"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Text = "🆔 " .. tostring(game.PlaceId)
+title.TextColor3 = Color3.fromRGB(100, 200, 255)
 title.TextSize = 9
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
@@ -301,7 +240,6 @@ jobIdInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- Kéo thả cho mainFrame
 local dragging, dragStart, startPos = false, nil, nil
 
 title.InputBegan:Connect(function(input)
@@ -324,3 +262,5 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
+
+print("Server Hopper UI đã được tải thành công!")
