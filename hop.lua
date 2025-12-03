@@ -17,6 +17,7 @@ local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
 playerCountFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+playerCountFrame.BackgroundTransparency = 0.3
 playerCountFrame.BorderSizePixel = 0
 playerCountFrame.Parent = screenGui
 
@@ -47,6 +48,7 @@ local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 140, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BackgroundTransparency = 0.3
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
@@ -57,6 +59,7 @@ corner.Parent = mainFrame
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 18)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.BackgroundTransparency = 0.3
 title.BorderSizePixel = 0
 title.Text = "🆔 " .. tostring(game.PlaceId)
 title.TextColor3 = Color3.fromRGB(100, 200, 255)
@@ -72,9 +75,10 @@ local jobIdInput = Instance.new("TextBox")
 jobIdInput.Size = UDim2.new(0, 95, 0, 16)
 jobIdInput.Position = UDim2.new(0, 4, 0, 22)
 jobIdInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+jobIdInput.BackgroundTransparency = 0.3
 jobIdInput.BorderSizePixel = 0
 jobIdInput.Text = ""
-jobIdInput.PlaceholderText = "Job ID"
+jobIdInput.PlaceholderText = "Job ID / Link"
 jobIdInput.TextColor3 = Color3.fromRGB(200, 200, 200)
 jobIdInput.TextSize = 8
 jobIdInput.Font = Enum.Font.Gotham
@@ -143,6 +147,34 @@ local isHopping = false
 local function updateStatus(text, color)
     statusLabel.Text = text
     statusLabel.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+end
+
+local function extractJobIdFromLink(input)
+    input = input:gsub("%s+", "")
+    
+    if input:match("roblox%.com/share") or input:match("code=") then
+        local code = input:match("code=([%w]+)")
+        if code then
+            updateStatus("Link OK", Color3.fromRGB(255, 255, 0))
+            
+            local success, result = pcall(function()
+                local url = "https://apis.roblox.com/universal-app-configuration/v1/behaviors/4748742268/content"
+                return game:HttpGet(url)
+            end)
+            
+            if success then
+                local decoded = HttpService:JSONDecode(result)
+                if decoded and decoded[code] then
+                    return decoded[code]
+                end
+            end
+            
+            updateStatus("Try code", Color3.fromRGB(255, 165, 0))
+            return code
+        end
+    end
+    
+    return input
 end
 
 local function copyJobId()
@@ -233,9 +265,12 @@ hopBtn.MouseButton1Click:Connect(hopToLowPlayerServer)
 
 jobIdInput.FocusLost:Connect(function(enterPressed)
     if enterPressed or jobIdInput.Text ~= "" then
-        local jobId = jobIdInput.Text:gsub("%s+", "")
-        if jobId ~= "" then
-            joinServerByJobId(jobId)
+        local input = jobIdInput.Text
+        if input ~= "" then
+            local jobId = extractJobIdFromLink(input)
+            if jobId ~= "" then
+                joinServerByJobId(jobId)
+            end
         end
     end
 end)
@@ -262,5 +297,3 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
-print("Server Hopper UI đã được tải thành công!")
