@@ -13,6 +13,7 @@ screenGui.Name = "ServerHopperGui"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
+-- Frame đếm số người chơi (trong suốt)
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
@@ -90,7 +91,7 @@ jobIdInput.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 jobIdInput.BackgroundTransparency = 0.5
 jobIdInput.BorderSizePixel = 0
 jobIdInput.Text = ""
-jobIdInput.PlaceholderText = "Job ID / Link"
+jobIdInput.PlaceholderText = "Job ID"
 jobIdInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
 jobIdInput.TextColor3 = Color3.fromRGB(220, 220, 220)
 jobIdInput.TextSize = 8
@@ -189,34 +190,6 @@ local function updateStatus(text, color)
     statusLabel.TextColor3 = color or Color3.fromRGB(255, 255, 255)
 end
 
-local function extractJobIdFromLink(input)
-    input = input:gsub("%s+", "")
-    
-    if input:match("roblox%.com/share") or input:match("code=") then
-        local code = input:match("code=([%w]+)")
-        if code then
-            updateStatus("Link OK", Color3.fromRGB(255, 255, 0))
-            
-            local success, result = pcall(function()
-                local url = "https://apis.roblox.com/universal-app-configuration/v1/behaviors/4748742268/content"
-                return game:HttpGet(url)
-            end)
-            
-            if success then
-                local decoded = HttpService:JSONDecode(result)
-                if decoded and decoded[code] then
-                    return decoded[code]
-                end
-            end
-            
-            updateStatus("Try code", Color3.fromRGB(255, 165, 0))
-            return code
-        end
-    end
-    
-    return input
-end
-
 local function copyJobId()
     setclipboard(game.JobId)
     updateStatus("Copied!", Color3.fromRGB(0, 255, 127))
@@ -305,12 +278,9 @@ hopBtn.MouseButton1Click:Connect(hopToLowPlayerServer)
 
 jobIdInput.FocusLost:Connect(function(enterPressed)
     if enterPressed or jobIdInput.Text ~= "" then
-        local input = jobIdInput.Text
-        if input ~= "" then
-            local jobId = extractJobIdFromLink(input)
-            if jobId ~= "" then
-                joinServerByJobId(jobId)
-            end
+        local jobId = jobIdInput.Text:gsub("%s+", "")
+        if jobId ~= "" then
+            joinServerByJobId(jobId)
         end
     end
 end)
@@ -337,4 +307,3 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
