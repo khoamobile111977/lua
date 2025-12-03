@@ -16,14 +16,20 @@ screenGui.ResetOnSpawn = false
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
-playerCountFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-playerCountFrame.BackgroundTransparency = 0.3
+playerCountFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+playerCountFrame.BackgroundTransparency = 0.4
 playerCountFrame.BorderSizePixel = 0
 playerCountFrame.Parent = screenGui
 
 local playerCountCorner = Instance.new("UICorner")
-playerCountCorner.CornerRadius = UDim.new(0, 6)
+playerCountCorner.CornerRadius = UDim.new(0, 8)
 playerCountCorner.Parent = playerCountFrame
+
+local playerCountStroke = Instance.new("UIStroke")
+playerCountStroke.Color = Color3.fromRGB(0, 255, 127)
+playerCountStroke.Thickness = 1
+playerCountStroke.Transparency = 0.7
+playerCountStroke.Parent = playerCountFrame
 
 local playerCountLabel = Instance.new("TextLabel")
 playerCountLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -47,64 +53,85 @@ Players.PlayerRemoving:Connect(updatePlayerCount)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 140, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BackgroundTransparency = 0.3
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.BackgroundTransparency = 0.4
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
+corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 200, 255)
+mainStroke.Thickness = 1
+mainStroke.Transparency = 0.6
+mainStroke.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 18)
-title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.BackgroundTransparency = 0.3
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+title.BackgroundTransparency = 0.5
 title.BorderSizePixel = 0
 title.Text = "🆔 " .. tostring(game.PlaceId)
-title.TextColor3 = Color3.fromRGB(100, 200, 255)
+title.TextColor3 = Color3.fromRGB(120, 220, 255)
 title.TextSize = 9
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 6)
+titleCorner.CornerRadius = UDim.new(0, 8)
 titleCorner.Parent = title
 
 local jobIdInput = Instance.new("TextBox")
 jobIdInput.Size = UDim2.new(0, 95, 0, 16)
 jobIdInput.Position = UDim2.new(0, 4, 0, 22)
-jobIdInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-jobIdInput.BackgroundTransparency = 0.3
+jobIdInput.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+jobIdInput.BackgroundTransparency = 0.5
 jobIdInput.BorderSizePixel = 0
 jobIdInput.Text = ""
 jobIdInput.PlaceholderText = "Job ID / Link"
-jobIdInput.TextColor3 = Color3.fromRGB(200, 200, 200)
+jobIdInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
+jobIdInput.TextColor3 = Color3.fromRGB(220, 220, 220)
 jobIdInput.TextSize = 8
 jobIdInput.Font = Enum.Font.Gotham
 jobIdInput.Parent = mainFrame
 
 local inputCorner = Instance.new("UICorner")
-inputCorner.CornerRadius = UDim.new(0, 3)
+inputCorner.CornerRadius = UDim.new(0, 4)
 inputCorner.Parent = jobIdInput
+
+local inputStroke = Instance.new("UIStroke")
+inputStroke.Color = Color3.fromRGB(80, 80, 100)
+inputStroke.Thickness = 1
+inputStroke.Transparency = 0.7
+inputStroke.Parent = jobIdInput
 
 local copyBtn = Instance.new("TextButton")
 copyBtn.Size = UDim2.new(0, 18, 0, 16)
 copyBtn.Position = UDim2.new(0, 102, 0, 22)
-copyBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+copyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+copyBtn.BackgroundTransparency = 0.3
 copyBtn.BorderSizePixel = 0
 copyBtn.Text = "📋"
 copyBtn.TextSize = 10
 copyBtn.Parent = mainFrame
 
 local copyCorner = Instance.new("UICorner")
-copyCorner.CornerRadius = UDim.new(0, 3)
+copyCorner.CornerRadius = UDim.new(0, 4)
 copyCorner.Parent = copyBtn
+
+local copyStroke = Instance.new("UIStroke")
+copyStroke.Color = Color3.fromRGB(100, 220, 255)
+copyStroke.Thickness = 1
+copyStroke.Transparency = 0.5
+copyStroke.Parent = copyBtn
 
 local clearBtn = Instance.new("TextButton")
 clearBtn.Size = UDim2.new(0, 18, 0, 16)
 clearBtn.Position = UDim2.new(0, 122, 0, 22)
-clearBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 0)
+clearBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 60)
+clearBtn.BackgroundTransparency = 0.3
 clearBtn.BorderSizePixel = 0
 clearBtn.Text = "✕"
 clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -113,13 +140,20 @@ clearBtn.Font = Enum.Font.GothamBold
 clearBtn.Parent = mainFrame
 
 local clearCorner = Instance.new("UICorner")
-clearCorner.CornerRadius = UDim.new(0, 3)
+clearCorner.CornerRadius = UDim.new(0, 4)
 clearCorner.Parent = clearBtn
+
+local clearStroke = Instance.new("UIStroke")
+clearStroke.Color = Color3.fromRGB(255, 120, 100)
+clearStroke.Thickness = 1
+clearStroke.Transparency = 0.5
+clearStroke.Parent = clearBtn
 
 local hopBtn = Instance.new("TextButton")
 hopBtn.Size = UDim2.new(0, 132, 0, 20)
 hopBtn.Position = UDim2.new(0, 4, 0, 42)
-hopBtn.BackgroundColor3 = Color3.fromRGB(0, 230, 118)
+hopBtn.BackgroundColor3 = Color3.fromRGB(0, 230, 150)
+hopBtn.BackgroundTransparency = 0.2
 hopBtn.BorderSizePixel = 0
 hopBtn.Text = "🚀 HOP SERVER"
 hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -128,8 +162,14 @@ hopBtn.Font = Enum.Font.GothamBold
 hopBtn.Parent = mainFrame
 
 local hopCorner = Instance.new("UICorner")
-hopCorner.CornerRadius = UDim.new(0, 4)
+hopCorner.CornerRadius = UDim.new(0, 5)
 hopCorner.Parent = hopBtn
+
+local hopStroke = Instance.new("UIStroke")
+hopStroke.Color = Color3.fromRGB(0, 255, 180)
+hopStroke.Thickness = 1.5
+hopStroke.Transparency = 0.4
+hopStroke.Parent = hopBtn
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0, 50, 0, 18)
@@ -297,3 +337,4 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
+
