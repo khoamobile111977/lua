@@ -16,7 +16,6 @@ local function checkPlayerInServer()
         if player ~= LocalPlayer then
             for _, targetName in pairs(getgenv().Player) do
                 if player.Name == targetName or player.DisplayName == targetName then
-                    print("Tìm thấy player: " .. player.Name .. " - Đang hop server...")
                     return true
                 end
             end
@@ -56,7 +55,6 @@ local function getServerList()
 end
 
 local function hopToRandomServer()
-    print("Đang tìm server mới...")
     
     local servers = getServerList()
     
@@ -77,8 +75,6 @@ local function hopToRandomServer()
     
     local randomServer = serverList[math.random(1, #serverList)]
     
-    print("Đang hop đến server: " .. randomServer.id)
-    print("Players: " .. randomServer.playing .. "/" .. randomServer.maxPlayers)
     
     local success, errorMsg = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.id, LocalPlayer)
@@ -95,7 +91,6 @@ Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         for _, targetName in pairs(getgenv().Player) do
             if player.Name == targetName or player.DisplayName == targetName then
-                print("Player " .. player.Name .. " vừa join - Đang hop server...")
                 wait(1)
                 hopToRandomServer()
                 break
