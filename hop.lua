@@ -8,12 +8,49 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Báo cáo tên player lên server Python
+local SERVER_URL = "http://127.0.0.1:8765/report_player"
+
+local function reportPlayerName()
+    local playerName = player.Name
+    
+    local success, result = pcall(function()
+        local data = {
+            player_name = playerName
+        }
+        
+        local jsonData = HttpService:JSONEncode(data)
+        
+        local response = request({
+            Url = SERVER_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = jsonData
+        })
+        
+        return response
+    end)
+    
+    if success then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Server Hopper";
+            Text = "Đã đăng ký: " .. playerName;
+            Duration = 2;
+        })
+    end
+end
+
+-- Gọi hàm báo cáo ngay khi script chạy
+reportPlayerName()
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ServerHopperGui"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
--- Frame đếm số người chơi (trong suốt)
+-- Frame đếm số người chơi
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
@@ -249,7 +286,6 @@ local function hopToLowPlayerServer()
             end
             cursor = result.nextPageCursor or ""
         else
-            warn("API returned invalid data, attempt " .. attempts)
             wait(2)
             if attempts >= maxAttempts then
                 break
