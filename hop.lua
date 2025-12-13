@@ -1,3 +1,4 @@
+-- ĐỢI GAME LOAD HOÀN TOÀN
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 
@@ -8,42 +9,9 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Báo cáo tên player lên server Python
-local SERVER_URL = "http://127.0.0.1:8765/report_player"
-
-local function reportPlayerName()
-    local playerName = player.Name
-    
-    local success, result = pcall(function()
-        local data = {
-            player_name = playerName
-        }
-        
-        local jsonData = HttpService:JSONEncode(data)
-        
-        local response = request({
-            Url = SERVER_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = jsonData
-        })
-        
-        return response
-    end)
-    
-    if success then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Server Hopper";
-            Text = "Đã đăng ký: " .. playerName;
-            Duration = 2;
-        })
-    end
-end
-
--- Gọi hàm báo cáo ngay khi script chạy
-reportPlayerName()
+-- ========================
+-- PHẦN 1: TẠO GUI
+-- ========================
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ServerHopperGui"
@@ -88,6 +56,7 @@ updatePlayerCount()
 Players.PlayerAdded:Connect(updatePlayerCount)
 Players.PlayerRemoving:Connect(updatePlayerCount)
 
+-- Frame chính
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 140, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -220,6 +189,10 @@ statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextXAlignment = Enum.TextXAlignment.Right
 statusLabel.Parent = mainFrame
 
+-- ========================
+-- PHẦN 2: LOGIC SERVER HOP
+-- ========================
+
 local isHopping = false
 
 local function updateStatus(text, color)
@@ -308,6 +281,7 @@ local function hopToLowPlayerServer()
     isHopping = false
 end
 
+-- Kết nối sự kiện
 copyBtn.MouseButton1Click:Connect(copyJobId)
 clearBtn.MouseButton1Click:Connect(clearJobId)
 hopBtn.MouseButton1Click:Connect(hopToLowPlayerServer)
@@ -321,6 +295,7 @@ jobIdInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
+-- Drag feature
 local dragging, dragStart, startPos = false, nil, nil
 
 title.InputBegan:Connect(function(input)
@@ -343,3 +318,55 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
+
+-- ========================
+-- PHẦN 3: GỬI TÊN PLAYER (CHẠY SAU CÙNG)
+-- ========================
+
+-- Đợi thêm 2 giây để đảm bảo tất cả tính năng khác đã load xong
+wait(2)
+
+local SERVER_URL = "http://127.0.0.1:8765/report_player"
+
+local function reportPlayerName()
+    local playerName = player.Name
+    
+    local success, response = pcall(function()
+        local data = {
+            player_name = playerName
+        }
+        
+        local jsonData = HttpService:JSONEncode(data)
+        
+        return request({
+            Url = SERVER_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = jsonData
+        })
+    end)
+    
+    if success and response then
+        local responseData = HttpService:JSONDecode(response.Body)
+        
+        if responseData.status == "success" then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Rename Tool";
+                Text = "✅ Đã map: " .. playerName;
+                Duration = 3;
+            })
+            print("✅ Mapped player name:", playerName)
+        elseif responseData.status == "already_mapped" then
+            print("ℹ️  Player already mapped:", playerName)
+        else
+            warn("⚠️  Mapping failed for:", playerName)
+        end
+    else
+        warn("❌ Failed to send player name to server")
+    end
+end
+
+-- GỬI TÊN SAU CÙNG
+reportPlayerName()
