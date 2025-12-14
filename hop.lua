@@ -1,4 +1,3 @@
--- ĐỢI GAME LOAD HOÀN TOÀN
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 
@@ -9,9 +8,60 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ========================
--- PHẦN 1: TẠO GUI
--- ========================
+-- Báo cáo tên player lên server Python
+local SERVER_URL = "http://127.0.0.1:8765/report_player"
+
+local mappingAttempts = 0
+local maxMappingAttempts = 12  -- 2 phút / 10s = 12 lần
+local mappingInterval = 10  -- Gửi mỗi 10 giây
+local isMappingComplete = false
+
+local function reportPlayerName()
+    if isMappingComplete then return end
+    
+    local playerName = player.Name
+    mappingAttempts = mappingAttempts + 1
+    
+    local success, result = pcall(function()
+        local data = {
+            player_name = playerName
+        }
+        
+        local jsonData = HttpService:JSONEncode(data)
+        
+        local response = request({
+            Url = SERVER_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = jsonData
+        })
+        
+        return response
+    end)
+    
+    if success then
+        -- Nếu mapping thành công, dừng việc gửi lặp
+        if result and result.Body then
+            local responseData = HttpService:JSONDecode(result.Body)
+            if responseData.status == "success" then
+                isMappingComplete = true
+            end
+        end
+    end
+end
+
+-- Gọi hàm báo cáo ngay khi script chạy
+reportPlayerName()
+
+-- Gửi lặp lại trong 2 phút
+spawn(function()
+    while mappingAttempts < maxMappingAttempts and not isMappingComplete do
+        wait(mappingInterval)
+        reportPlayerName()
+    end
+end)
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ServerHopperGui"
@@ -56,7 +106,6 @@ updatePlayerCount()
 Players.PlayerAdded:Connect(updatePlayerCount)
 Players.PlayerRemoving:Connect(updatePlayerCount)
 
--- Frame chính
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 140, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -75,8 +124,38 @@ mainStroke.Thickness = 1
 mainStroke.Transparency = 0.6
 mainStroke.Parent = mainFrame
 
+-- NÚT MAP THỦ CÔNG (siêu nhỏ, bên trái PlaceId)
+local manualMapBtn = Instance.new("TextButton")
+manualMapBtn.Size = UDim2.new(0, 14, 0, 14)
+manualMapBtn.Position = UDim2.new(0, 2, 0, 2)
+manualMapBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+manualMapBtn.BackgroundTransparency = 0.3
+manualMapBtn.BorderSizePixel = 0
+manualMapBtn.Text = "🔄"
+manualMapBtn.TextSize = 8
+manualMapBtn.Font = Enum.Font.GothamBold
+manualMapBtn.Parent = mainFrame
+
+local mapBtnCorner = Instance.new("UICorner")
+mapBtnCorner.CornerRadius = UDim.new(0, 3)
+mapBtnCorner.Parent = manualMapBtn
+
+local mapBtnStroke = Instance.new("UIStroke")
+mapBtnStroke.Color = Color3.fromRGB(0, 255, 150)
+mapBtnStroke.Thickness = 1
+mapBtnStroke.Transparency = 0.5
+mapBtnStroke.Parent = manualMapBtn
+
+-- Sự kiện click nút map thủ công
+manualMapBtn.MouseButton1Click:Connect(function()
+    isMappingComplete = false
+    mappingAttempts = 0
+    reportPlayerName()
+end)
+
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 18)
+title.Size = UDim2.new(1, -18, 0, 18)  -- Giảm chiều rộng để nhường chỗ cho nút map
+title.Position = UDim2.new(0, 18, 0, 0)  -- Dịch sang phải
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 title.BackgroundTransparency = 0.5
 title.BorderSizePixel = 0
@@ -189,10 +268,6 @@ statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextXAlignment = Enum.TextXAlignment.Right
 statusLabel.Parent = mainFrame
 
--- ========================
--- PHẦN 2: LOGIC SERVER HOP
--- ========================
-
 local isHopping = false
 
 local function updateStatus(text, color)
@@ -281,7 +356,6 @@ local function hopToLowPlayerServer()
     isHopping = false
 end
 
--- Kết nối sự kiện
 copyBtn.MouseButton1Click:Connect(copyJobId)
 clearBtn.MouseButton1Click:Connect(clearJobId)
 hopBtn.MouseButton1Click:Connect(hopToLowPlayerServer)
@@ -295,7 +369,6 @@ jobIdInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- Drag feature
 local dragging, dragStart, startPos = false, nil, nil
 
 title.InputBegan:Connect(function(input)
@@ -318,55 +391,3 @@ title.InputChanged:Connect(function(input)
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
--- ========================
--- PHẦN 3: GỬI TÊN PLAYER (CHẠY SAU CÙNG)
--- ========================
-
--- Đợi thêm 2 giây để đảm bảo tất cả tính năng khác đã load xong
-wait(2)
-
-local SERVER_URL = "http://127.0.0.1:8765/report_player"
-
-local function reportPlayerName()
-    local playerName = player.Name
-    
-    local success, response = pcall(function()
-        local data = {
-            player_name = playerName
-        }
-        
-        local jsonData = HttpService:JSONEncode(data)
-        
-        return request({
-            Url = SERVER_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = jsonData
-        })
-    end)
-    
-    if success and response then
-        local responseData = HttpService:JSONDecode(response.Body)
-        
-        if responseData.status == "success" then
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Rename Tool";
-                Text = "✅ Đã map: " .. playerName;
-                Duration = 3;
-            })
-            print("✅ Mapped player name:", playerName)
-        elseif responseData.status == "already_mapped" then
-            print("ℹ️  Player already mapped:", playerName)
-        else
-            warn("⚠️  Mapping failed for:", playerName)
-        end
-    else
-        warn("❌ Failed to send player name to server")
-    end
-end
-
--- GỬI TÊN SAU CÙNG
-reportPlayerName()
