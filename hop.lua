@@ -12,8 +12,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SERVER_URL = "http://127.0.0.1:8765/report_player"
 
 local mappingAttempts = 0
-local maxMappingAttempts = 12  -- 2 phút / 10s = 12 lần
-local mappingInterval = 10  -- Gửi mỗi 10 giây
+local maxMappingAttempts = 12 
+local mappingInterval = 10  
 local isMappingComplete = false
 
 local function reportPlayerName()
@@ -23,11 +23,7 @@ local function reportPlayerName()
     mappingAttempts = mappingAttempts + 1
     
     local success, result = pcall(function()
-        local data = {
-            player_name = playerName
-        }
-        
-        local jsonData = HttpService:JSONEncode(data)
+        local jsonData = '{"player_name":"' .. tostring(playerName) .. '"}'
         
         local response = request({
             Url = SERVER_URL,
@@ -41,21 +37,20 @@ local function reportPlayerName()
         return response
     end)
     
-    if success then
-        -- Nếu mapping thành công, dừng việc gửi lặp
-        if result and result.Body then
-            local responseData = HttpService:JSONDecode(result.Body)
-            if responseData.status == "success" then
-                isMappingComplete = true
+    if success and result then
+        pcall(function()
+            if result.Body then
+                local responseData = HttpService:JSONDecode(result.Body)
+                if responseData and responseData.status == "success" then
+                    isMappingComplete = true
+                end
             end
-        end
+        end)
     end
 end
 
--- Gọi hàm báo cáo ngay khi script chạy
 reportPlayerName()
 
--- Gửi lặp lại trong 2 phút
 spawn(function()
     while mappingAttempts < maxMappingAttempts and not isMappingComplete do
         wait(mappingInterval)
