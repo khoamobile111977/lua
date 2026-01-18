@@ -4,11 +4,11 @@ repeat wait() until game.Players and game.Players.LocalPlayer
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Báo cáo tên player lên server Python
 local SERVER_URL = "http://127.0.0.1:8765/report_player"
 
 local mappingAttempts = 0
@@ -63,7 +63,6 @@ screenGui.Name = "ServerHopperGui"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
 
--- Frame đếm số người chơi
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
 playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
@@ -102,7 +101,7 @@ Players.PlayerAdded:Connect(updatePlayerCount)
 Players.PlayerRemoving:Connect(updatePlayerCount)
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 140, 0, 70)
+mainFrame.Size = UDim2.new(0, 158, 0, 70)
 mainFrame.Position = UDim2.new(0, 10, 0, 10)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 mainFrame.BackgroundTransparency = 0.4
@@ -119,7 +118,6 @@ mainStroke.Thickness = 1
 mainStroke.Transparency = 0.6
 mainStroke.Parent = mainFrame
 
--- NÚT MAP THỦ CÔNG (siêu nhỏ, bên trái PlaceId)
 local manualMapBtn = Instance.new("TextButton")
 manualMapBtn.Size = UDim2.new(0, 14, 0, 14)
 manualMapBtn.Position = UDim2.new(0, 2, 0, 2)
@@ -141,7 +139,6 @@ mapBtnStroke.Thickness = 1
 mapBtnStroke.Transparency = 0.5
 mapBtnStroke.Parent = manualMapBtn
 
--- Sự kiện click nút map thủ công
 manualMapBtn.MouseButton1Click:Connect(function()
     isMappingComplete = false
     mappingAttempts = 0
@@ -149,8 +146,8 @@ manualMapBtn.MouseButton1Click:Connect(function()
 end)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -18, 0, 18)  -- Giảm chiều rộng để nhường chỗ cho nút map
-title.Position = UDim2.new(0, 18, 0, 0)  -- Dịch sang phải
+title.Size = UDim2.new(1, -18, 0, 18)
+title.Position = UDim2.new(0, 18, 0, 0)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 title.BackgroundTransparency = 0.5
 title.BorderSizePixel = 0
@@ -208,30 +205,8 @@ copyStroke.Thickness = 1
 copyStroke.Transparency = 0.5
 copyStroke.Parent = copyBtn
 
-local clearBtn = Instance.new("TextButton")
-clearBtn.Size = UDim2.new(0, 18, 0, 16)
-clearBtn.Position = UDim2.new(0, 122, 0, 22)
-clearBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 60)
-clearBtn.BackgroundTransparency = 0.3
-clearBtn.BorderSizePixel = 0
-clearBtn.Text = "✕"
-clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-clearBtn.TextSize = 10
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.Parent = mainFrame
-
-local clearCorner = Instance.new("UICorner")
-clearCorner.CornerRadius = UDim.new(0, 4)
-clearCorner.Parent = clearBtn
-
-local clearStroke = Instance.new("UIStroke")
-clearStroke.Color = Color3.fromRGB(255, 120, 100)
-clearStroke.Thickness = 1
-clearStroke.Transparency = 0.5
-clearStroke.Parent = clearBtn
-
 local hopBtn = Instance.new("TextButton")
-hopBtn.Size = UDim2.new(0, 132, 0, 20)
+hopBtn.Size = UDim2.new(0, 150, 0, 20)
 hopBtn.Position = UDim2.new(0, 4, 0, 42)
 hopBtn.BackgroundColor3 = Color3.fromRGB(0, 230, 150)
 hopBtn.BackgroundTransparency = 0.2
@@ -251,6 +226,50 @@ hopStroke.Color = Color3.fromRGB(0, 255, 180)
 hopStroke.Thickness = 1.5
 hopStroke.Transparency = 0.4
 hopStroke.Parent = hopBtn
+
+local sea2Btn = Instance.new("TextButton")
+sea2Btn.Size = UDim2.new(0, 14, 0, 14)
+sea2Btn.Position = UDim2.new(0, 122, 0, 23)
+sea2Btn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+sea2Btn.BackgroundTransparency = 0.7
+sea2Btn.BorderSizePixel = 0
+sea2Btn.Text = "2"
+sea2Btn.TextColor3 = Color3.fromRGB(255, 200, 100)
+sea2Btn.TextSize = 10
+sea2Btn.Font = Enum.Font.GothamBold
+sea2Btn.Parent = mainFrame
+
+local sea2Corner = Instance.new("UICorner")
+sea2Corner.CornerRadius = UDim.new(0, 3)
+sea2Corner.Parent = sea2Btn
+
+local sea2Stroke = Instance.new("UIStroke")
+sea2Stroke.Color = Color3.fromRGB(255, 180, 50)
+sea2Stroke.Thickness = 1
+sea2Stroke.Transparency = 0.5
+sea2Stroke.Parent = sea2Btn
+
+local sea3Btn = Instance.new("TextButton")
+sea3Btn.Size = UDim2.new(0, 14, 0, 14)
+sea3Btn.Position = UDim2.new(0, 138, 0, 23)
+sea3Btn.BackgroundColor3 = Color3.fromRGB(255, 50, 150)
+sea3Btn.BackgroundTransparency = 0.7
+sea3Btn.BorderSizePixel = 0
+sea3Btn.Text = "3"
+sea3Btn.TextColor3 = Color3.fromRGB(255, 150, 200)
+sea3Btn.TextSize = 10
+sea3Btn.Font = Enum.Font.GothamBold
+sea3Btn.Parent = mainFrame
+
+local sea3Corner = Instance.new("UICorner")
+sea3Corner.CornerRadius = UDim.new(0, 3)
+sea3Corner.Parent = sea3Btn
+
+local sea3Stroke = Instance.new("UIStroke")
+sea3Stroke.Color = Color3.fromRGB(255, 100, 180)
+sea3Stroke.Thickness = 1
+sea3Stroke.Transparency = 0.5
+sea3Stroke.Parent = sea3Btn
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0, 50, 0, 18)
@@ -277,19 +296,61 @@ local function copyJobId()
     updateStatus("Ready", Color3.fromRGB(0, 255, 127))
 end
 
-local function clearJobId()
-    jobIdInput.Text = ""
-    updateStatus("Cleared", Color3.fromRGB(255, 255, 0))
-    wait(1)
-    updateStatus("Ready", Color3.fromRGB(0, 255, 127))
-end
-
 local function joinServerByJobId(jobId)
     if jobId ~= "" then
         updateStatus("Join...", Color3.fromRGB(255, 255, 0))
         pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
         end)
+    end
+end
+
+-- Hàm chọn team trước khi join Sea
+local function ensureTeamSelected()
+    if not player.Team then
+        updateStatus("Team...", Color3.fromRGB(255, 255, 0))
+        local success = pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates")
+        end)
+        if success then
+            repeat wait() until player.Team
+            updateStatus("Team OK", Color3.fromRGB(0, 255, 127))
+            wait(0.5)
+        end
+    end
+end
+
+local function joinSea2()
+    updateStatus("Sea 2...", Color3.fromRGB(255, 150, 0))
+    ensureTeamSelected()
+    
+    local success = pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelDressrosa")
+    end)
+    
+    if success then
+        updateStatus("→Sea 2", Color3.fromRGB(0, 255, 127))
+    else
+        updateStatus("Failed!", Color3.fromRGB(255, 0, 0))
+        wait(2)
+        updateStatus("Ready", Color3.fromRGB(0, 255, 127))
+    end
+end
+
+local function joinSea3()
+    updateStatus("Sea 3...", Color3.fromRGB(255, 50, 150))
+    ensureTeamSelected()
+    
+    local success = pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelZou")
+    end)
+    
+    if success then
+        updateStatus("→Sea 3", Color3.fromRGB(0, 255, 127))
+    else
+        updateStatus("Failed!", Color3.fromRGB(255, 0, 0))
+        wait(2)
+        updateStatus("Ready", Color3.fromRGB(0, 255, 127))
     end
 end
 
@@ -352,8 +413,9 @@ local function hopToLowPlayerServer()
 end
 
 copyBtn.MouseButton1Click:Connect(copyJobId)
-clearBtn.MouseButton1Click:Connect(clearJobId)
 hopBtn.MouseButton1Click:Connect(hopToLowPlayerServer)
+sea2Btn.MouseButton1Click:Connect(joinSea2)
+sea3Btn.MouseButton1Click:Connect(joinSea3)
 
 jobIdInput.FocusLost:Connect(function(enterPressed)
     if enterPressed or jobIdInput.Text ~= "" then
