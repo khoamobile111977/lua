@@ -395,6 +395,27 @@ function GetDragonWizard()
         rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dragon Wizard", Command = "LearnTether"})
         StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã học Tether!", Duration = 2})
     end
+
+    task.wait(3)
+    local hasBlackBelt = checkInventory("Dojo Belt (Black)")
+    
+    if hasBlackBelt then
+        StarterGui:SetCore("SendNotification", {
+            Title = "✅ Xác nhận thành công", 
+            Text = "Đã có Black Belt - GetDragonWizard hoàn tất!", 
+            Duration = 3
+        })
+        return true
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "⚠️ Chưa có Black Belt", 
+            Text = "Rejoin và thử lại...", 
+            Duration = 3
+        })
+        task.wait(2)
+        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+        return false
+    end
 end
 
 function BuyDraco()
