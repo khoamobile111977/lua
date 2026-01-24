@@ -1,5 +1,3 @@
--- FULLY BELT 3 - AUTO TRADE SYSTEM (FIXED & ULTRA MODERN UI)
--- Kết hợp tptradetablenew.lua + autotrade.lua + allinonedraconewui.lua
 
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
@@ -267,14 +265,14 @@ function TeleportToTradeTable(tableIndex)
     
     local targetCFrame = p1CFrame
     local isCheckingP1 = true
-
+    
     local checkConnection
     checkConnection = game:GetService("RunService").Heartbeat:Connect(function()
         if not Main.IsMoving then
             checkConnection:Disconnect()
             return
         end
-
+        
         if isCheckingP1 and IsChairOccupied(p1) then
             if Main.CurrentTween then
                 Main.CurrentTween:Cancel()
@@ -478,6 +476,47 @@ local function addLowestAvailableFruit(sortedFruits, startIndex)
     return nil, nil
 end
 
+local function removeFruitFromTrade(fruitName)
+    local success = pcall(function()
+        TradeFunction:InvokeServer("removeItem", fruitName)
+    end)
+    return success
+end
+
+local function countMyFruitsInTrade()
+    local success, count = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local fruitCount = 0
+        
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+                fruitCount = fruitCount + 1
+            end
+        end
+        
+        return fruitCount
+    end)
+    
+    return success and count or 0
+end
+
+local function getMyFruitsInTrade()
+    local success, fruits = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local fruitList = {}
+        
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+                table.insert(fruitList, child.Name)
+            end
+        end
+        
+        return fruitList
+    end)
+    
+    return success and fruits or {}
+end
+
 local StatusGui = Instance.new("ScreenGui")
 local StatusLabel = Instance.new("TextLabel")
 
@@ -593,7 +632,32 @@ local function autoTrade()
             local myValue, opponentValue = getTradeValues()
             
             if myValue < opponentValue then
-                UpdateStatus("➕ Đang thêm thêm fruit...", Color3.fromRGB(139, 92, 246))
+                local myFruitCount = countMyFruitsInTrade()
+                
+                if myFruitCount >= 4 then
+                    UpdateStatus("⚠️ Đã đầy 4 slot! Đang bỏ fruit rẻ nhất...", Color3.fromRGB(245, 158, 11))
+                    
+                    local myFruits = getMyFruitsInTrade()
+                    
+                    if #myFruits > 0 then
+                        local fruitToRemove = myFruits[1]
+                        
+                        UpdateStatus("🗑️ Đang bỏ: " .. fruitToRemove, Color3.fromRGB(239, 68, 68))
+                        
+                        local removeSuccess = removeFruitFromTrade(fruitToRemove)
+                        
+                        if removeSuccess then
+                            task.wait(0.5)
+                            UpdateStatus("✅ Đã bỏ fruit rẻ nhất!", Color3.fromRGB(16, 185, 129))
+                            task.wait(0.3)
+                        else
+                            UpdateStatus("❌ Không thể bỏ fruit!", Color3.fromRGB(239, 68, 68))
+                            task.wait(2)
+                        end
+                    end
+                end
+                
+                UpdateStatus("➕ Đang thêm fruit...", Color3.fromRGB(139, 92, 246))
                 
                 currentIndex = currentIndex + 1
                 local newIndex, newFruit = addLowestAvailableFruit(sortedFruits, currentIndex)
@@ -613,7 +677,6 @@ local function autoTrade()
         
         task.wait(0.25)
     end
-    
     return true
 end
 
@@ -627,6 +690,7 @@ local function checkBothChairsOccupied(tableIndex)
     
     return IsChairOccupied(p1) and IsChairOccupied(p2)
 end
+
 
 local StartButton, StatusText
 
@@ -822,7 +886,7 @@ StatusText.TextTransparency = 0.2
 
 local function updateTableSelection(tableNum)
     getgenv().SelectedTable = tableNum
-
+    
     Table1Btn.BackgroundTransparency = 0.3
     Table2Btn.BackgroundTransparency = 0.3
     Table3Btn.BackgroundTransparency = 0.3
@@ -830,7 +894,7 @@ local function updateTableSelection(tableNum)
     Table1Btn.TextTransparency = 0.3
     Table2Btn.TextTransparency = 0.3
     Table3Btn.TextTransparency = 0.3
-
+    
     if tableNum == 1 then
         Table1Btn.BackgroundTransparency = 0.1
         Table1Btn.TextTransparency = 0
@@ -941,7 +1005,7 @@ updateTableSelection(1)
 
 task.wait(0.5)
 StarterGui:SetCore("SendNotification", {
-    Title = " Belt 3 Auto",
-    Text = "Loaded!",
+    Title = " Auto Fully Belt 3 promax",
+    Text = "Loaded! donate me to 03770823195002 mbbank pls <3",
     Duration = 4
 })
