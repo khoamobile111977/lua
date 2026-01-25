@@ -265,6 +265,3 @@ Button3_2.MouseButton1Click:Connect(function()
     spawn(function() buttonClickEffect(Button3_2, Color3.fromRGB(180, 70, 130)) end)
     TeleportToChair(3, 2)
 end)
-
-print("Trade Table UI đã được tải!")
-print("6 nút cho 3 bàn, mỗi bàn có 2 ghế")
