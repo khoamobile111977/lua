@@ -253,7 +253,7 @@ local function checkAndEnsureTurtleMap()
     
     warn("⚠️ Không tìm thấy Turtle, đang tween đến spawn...")
     
-    local spawnPos = CFrame.new(5270.25195, 1003.49152, 23.6695557, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+    local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
     
     local foundTurtle = false
     local checkTask = task.spawn(function()
