@@ -238,6 +238,47 @@ local function GetAllTradeTables()
     return tables
 end
 
+local StatusGui = Instance.new("ScreenGui")
+local StatusLabel = Instance.new("TextLabel")
+
+StatusGui.Name = "Belt3StatusGui"
+StatusGui.Parent = lp:WaitForChild("PlayerGui")
+StatusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+StatusGui.ResetOnSpawn = false
+
+StatusLabel.Parent = StatusGui
+StatusLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+StatusLabel.BackgroundTransparency = 0.15
+StatusLabel.Position = UDim2.new(0.5, -180, 0, 15)
+StatusLabel.Size = UDim2.new(0, 360, 0, 42)
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.Text = ""
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusLabel.TextSize = 14
+StatusLabel.TextStrokeTransparency = 0.3
+StatusLabel.Visible = false
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusLabel
+
+local StatusStroke = Instance.new("UIStroke")
+StatusStroke.Color = Color3.fromRGB(139, 92, 246)
+StatusStroke.Thickness = 1.5
+StatusStroke.Transparency = 0.5
+StatusStroke.Parent = StatusLabel
+
+local function UpdateStatus(text, color)
+    StatusLabel.Text = text
+    StatusLabel.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+    StatusStroke.Color = color or Color3.fromRGB(139, 92, 246)
+    StatusLabel.Visible = true
+end
+
+local function HideStatus()
+    StatusLabel.Visible = false
+end
+
 local function checkAndEnsureTurtleMap()
     local map = workspace:FindFirstChild("Map")
     if not map then
@@ -558,47 +599,6 @@ local function getMyFruitsInTrade()
     end)
     
     return success and fruits or {}
-end
-
-local StatusGui = Instance.new("ScreenGui")
-local StatusLabel = Instance.new("TextLabel")
-
-StatusGui.Name = "Belt3StatusGui"
-StatusGui.Parent = lp:WaitForChild("PlayerGui")
-StatusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-StatusGui.ResetOnSpawn = false
-
-StatusLabel.Parent = StatusGui
-StatusLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-StatusLabel.BackgroundTransparency = 0.15
-StatusLabel.Position = UDim2.new(0.5, -180, 0, 15)
-StatusLabel.Size = UDim2.new(0, 360, 0, 42)
-StatusLabel.Font = Enum.Font.GothamBold
-StatusLabel.Text = ""
-StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-StatusLabel.TextSize = 14
-StatusLabel.TextStrokeTransparency = 0.3
-StatusLabel.Visible = false
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 8)
-StatusCorner.Parent = StatusLabel
-
-local StatusStroke = Instance.new("UIStroke")
-StatusStroke.Color = Color3.fromRGB(139, 92, 246)
-StatusStroke.Thickness = 1.5
-StatusStroke.Transparency = 0.5
-StatusStroke.Parent = StatusLabel
-
-local function UpdateStatus(text, color)
-    StatusLabel.Text = text
-    StatusLabel.TextColor3 = color or Color3.fromRGB(255, 255, 255)
-    StatusStroke.Color = color or Color3.fromRGB(139, 92, 246)
-    StatusLabel.Visible = true
-end
-
-local function HideStatus()
-    StatusLabel.Visible = false
 end
 
 local function waitForTradeCountdown()
