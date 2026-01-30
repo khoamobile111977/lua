@@ -65,7 +65,8 @@ screenGui.ResetOnSpawn = false
 
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
-playerCountFrame.Position = UDim2.new(0.5, -60, 0, 5)
+playerCountFrame.AnchorPoint = Vector2.new(0.5, 0)
+playerCountFrame.Position = UDim2.new(0.5, 0, 0, 0)
 playerCountFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 playerCountFrame.BackgroundTransparency = 0.4
 playerCountFrame.BorderSizePixel = 0
