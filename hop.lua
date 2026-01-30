@@ -62,6 +62,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ServerHopperGui"
 screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 
 local playerCountFrame = Instance.new("Frame")
 playerCountFrame.Size = UDim2.new(0, 120, 0, 30)
