@@ -104,7 +104,7 @@ Players.PlayerRemoving:Connect(updatePlayerCount)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 158, 0, 70)
-mainFrame.Position = UDim2.new(0, 10, 0, 50)
+mainFrame.Position = UDim2.new(0, 10, 0, 60)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 mainFrame.BackgroundTransparency = 0.4
 mainFrame.BorderSizePixel = 0
