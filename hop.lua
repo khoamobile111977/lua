@@ -12,8 +12,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SERVER_URL = "http://127.0.0.1:8765/report_player"
 
 local mappingAttempts = 0
-local maxMappingAttempts = 12 
-local mappingInterval = 10  
+local maxMappingAttempts = 12
+local mappingInterval = 3
 local isMappingComplete = false
 
 local function reportPlayerName()
