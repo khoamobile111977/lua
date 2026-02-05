@@ -6,7 +6,7 @@ if not game.Players.LocalPlayer.Team then
     game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates") 
 end
 repeat wait() until game.Players.LocalPlayer.Team
-task.wait(1)
+task.wait(0.5)
 
 local vu = game:GetService("VirtualUser")
 game:GetService("Players").LocalPlayer.Idled:connect(function()
