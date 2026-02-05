@@ -8,6 +8,8 @@ local StarterGui = game:GetService("StarterGui")
 
 -- Giữ nguyên tất cả các function từ script gốc
 getgenv().FullyDai5Running = getgenv().FullyDai5Running or false
+getgenv().FullyBelt3Running = getgenv().FullyBelt3Running or false
+getgenv().SelectedTable = getgenv().SelectedTable or 1
 getgenv().Main = getgenv().Main or {}
 Main.CurrentTween = nil
 Main.IsMoving = false
@@ -531,14 +533,434 @@ function TeleportToChair(tableIndex, chairIndex)
     TP1(chairPos)
 end
 
-function ExecuteAtTrade()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/khoamobile111977/lua/refs/heads/main/autotrade.lua"))()
-    StarterGui:SetCore("SendNotification", {Title = "AtTrade", Text = "Script đã được load!", Duration = 2})
+-- ===== BELT 3 AUTO TRADE FUNCTIONS =====
+
+local function IsChairOccupied(chair)
+    if not chair then return false end
+    
+    local control = nil
+    if chair:IsA("Model") then
+        control = chair:FindFirstChild("Control")
+    elseif chair:IsA("Seat") or chair:IsA("VehicleSeat") then
+        control = chair
+    end
+    
+    if not control then return false end
+    
+    local occupant = control.Occupant
+    
+    if occupant and occupant:IsA("Humanoid") then
+        return true
+    else
+        return false
+    end
 end
 
--- ===== BẮT ĐẦU UI HIỆN ĐẠI CHUYÊN NGHIỆP =====
+local function GetAllTradeTables()
+    local map = workspace:FindFirstChild("Map")
+    if not map then return {} end
+    
+    local turtle = map:FindFirstChild("Turtle")
+    if not turtle then return {} end
+    
+    local tables = {}
+    
+    for _, obj in ipairs(turtle:GetChildren()) do
+        if obj.Name:match("TradeTable") then
+            local p1 = obj:FindFirstChild("P1")
+            local p2 = obj:FindFirstChild("P2")
+            
+            if p1 and p2 then
+                table.insert(tables, {
+                    name = obj.Name,
+                    object = obj,
+                    p1 = p1,
+                    p2 = p2
+                })
+            end
+        end
+    end
+    
+    table.sort(tables, function(a, b)
+        local aNum = tonumber(a.name:match("%d+")) or 0
+        local bNum = tonumber(b.name:match("%d+")) or 0
+        return aNum < bNum
+    end)
+    
+    return tables
+end
 
--- Modern Minimalist Colors - Màu đồng nhất
+local function checkAndEnsureTurtleMap()
+    local map = workspace:FindFirstChild("Map")
+    if not map then return false end
+    
+    local turtle = map:FindFirstChild("Turtle")
+    if turtle then return true end
+    
+    local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
+    
+    local foundTurtle = false
+    local checkTask = task.spawn(function()
+        while not foundTurtle do
+            local currentMap = workspace:FindFirstChild("Map")
+            if currentMap and currentMap:FindFirstChild("Turtle") then
+                foundTurtle = true
+                if Main.CurrentTween then
+                    Main.CurrentTween:Cancel()
+                end
+                Main.IsMoving = false
+                Main.CurrentTween = nil
+                getgenv().DracoNoClip = false
+                disableDracoNoClip()
+                break
+            end
+
+            if not Main.IsMoving then break end
+            task.wait(0.5)
+        end
+    end)
+
+    TP1(spawnPos)
+    repeat task.wait(0.1) until not Main.IsMoving or foundTurtle
+    task.wait(0.5)
+
+    local finalMap = workspace:FindFirstChild("Map")
+    return finalMap and finalMap:FindFirstChild("Turtle") ~= nil
+end
+
+function TeleportToTradeTable(tableIndex, useInstant)
+    if not checkAndEnsureTurtleMap() then
+        return false
+    end
+    
+    local allTables = GetAllTradeTables()
+    if #allTables == 0 or tableIndex < 1 or tableIndex > #allTables then
+        return false
+    end
+    
+    local selectedTable = allTables[tableIndex]
+    local p1 = selectedTable.p1
+    local p2 = selectedTable.p2
+    
+    local p1CFrame = p1:IsA("Model") and p1:GetPrimaryPartCFrame() or (p1:IsA("BasePart") and p1.CFrame)
+    local p2CFrame = p2:IsA("Model") and p2:GetPrimaryPartCFrame() or (p2:IsA("BasePart") and p2.CFrame)
+    
+    if not p1CFrame or not p2CFrame then return false end
+    
+    local targetCFrame = p1CFrame
+    
+    -- Nếu dùng Instant TP
+    if useInstant or getgenv().InstantTP then
+        -- Check xem P1 có người không
+        if IsChairOccupied(p1) then
+            targetCFrame = p2CFrame
+        end
+        
+        -- Instant teleport
+        local char = lp.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = targetCFrame
+        end
+        return true
+    end
+    
+    -- Dùng Tween bình thường
+    local isCheckingP1 = true
+    
+    local checkConnection
+    checkConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        if not Main.IsMoving then
+            checkConnection:Disconnect()
+            return
+        end
+        
+        if isCheckingP1 and IsChairOccupied(p1) then
+            if Main.CurrentTween then
+                Main.CurrentTween:Cancel()
+            end
+            
+            isCheckingP1 = false
+            checkConnection:Disconnect()
+            task.wait(0.1)
+            TP1(p2CFrame)
+        end
+    end)
+    
+    TP1(targetCFrame)
+    repeat task.wait(0.1) until not Main.IsMoving
+    
+    if checkConnection and checkConnection.Connected then
+        checkConnection:Disconnect()
+    end
+    
+    return true
+end
+
+local CommF = rs:WaitForChild("Remotes"):WaitForChild("CommF_")
+local TradeFunction = rs:WaitForChild("Remotes"):WaitForChild("TradeFunction")
+
+local function getTradeGUI()
+    return lp.PlayerGui.Main.Trade
+end
+
+local function getTradeInventory()
+    local success, result = pcall(function()
+        return CommF:InvokeServer("getTradeInventory")
+    end)
+    if not success or typeof(result) ~= "table" then return nil end
+    return result
+end
+
+local function sortFruitsByPrice(inventory)
+    local fruits = {}
+    for index, fruitData in pairs(inventory) do
+        if typeof(fruitData) == "table" and fruitData.Price and fruitData.Name then
+            table.insert(fruits, {
+                name = fruitData.Name,
+                price = fruitData.Price,
+                data = fruitData
+            })
+        end
+    end
+    table.sort(fruits, function(a, b)
+        return a.price < b.price
+    end)
+    return fruits
+end
+
+local function addFruitToTrade(fruitName)
+    local success, result = pcall(function()
+        return TradeFunction:InvokeServer("addItem", fruitName)
+    end)
+    return success, result
+end
+
+local function checkMyFruitAdded(fruitName)
+    local success, result = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local fruitButton = container:FindFirstChild(fruitName)
+        if fruitButton and fruitButton:IsA("ImageButton") then return true end
+        return false
+    end)
+    if success then return result end
+    return false
+end
+
+local function checkOpponentAddedFruit()
+    local success, result = pcall(function()
+        local container = getTradeGUI().Container["2"].Frame
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+                return true, child.Name
+            end
+        end
+        return false, nil
+    end)
+    if success then return result end
+    return false, nil
+end
+
+local function getValueDifference()
+    local success, result = pcall(function()
+        local bottomTitle = getTradeGUI().BottomTitle
+        local text = bottomTitle.ContentText
+        local percent = string.match(text, "(%d+)%%")
+        return tonumber(percent)
+    end)
+    return success and result or 100
+end
+
+local function getTradeValues()
+    local success, value1, value2 = pcall(function()
+        local info = getTradeGUI().Info
+        local v1Text = info.Value1.ContentText
+        local v2Text = info.Value2.ContentText
+        local v1 = tonumber((string.gsub(v1Text, "[^%d]", "")))
+        local v2 = tonumber((string.gsub(v2Text, "[^%d]", "")))
+        return v1, v2
+    end)
+    if success and value1 and value2 then return value1, value2 end
+    return 0, 0
+end
+
+local function acceptTrade()
+    local success = pcall(function()
+        TradeFunction:InvokeServer("accept")
+    end)
+    return success
+end
+
+local function addLowestAvailableFruit(sortedFruits, startIndex)
+    startIndex = startIndex or 1
+    for i = startIndex, #sortedFruits do
+        local fruit = sortedFruits[i]
+        local success, result = addFruitToTrade(fruit.name)
+        if not success then continue end
+        task.wait(0.25)
+        local added = false
+        for attempt = 1, 5 do
+            added = checkMyFruitAdded(fruit.name)
+            if added then break end
+            task.wait(0.25)
+        end
+        if added then return i, fruit end
+    end
+    return nil, nil
+end
+
+local function removeFruitFromTrade(fruitName)
+    local success = pcall(function()
+        TradeFunction:InvokeServer("removeItem", fruitName)
+    end)
+    return success
+end
+
+local function countMyFruitsInTrade()
+    local success, count = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local fruitCount = 0
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+                fruitCount = fruitCount + 1
+            end
+        end
+        return fruitCount
+    end)
+    return success and count or 0
+end
+
+local function getMyFruitsInTrade()
+    local success, fruits = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local fruitList = {}
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+                table.insert(fruitList, child.Name)
+            end
+        end
+        return fruitList
+    end)
+    return success and fruits or {}
+end
+
+local function waitForTradeCountdown()
+    local tradeGui = lp.PlayerGui.Main.Trade
+    local countdown = tradeGui.Countdown
+    repeat task.wait(0.1) until countdown.Visible == true
+    repeat task.wait(0.25) until not countdown.Visible or countdown.ContentText == "" or not tradeGui.Visible
+    task.wait(3)
+end
+
+local function autoTrade()
+    local inventory = getTradeInventory()
+    if not inventory then return false end
+    
+    local sortedFruits = sortFruitsByPrice(inventory)
+    local currentIndex, addedFruit = addLowestAvailableFruit(sortedFruits, 1)
+    if not currentIndex then return false end
+    
+    local opponentAdded = false
+    repeat
+        task.wait(0.25)
+        opponentAdded = checkOpponentAddedFruit()
+    until opponentAdded
+    
+    task.wait(0.5)
+    
+    while true do
+        local valueDiff = getValueDifference()
+        if valueDiff <= 40 then
+            acceptTrade()
+            task.wait(1)
+            break
+        else
+            local myValue, opponentValue = getTradeValues()
+            if myValue < opponentValue then
+                local myFruitCount = countMyFruitsInTrade()
+                if myFruitCount >= 4 then
+                    local myFruits = getMyFruitsInTrade()
+                    if #myFruits > 0 then
+                        local fruitToRemove = myFruits[1]
+                        local removeSuccess = removeFruitFromTrade(fruitToRemove)
+                        if removeSuccess then task.wait(0.5) end
+                    end
+                end
+                currentIndex = currentIndex + 1
+                local newIndex, newFruit = addLowestAvailableFruit(sortedFruits, currentIndex)
+                if not newIndex then return false end
+                currentIndex = newIndex
+            else
+                task.wait(0.25)
+            end
+        end
+        task.wait(0.25)
+    end
+    return true
+end
+
+local function checkBothChairsOccupied(tableIndex)
+    local allTables = GetAllTradeTables()
+    if tableIndex < 1 or tableIndex > #allTables then return false end
+    local selectedTable = allTables[tableIndex]
+    local p1 = selectedTable.p1
+    local p2 = selectedTable.p2
+    return IsChairOccupied(p1) and IsChairOccupied(p2)
+end
+
+local Belt3StatusLabel
+
+local function UpdateBelt3Status(text)
+    if Belt3StatusLabel then
+        Belt3StatusLabel.Text = text
+        Belt3StatusLabel.Visible = true
+    end
+end
+
+local function HideBelt3Status()
+    if Belt3StatusLabel then
+        Belt3StatusLabel.Visible = false
+    end
+end
+
+local function FullyBelt3Loop()
+    local tableIndex = getgenv().SelectedTable
+    UpdateBelt3Status("Đang tp đến bàn " .. tableIndex)
+    TeleportToTradeTable(tableIndex)
+    task.wait(1)
+    
+    UpdateBelt3Status("Đợi 2 người ngồi...")
+    repeat task.wait(0.5) until checkBothChairsOccupied(tableIndex) or not getgenv().FullyBelt3Running
+    if not getgenv().FullyBelt3Running then HideBelt3Status() return end
+    
+    UpdateBelt3Status("Auto trading...")
+    local tradeSuccess = autoTrade()
+    if not tradeSuccess then
+        UpdateBelt3Status("Trade thất bại!")
+        task.wait(2)
+        getgenv().FullyBelt3Running = false
+        HideBelt3Status()
+        return
+    end
+    
+    waitForTradeCountdown()
+    UpdateBelt3Status("Claim Belt 3...")
+    ClaimDojoQuest()
+    task.wait(2)
+    
+    UpdateBelt3Status("Hoàn thành!")
+    task.wait(2)
+    getgenv().FullyBelt3Running = false
+    HideBelt3Status()
+    
+    StarterGui:SetCore("SendNotification", {
+        Title = "Belt 3 Auto",
+        Text = "Đã hoàn thành!",
+        Duration = 3
+    })
+end
+
+-- ===== BẮT ĐẦU UI =====
+
 local COLORS = {
     bg = Color3.fromRGB(15, 15, 20),
     bgSecondary = Color3.fromRGB(25, 25, 35),
@@ -549,14 +971,12 @@ local COLORS = {
     border = Color3.fromRGB(45, 45, 60)
 }
 
--- Tạo ScreenGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "DracoMinimalUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = lp:WaitForChild("PlayerGui")
 
--- Main Frame - Compact và trong suốt
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 240, 0, 320)
 mainFrame.Position = UDim2.new(1, -250, 1, -330)
@@ -569,14 +989,12 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 12)
 mainCorner.Parent = mainFrame
 
--- Stroke border
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = COLORS.border
 mainStroke.Thickness = 1
 mainStroke.Transparency = 0.5
 mainStroke.Parent = mainFrame
 
--- Header - Minimal
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 45)
 header.BackgroundColor3 = COLORS.bgSecondary
@@ -588,7 +1006,6 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 12)
 headerCorner.Parent = header
 
--- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
@@ -600,18 +1017,16 @@ title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = header
 
--- Version label
 local version = Instance.new("TextLabel")
 version.Size = UDim2.new(0, 60, 0, 16)
 version.Position = UDim2.new(1, -70, 0, 14)
-version.Text = "v2.0"
+version.Text = "v3.0"
 version.TextColor3 = COLORS.textDim
 version.TextSize = 9
 version.Font = Enum.Font.GothamMedium
 version.BackgroundTransparency = 1
 version.Parent = header
 
--- Tab Container - Compact
 local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(1, -16, 0, 28)
 tabContainer.Position = UDim2.new(0, 8, 0, 52)
@@ -624,7 +1039,6 @@ tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 tabLayout.Padding = UDim.new(0, 4)
 tabLayout.Parent = tabContainer
 
--- Content container - Compact
 local contentFrame = Instance.new("ScrollingFrame")
 contentFrame.Size = UDim2.new(1, -16, 1, -88)
 contentFrame.Position = UDim2.new(0, 8, 0, 86)
@@ -645,7 +1059,6 @@ contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     contentFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 5)
 end)
 
--- Function tạo tab button - Clean
 local function createTab(name, text, order)
     local tab = Instance.new("TextButton")
     tab.Name = name .. "Tab"
@@ -668,7 +1081,6 @@ local function createTab(name, text, order)
     return tab
 end
 
--- Function tạo button - Minimal
 local function createButton(text)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0, 224, 0, 36)
@@ -692,7 +1104,6 @@ local function createButton(text)
     buttonStroke.Transparency = 0.6
     buttonStroke.Parent = button
     
-    -- Hover effect
     button.MouseEnter:Connect(function()
         ts:Create(button, TweenInfo.new(0.15), {
             BackgroundColor3 = COLORS.accent,
@@ -716,13 +1127,10 @@ local function createButton(text)
     return button
 end
 
--- Function tạo toggle button
 local function createToggleButton(text)
-    local button = createButton(text)
-    return button
+    return createButton(text)
 end
 
--- Function tạo info label
 local function createInfoLabel(text)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0, 224, 0, 32)
@@ -748,43 +1156,58 @@ local function createInfoLabel(text)
     return label
 end
 
--- Tạo các tabs - Thứ tự mới: Info, Craft, Draco, Chair
 local infoTab = createTab("info", "Info", 1)
 local craftTab = createTab("craft", "Craft", 2)
 local dracoTab = createTab("draco", "Draco", 3)
 local chairTab = createTab("chair", "Chair", 4)
 
--- Content containers
 local infoContent = {}
 local craftContent = {}
 local dracoContent = {}
 local chairContent = {}
 
--- Info Tab Content
 infoContent[1] = createInfoLabel("Dojo Belt: 0")
 infoContent[2] = createInfoLabel("Dragon Egg: 0")
 infoContent[3] = createInfoLabel("Dragon Scale: 0")
 infoContent[4] = createInfoLabel("Blaze Ember: 0")
 infoContent[5] = createInfoLabel("Dinosaur Bones: 0")
 
--- Craft Tab Content
 craftContent[1] = createButton("Craft Dragon Items")
 FullyDai5Toggle = createToggleButton("Fully Đai 5")
 craftContent[2] = FullyDai5Toggle
 craftContent[3] = createButton("Buy Sanguine Art")
 
--- Draco Tab Content
 dracoContent[1] = createButton("Dragon Wizard")
 dracoContent[2] = createButton("Buy Draco Race")
 dracoContent[3] = createButton("Reset Gun+Sword")
 dracoContent[4] = createButton("Reset Melee+Sword")
 
--- Chair Tab Content
-chairContent[1] = createButton("AtTrade")
-for i = 1, 3 do
-    chairContent[i*2] = createButton("Bàn " .. i .. " - Ghế 1")
-    chairContent[i*2 + 1] = createButton("Bàn " .. i .. " - Ghế 2")
-end
+-- Chair Tab Content với Belt 3 Auto
+Belt3StatusLabel = createInfoLabel("Chọn bàn để bắt đầu")
+chairContent[1] = Belt3StatusLabel
+
+local table1Btn = createButton("BÀN 1")
+chairContent[2] = table1Btn
+local table2Btn = createButton("BÀN 2")
+chairContent[3] = table2Btn
+local table3Btn = createButton("BÀN 3")
+chairContent[4] = table3Btn
+
+local belt3StartBtn = createToggleButton("START AUTO")
+chairContent[5] = belt3StartBtn
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0, 224, 0, 1)
+divider.BackgroundColor3 = COLORS.border
+divider.BackgroundTransparency = 0.5
+divider.BorderSizePixel = 0
+divider.Parent = contentFrame
+chairContent[6] = divider
+
+getgenv().InstantTP = getgenv().InstantTP or false
+
+local instantTPBtn = createToggleButton("Instant TP: OFF")
+chairContent[7] = instantTPBtn
 
 local function updateInfoDisplay()
     task.spawn(function()
@@ -796,20 +1219,17 @@ local function updateInfoDisplay()
     end)
 end
 
--- Function switch tab
 local currentTab = "info"
 
 local function switchTab(tabName)
     currentTab = tabName
     
-    -- Hide all content
     for _, content in ipairs({infoContent, craftContent, dracoContent, chairContent}) do
         for _, item in ipairs(content) do 
             item.Visible = false 
         end
     end
     
-    -- Reset tab colors
     infoTab.BackgroundColor3 = COLORS.bgSecondary
     infoTab.BackgroundTransparency = 0.4
     infoTab.TextColor3 = COLORS.textDim
@@ -826,7 +1246,6 @@ local function switchTab(tabName)
     chairTab.BackgroundTransparency = 0.4
     chairTab.TextColor3 = COLORS.textDim
     
-    -- Show selected tab content
     if tabName == "info" then
         infoTab.BackgroundColor3 = COLORS.accent
         infoTab.BackgroundTransparency = 0.2
@@ -851,13 +1270,11 @@ local function switchTab(tabName)
     end
 end
 
--- Tab Events
 infoTab.MouseButton1Click:Connect(function() switchTab("info") end)
 craftTab.MouseButton1Click:Connect(function() switchTab("craft") end)
 dracoTab.MouseButton1Click:Connect(function() switchTab("draco") end)
 chairTab.MouseButton1Click:Connect(function() switchTab("chair") end)
 
--- Craft Functions
 craftContent[1].MouseButton1Click:Connect(function() craftDragonItems() end)
 craftContent[2].MouseButton1Click:Connect(function()
     ToggleFullyDai5()
@@ -871,23 +1288,94 @@ craftContent[2].MouseButton1Click:Connect(function()
 end)
 craftContent[3].MouseButton1Click:Connect(function() buySanguineArt() end)
 
--- Draco Functions
 dracoContent[1].MouseButton1Click:Connect(function() GetDragonWizard() end)
 dracoContent[2].MouseButton1Click:Connect(function() BuyDraco() end)
 dracoContent[3].MouseButton1Click:Connect(function() statgunsword() end)
 dracoContent[4].MouseButton1Click:Connect(function() meleesword() end)
 
--- Chair Functions
-chairContent[1].MouseButton1Click:Connect(function() ExecuteAtTrade() end)
-for i = 2, 7 do
-    local tableIdx = math.ceil((i-1) / 2)
-    local chairIdx = ((i-1) % 2 == 0) and 2 or 1
-    chairContent[i].MouseButton1Click:Connect(function() 
-        TeleportToChair(tableIdx, chairIdx) 
-    end)
+-- Chair Tab Functions
+local function updateTableSelection(tableNum)
+    getgenv().SelectedTable = tableNum
+    
+    -- Reset tất cả nút về trạng thái bình thường
+    table1Btn.BackgroundColor3 = COLORS.bgSecondary
+    table1Btn.BackgroundTransparency = 0.3
+    table2Btn.BackgroundColor3 = COLORS.bgSecondary
+    table2Btn.BackgroundTransparency = 0.3
+    table3Btn.BackgroundColor3 = COLORS.bgSecondary
+    table3Btn.BackgroundTransparency = 0.3
+    
+    -- Highlight nút được chọn
+    if tableNum == 1 then
+        table1Btn.BackgroundColor3 = COLORS.accent
+        table1Btn.BackgroundTransparency = 0.2
+        Belt3StatusLabel.Text = "Đã chọn: BÀN 1"
+    elseif tableNum == 2 then
+        table2Btn.BackgroundColor3 = COLORS.accent
+        table2Btn.BackgroundTransparency = 0.2
+        Belt3StatusLabel.Text = "Đã chọn: BÀN 2"
+    elseif tableNum == 3 then
+        table3Btn.BackgroundColor3 = COLORS.accent
+        table3Btn.BackgroundTransparency = 0.2
+        Belt3StatusLabel.Text = "Đã chọn: BÀN 3"
+    end
 end
 
--- Draggable
+table1Btn.MouseButton1Click:Connect(function()
+    if not getgenv().FullyBelt3Running then
+        updateTableSelection(1)
+    end
+end)
+
+table2Btn.MouseButton1Click:Connect(function()
+    if not getgenv().FullyBelt3Running then
+        updateTableSelection(2)
+    end
+end)
+
+table3Btn.MouseButton1Click:Connect(function()
+    if not getgenv().FullyBelt3Running then
+        updateTableSelection(3)
+    end
+end)
+
+belt3StartBtn.MouseButton1Click:Connect(function()
+    getgenv().FullyBelt3Running = not getgenv().FullyBelt3Running
+    
+    if getgenv().FullyBelt3Running then
+        belt3StartBtn.Text = "STOP AUTO"
+        belt3StartBtn.BackgroundColor3 = Color3.fromRGB(239, 68, 68)
+        table1Btn.Active = false
+        table2Btn.Active = false
+        table3Btn.Active = false
+        UpdateBelt3Status("Đang khởi động...")
+        task.spawn(FullyBelt3Loop)
+    else
+        belt3StartBtn.Text = "START AUTO"
+        belt3StartBtn.BackgroundColor3 = COLORS.bgSecondary
+        table1Btn.Active = true
+        table2Btn.Active = true
+        table3Btn.Active = true
+        updateTableSelection(getgenv().SelectedTable)
+        HideBelt3Status()
+    end
+end)
+
+-- Instant TP Toggle
+instantTPBtn.MouseButton1Click:Connect(function()
+    getgenv().InstantTP = not getgenv().InstantTP
+    
+    if getgenv().InstantTP then
+        instantTPBtn.Text = "Instant TP: ON"
+        instantTPBtn.BackgroundColor3 = COLORS.accent
+        instantTPBtn.BackgroundTransparency = 0.2
+    else
+        instantTPBtn.Text = "Instant TP: OFF"
+        instantTPBtn.BackgroundColor3 = COLORS.bgSecondary
+        instantTPBtn.BackgroundTransparency = 0.3
+    end
+end)
+
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -916,7 +1404,6 @@ UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then update(input) end
 end)
 
--- Toggle UI với phím ALT
 local uiVisible = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.LeftAlt and not gameProcessed then
@@ -925,11 +1412,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Initialize
 switchTab("info")
 updateInfoDisplay()
+updateTableSelection(1)
 
--- Auto update info
 task.spawn(function()
     while gui.Parent do
         task.wait(10)
@@ -939,10 +1425,9 @@ task.spawn(function()
     end
 end)
 
--- Load notification
 task.wait(0.3)
 StarterGui:SetCore("SendNotification", {
-    Title = "Draco Tools", 
+    Title = "Draco Tools v3.0", 
     Text = "Press ALT to toggle UI", 
     Duration = 3
 })
