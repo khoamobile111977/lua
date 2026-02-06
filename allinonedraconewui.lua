@@ -595,37 +595,71 @@ local function checkAndEnsureTurtleMap()
     if not map then return false end
     
     local turtle = map:FindFirstChild("Turtle")
-    if turtle then return true end
     
-    local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
-    
-    local foundTurtle = false
-    local checkTask = task.spawn(function()
-        while not foundTurtle do
-            local currentMap = workspace:FindFirstChild("Map")
-            if currentMap and currentMap:FindFirstChild("Turtle") then
-                foundTurtle = true
-                if Main.CurrentTween then
-                    Main.CurrentTween:Cancel()
-                end
-                Main.IsMoving = false
-                Main.CurrentTween = nil
-                getgenv().DracoNoClip = false
-                disableDracoNoClip()
+    -- Check Trade Tables thẳng luôn
+    local hasTradeTable = false
+    if turtle then
+        for _, obj in ipairs(turtle:GetChildren()) do
+            if obj.Name:match("TradeTable") then
+                hasTradeTable = true
                 break
             end
-
-            if not Main.IsMoving then break end
-            task.wait(0.5)
         end
-    end)
+    end
+    
+    -- Nếu không có Trade Table thì tp để load
+    if not hasTradeTable then
+        local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
+        
+        local foundTables = false
+        local checkTask = task.spawn(function()
+            while not foundTables do
+                local currentMap = workspace:FindFirstChild("Map")
+                if currentMap then
+                    local currentTurtle = currentMap:FindFirstChild("Turtle")
+                    if currentTurtle then
+                        for _, obj in ipairs(currentTurtle:GetChildren()) do
+                            if obj.Name:match("TradeTable") then
+                                foundTables = true
+                                if Main.CurrentTween then
+                                    Main.CurrentTween:Cancel()
+                                end
+                                Main.IsMoving = false
+                                Main.CurrentTween = nil
+                                getgenv().DracoNoClip = false
+                                disableDracoNoClip()
+                                break
+                            end
+                        end
+                    end
+                end
 
-    TP1(spawnPos)
-    repeat task.wait(0.1) until not Main.IsMoving or foundTurtle
-    task.wait(0.5)
+                if not Main.IsMoving then break end
+                task.wait(0.5)
+            end
+        end)
 
-    local finalMap = workspace:FindFirstChild("Map")
-    return finalMap and finalMap:FindFirstChild("Turtle") ~= nil
+        TP1(spawnPos)
+        repeat task.wait(0.1) until not Main.IsMoving or foundTables
+        task.wait(0.5)
+        
+        -- Check lại lần cuối
+        local finalMap = workspace:FindFirstChild("Map")
+        if finalMap then
+            local finalTurtle = finalMap:FindFirstChild("Turtle")
+            if finalTurtle then
+                for _, obj in ipairs(finalTurtle:GetChildren()) do
+                    if obj.Name:match("TradeTable") then
+                        return true
+                    end
+                end
+            end
+        end
+        
+        return false
+    end
+    
+    return true
 end
 
 function TeleportToTradeTable(tableIndex, useInstant)
@@ -1431,3 +1465,4 @@ StarterGui:SetCore("SendNotification", {
     Text = "Press ALT to toggle UI", 
     Duration = 3
 })
+
