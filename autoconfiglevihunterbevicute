@@ -28,7 +28,7 @@ local TIKI_HELPER_CONFIG = {
     ["Use Click M1 Fruit"] = false,
     ["Use New Method Shoot Heart"] = false,
     ["Ping Discord"] = false,
-    ["Select Owner Boat Beast Hunter"] = "", -- Sẽ được override tự động
+    ["Select Owner Boat Beast Hunter"] = "",
     ["Boost Fps"] = true,
     ["Value Collect Chest to Hop"] = "80",
     ["Webhook Find Leviathan"] = false,
@@ -55,7 +55,7 @@ local HYDRA_HELPER_CONFIG = {
     ["Use Click M1 Fruit"] = false,
     ["Use New Method Shoot Heart"] = false,
     ["Auto Chest Hop"] = false,
-    ["Select Owner Boat Beast Hunter"] = "", -- Sẽ được override tự động
+    ["Select Owner Boat Beast Hunter"] = "",
     ["Boost Fps"] = true,
     ["Webhook Drive To Tiki/Hydra"] = false,
     ["Webhook Find Leviathan"] = false,
@@ -233,7 +233,6 @@ local function buySharkmanKarate()
         retryCount = retryCount + 1
         sendNotification("⏳ Mua Melee", "Lần thử " .. retryCount .. "/" .. maxRetries, 3)
         
-        -- Tìm NPC
         local npc = findNPC("Sharkman Teacher")
         if not npc or not npc:FindFirstChild("HumanoidRootPart") then
             sendNotification("❌ Lỗi", "Không tìm thấy NPC!", 3)
@@ -244,14 +243,10 @@ local function buySharkmanKarate()
             continue
         end
         
-        -- Teleport đến NPC
         TP1(CFrame.new(npc.HumanoidRootPart.Position))
-        
-        -- Đợi tween hoàn thành
         repeat task.wait() until not Main.IsMoving
         task.wait(1)
         
-        -- Kiểm tra khoảng cách sau khi tween
         local char = lp.Character or lp.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
         local distance = (hrp.Position - npc.HumanoidRootPart.Position).Magnitude
@@ -308,12 +303,10 @@ local function main()
         
         if buySharkmanKarate() then
             task.wait(2)
-            
-            -- Tween về vị trí sau khi mua
+
             sendNotification("⏳ Di chuyển", "Đang quay về vị trí...", 3)
             TP1(CFrame.new(-16664.458984375, 189.5279998779297, 523.4910278320312))
-            
-            -- Đợi tween hoàn thành
+
             repeat task.wait() until not Main.IsMoving
             
             sendNotification("✅ Hoàn thành", "Đã quay về vị trí!", 3)
@@ -323,12 +316,10 @@ local function main()
         end
     end
     
-    -- Bước 2: Kiểm tra loại account
     local myUsername = lp.Name
     local amIBoatAccount = isAccBoat(myUsername)
     
     if amIBoatAccount then
-        -- Tôi là account boat -> Load config boat từ GitHub
         sendNotification("🚢 Account Boat", "Bạn là account boat: " .. myUsername, 5)
         
         local configUrl
@@ -352,13 +343,11 @@ local function main()
         end
         
     else
-        -- Tôi không phải boat account -> Tìm boat trong server
         local boatAccountName = findAccBoatInServer()
         
         if boatAccountName then
             sendNotification("🤝 Account Helper", "Tìm thấy boat: " .. boatAccountName, 5)
             
-            -- Chọn config helper dựa vào getgenv().levi
             local helperConfig
             if getgenv().levi == "tiki" then
                 helperConfig = TIKI_HELPER_CONFIG
@@ -366,16 +355,13 @@ local function main()
                 helperConfig = HYDRA_HELPER_CONFIG
             end
             
-            -- Override Owner Boat Beast Hunter với tên boat tìm được
             helperConfig["Select Owner Boat Beast Hunter"] = boatAccountName
-            
-            -- Set config vào getgenv()
+
             getgenv().Config = helperConfig
             
             sendNotification("✅ Set Owner", "Owner: " .. boatAccountName, 3)
             sendNotification("⏳ Loading", "Đang load script helper...", 3)
             
-            -- Load script chính
             local success, result = pcall(function()
                 return loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"))()
             end)
