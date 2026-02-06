@@ -6,21 +6,11 @@ if not game.Players.LocalPlayer.Team then
 end
 repeat wait() until game.Players.LocalPlayer.Team
 
-getgenv().melee = "Sharkman Karate"
-getgenv().accboat = { 
-    "tenacc1",
-    "tenacc2",
-}
-getgenv().levi = "tiki" -- or "hydra"
-getgenv().Key = "key"
-
--- GitHub Raw URLs cho 2 config boat (GIỮ NGUYÊN)
 local CONFIG_URLS = {
     tiki_boat = "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/accboattiki",
     hydra_boat = "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/accboathydra",
 }
 
--- Config helper nhúng trực tiếp trong code
 local TIKI_HELPER_CONFIG = {
     ["Shoot Heart When Ice Spike Breaks"] = false,
     ["Drive Boat To Tiki"] = false,
