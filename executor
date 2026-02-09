@@ -264,6 +264,7 @@ local function setStatus(text, color)
     statusLabel.TextColor3 = COLORS.success
 end
 
+-- Execute Button
 executeBtn.MouseButton1Click:Connect(function()
     local code = codeBox.Text
     
@@ -274,6 +275,11 @@ executeBtn.MouseButton1Click:Connect(function()
     
     setStatus("⚡ Executing...", COLORS.accent)
     
+    task.wait(0.5) -- Đợi một chút để user thấy status
+    
+    uiVisible = false
+    mainFrame.Visible = false
+    
     local success, err = pcall(function()
         local func, loadErr = loadstring(code)
         if not func then
@@ -283,10 +289,9 @@ executeBtn.MouseButton1Click:Connect(function()
     end)
     
     if success then
-        setStatus("✓ Executed successfully", COLORS.success)
+        print("✓ Script executed successfully!")
     else
-        setStatus("✗ Error: " .. tostring(err), COLORS.error)
-        warn("Executor Error:", err)
+        warn("✗ Executor Error:", err)
     end
 end)
 
