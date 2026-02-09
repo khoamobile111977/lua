@@ -1,5 +1,6 @@
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
+-- Script Executor UI với Scroll và Auto Hide
 local lp = game.Players.LocalPlayer
 local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -17,12 +18,14 @@ local COLORS = {
     codeBg = Color3.fromRGB(20, 20, 28)
 }
 
+-- Tạo ScreenGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "ExecutorUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = lp:WaitForChild("PlayerGui")
 
+-- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 600, 0, 400)
 mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
@@ -41,6 +44,7 @@ mainStroke.Thickness = 2
 mainStroke.Transparency = 0.3
 mainStroke.Parent = mainFrame
 
+-- Header
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 50)
 header.BackgroundColor3 = COLORS.bgSecondary
@@ -74,6 +78,7 @@ statusLabel.BackgroundTransparency = 1
 statusLabel.TextXAlignment = Enum.TextXAlignment.Right
 statusLabel.Parent = header
 
+-- Code Editor Container (Background)
 local editorContainer = Instance.new("Frame")
 editorContainer.Size = UDim2.new(1, -20, 1, -120)
 editorContainer.Position = UDim2.new(0, 10, 0, 60)
@@ -93,6 +98,7 @@ editorStroke.Thickness = 1
 editorStroke.Transparency = 0.5
 editorStroke.Parent = editorContainer
 
+-- Scrolling Frame cho Line Numbers
 local lineNumberScroll = Instance.new("ScrollingFrame")
 lineNumberScroll.Size = UDim2.new(0, 40, 1, 0)
 lineNumberScroll.Position = UDim2.new(0, 5, 0, 0)
@@ -103,6 +109,7 @@ lineNumberScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 lineNumberScroll.ScrollingEnabled = false
 lineNumberScroll.Parent = editorContainer
 
+-- Line Numbers
 local lineNumbers = Instance.new("TextLabel")
 lineNumbers.Size = UDim2.new(1, 0, 0, 300)
 lineNumbers.Position = UDim2.new(0, 0, 0, 5)
@@ -115,6 +122,7 @@ lineNumbers.TextXAlignment = Enum.TextXAlignment.Right
 lineNumbers.TextYAlignment = Enum.TextYAlignment.Top
 lineNumbers.Parent = lineNumberScroll
 
+-- Separator Line
 local separator = Instance.new("Frame")
 separator.Size = UDim2.new(0, 1, 1, 0)
 separator.Position = UDim2.new(0, 48, 0, 0)
@@ -123,6 +131,7 @@ separator.BackgroundTransparency = 0.5
 separator.BorderSizePixel = 0
 separator.Parent = editorContainer
 
+-- Scrolling Frame cho Code
 local codeScroll = Instance.new("ScrollingFrame")
 codeScroll.Size = UDim2.new(1, -55, 1, 0)
 codeScroll.Position = UDim2.new(0, 50, 0, 0)
@@ -134,6 +143,7 @@ codeScroll.ScrollBarImageTransparency = 0.3
 codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 codeScroll.Parent = editorContainer
 
+-- Code TextBox
 local codeBox = Instance.new("TextBox")
 codeBox.Size = UDim2.new(1, -10, 0, 300)
 codeBox.Position = UDim2.new(0, 5, 0, 5)
@@ -150,26 +160,32 @@ codeBox.PlaceholderText = ""
 codeBox.TextWrapped = true
 codeBox.Parent = codeScroll
 
+-- Function để sync scroll giữa line numbers và code
 local function syncScroll()
     lineNumberScroll.CanvasPosition = Vector2.new(0, codeScroll.CanvasPosition.Y)
 end
 
 codeScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(syncScroll)
 
+-- Auto update line numbers và canvas size
 local function updateEditor()
     local text = codeBox.Text
     local lines = 1
     for _ in text:gmatch("\n") do
         lines = lines + 1
     end
-
+    
+    -- Tính chiều cao cần thiết
     local textHeight = math.max(300, lines * 18 + 20)
-
+    
+    -- Update canvas size
     codeScroll.CanvasSize = UDim2.new(0, 0, 0, textHeight)
     lineNumberScroll.CanvasSize = UDim2.new(0, 0, 0, textHeight)
     
+    -- Update textbox size
     codeBox.Size = UDim2.new(1, -10, 0, textHeight)
-
+    
+    -- Update line numbers
     local lineText = ""
     for i = 1, lines do
         lineText = lineText .. i .. "\n"
@@ -178,12 +194,15 @@ local function updateEditor()
     lineNumbers.Size = UDim2.new(1, 0, 0, textHeight)
 end
 
+-- Update khi text thay đổi
 codeBox:GetPropertyChangedSignal("Text"):Connect(function()
     updateEditor()
 end)
 
+-- Initial update
 updateEditor()
 
+-- Button Container
 local buttonContainer = Instance.new("Frame")
 buttonContainer.Size = UDim2.new(1, -20, 0, 45)
 buttonContainer.Position = UDim2.new(0, 10, 1, -55)
@@ -196,6 +215,7 @@ buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 buttonLayout.Padding = UDim.new(0, 10)
 buttonLayout.Parent = buttonContainer
 
+-- Create Button Function
 local function createButton(text, color, order)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0, 170, 0, 45)
@@ -220,6 +240,7 @@ local function createButton(text, color, order)
     buttonStroke.Transparency = 0.4
     buttonStroke.Parent = button
     
+    -- Hover effects
     button.MouseEnter:Connect(function()
         ts:Create(button, TweenInfo.new(0.2), {
             BackgroundTransparency = 0,
@@ -243,28 +264,21 @@ local function createButton(text, color, order)
     return button
 end
 
+-- Buttons
 local executeBtn = createButton("▶ EXECUTE", COLORS.success, 1)
 local clearBtn = createButton("✖ CLEAR", COLORS.error, 2)
 local copyBtn = createButton("📋 COPY", COLORS.accent, 3)
 
+-- Status Function
 local function setStatus(text, color)
     statusLabel.Text = text
     statusLabel.TextColor3 = color
-    ts:Create(statusLabel, TweenInfo.new(0.3), {
-        TextTransparency = 0
-    }):Play()
-    
-    task.wait(3)
-    
-    ts:Create(statusLabel, TweenInfo.new(0.5), {
-        TextTransparency = 0
-    }):Play()
-    task.wait(0.5)
-    statusLabel.Text = "Ready"
-    statusLabel.TextColor3 = COLORS.success
 end
 
--- Execute Button
+-- Biến để theo dõi trạng thái UI
+local uiVisible = true
+
+-- Execute Button (ĐÃ SỬA - TỰ ĐỘNG ẨN UI)
 executeBtn.MouseButton1Click:Connect(function()
     local code = codeBox.Text
     
@@ -275,11 +289,13 @@ executeBtn.MouseButton1Click:Connect(function()
     
     setStatus("⚡ Executing...", COLORS.accent)
     
-    task.wait(0.5) -- Đợi một chút để user thấy status
+    task.wait(0.3) -- Đợi một chút để user thấy status
     
+    -- Ẩn UI trước khi execute
     uiVisible = false
     mainFrame.Visible = false
     
+    -- Execute code
     local success, err = pcall(function()
         local func, loadErr = loadstring(code)
         if not func then
@@ -295,11 +311,13 @@ executeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Clear Button
 clearBtn.MouseButton1Click:Connect(function()
     codeBox.Text = ""
     setStatus("✓ Cleared", COLORS.success)
 end)
 
+-- Copy Button
 copyBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard(codeBox.Text)
@@ -309,6 +327,7 @@ copyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Dragging
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -337,13 +356,14 @@ UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then update(input) end
 end)
 
-local uiVisible = true
+-- Toggle with Delete Key
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.Delete and not gameProcessed then
         uiVisible = not uiVisible
         mainFrame.Visible = uiVisible
         
         if uiVisible then
+            setStatus("Ready", COLORS.success)
             ts:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Size = UDim2.new(0, 600, 0, 400)
             }):Play()
@@ -351,16 +371,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Initial Animation
 mainFrame.Size = UDim2.new(0, 0, 0, 0)
 ts:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
     Size = UDim2.new(0, 600, 0, 400)
 }):Play()
 
+-- Notification
 game.StarterGui:SetCore("SendNotification", {
     Title = "Script Executor Loaded",
     Text = "Press DELETE to toggle UI",
     Duration = 4
 })
-
-print("✓ Script Executor loaded successfully!")
-print("✓ Press DELETE to toggle UI")
