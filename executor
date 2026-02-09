@@ -1,6 +1,6 @@
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
--- Script Executor UI với Scroll và Auto Hide
+-- Script Executor UI - Ẩn từ đầu
 local lp = game.Players.LocalPlayer
 local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -32,6 +32,7 @@ mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
 mainFrame.BackgroundColor3 = COLORS.bg
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false -- ẨN TỪ ĐẦU
 mainFrame.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
@@ -275,10 +276,10 @@ local function setStatus(text, color)
     statusLabel.TextColor3 = color
 end
 
--- Biến để theo dõi trạng thái UI
-local uiVisible = true
+-- Biến để theo dõi trạng thái UI (BẮT ĐẦU = ẨN)
+local uiVisible = false
 
--- Execute Button (ĐÃ SỬA - TỰ ĐỘNG ẨN UI)
+-- Execute Button
 executeBtn.MouseButton1Click:Connect(function()
     local code = codeBox.Text
     
@@ -289,7 +290,7 @@ executeBtn.MouseButton1Click:Connect(function()
     
     setStatus("⚡ Executing...", COLORS.accent)
     
-    task.wait(0.3) -- Đợi một chút để user thấy status
+    task.wait(0.3)
     
     -- Ẩn UI trước khi execute
     uiVisible = false
@@ -360,26 +361,26 @@ end)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.Delete and not gameProcessed then
         uiVisible = not uiVisible
-        mainFrame.Visible = uiVisible
         
         if uiVisible then
+            -- Hiện UI với animation
+            mainFrame.Visible = true
+            mainFrame.Size = UDim2.new(0, 0, 0, 0)
             setStatus("Ready", COLORS.success)
             ts:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Size = UDim2.new(0, 600, 0, 400)
             }):Play()
+        else
+            -- Ẩn UI
+            mainFrame.Visible = false
         end
     end
 end)
 
--- Initial Animation
-mainFrame.Size = UDim2.new(0, 0, 0, 0)
-ts:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 600, 0, 400)
-}):Play()
-
--- Notification
+-- Notification (chỉ thông báo, không hiện UI)
 game.StarterGui:SetCore("SendNotification", {
     Title = "Script Executor Loaded",
-    Text = "Press DELETE to toggle UI",
+    Text = "Press DELETE to open UI",
     Duration = 4
 })
+
