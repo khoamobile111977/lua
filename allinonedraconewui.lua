@@ -526,6 +526,28 @@ function buySanguineArt()
     end
 end
 
+function buyshark()
+    if tpToNPC("Sharkman Teacher") then
+        task.wait(2)
+        local args = {"BuySharkmanKarate"}
+        rs.Remotes.CommF_:InvokeServer(unpack(args))
+        StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Sharkman Karate!", Duration = 2})
+    else
+        StarterGui:SetCore("SendNotification", {Title = "Error", Text = "Không tìm thấy NPC!", Duration = 3})
+    end
+end
+
+function buytalon()
+    if tpToNPC("Uzoth") then
+        task.wait(2)
+        local args = {"BuyDragonTalon"}
+        rs.Remotes.CommF_:InvokeServer(unpack(args))
+        StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Dragon Talon!", Duration = 2})
+    else
+        StarterGui:SetCore("SendNotification", {Title = "Error", Text = "Không tìm thấy NPC!", Duration = 3})
+    end
+end
+
 function TeleportToChair(tableIndex, chairIndex)
     local table = TradeTables[tableIndex]
     if not table then return end
@@ -1209,7 +1231,9 @@ infoContent[5] = createInfoLabel("Dinosaur Bones: 0")
 craftContent[1] = createButton("Craft Dragon Items")
 FullyDai5Toggle = createToggleButton("Fully Đai 5")
 craftContent[2] = FullyDai5Toggle
-craftContent[3] = createButton("Buy Sanguine Art")
+craftContent[3] = createButton("Buy Sharkman Karate")
+craftContent[4] = createButton("Buy Dragon Talon")
+craftContent[5] = createButton("Buy Sanguine Art")
 
 dracoContent[1] = createButton("Dragon Wizard")
 dracoContent[2] = createButton("Buy Draco Race")
@@ -1320,7 +1344,9 @@ craftContent[2].MouseButton1Click:Connect(function()
         craftContent[2].BackgroundColor3 = COLORS.bgSecondary
     end
 end)
-craftContent[3].MouseButton1Click:Connect(function() buySanguineArt() end)
+craftContent[3].MouseButton1Click:Connect(function() buyshark() end)
+craftContent[4].MouseButton1Click:Connect(function() buytalon() end)
+craftContent[5].MouseButton1Click:Connect(function() buySanguineArt() end)
 
 dracoContent[1].MouseButton1Click:Connect(function() GetDragonWizard() end)
 dracoContent[2].MouseButton1Click:Connect(function() BuyDraco() end)
@@ -1465,4 +1491,5 @@ StarterGui:SetCore("SendNotification", {
     Text = "Press ALT to toggle UI", 
     Duration = 3
 })
+
 
