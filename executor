@@ -1,0 +1,361 @@
+repeat wait() until game:IsLoaded()
+repeat wait() until game.Players and game.Players.LocalPlayer
+local lp = game.Players.LocalPlayer
+local ts = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local COLORS = {
+    bg = Color3.fromRGB(15, 15, 20),
+    bgSecondary = Color3.fromRGB(25, 25, 35),
+    accent = Color3.fromRGB(99, 102, 241),
+    accentHover = Color3.fromRGB(129, 132, 255),
+    success = Color3.fromRGB(34, 197, 94),
+    error = Color3.fromRGB(239, 68, 68),
+    text = Color3.fromRGB(230, 230, 240),
+    textDim = Color3.fromRGB(140, 140, 160),
+    border = Color3.fromRGB(45, 45, 60),
+    codeBg = Color3.fromRGB(20, 20, 28)
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ExecutorUI"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = lp:WaitForChild("PlayerGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 600, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
+mainFrame.BackgroundColor3 = COLORS.bg
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = COLORS.border
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.3
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 50)
+header.BackgroundColor3 = COLORS.bgSecondary
+header.BackgroundTransparency = 0.2
+header.BorderSizePixel = 0
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 1, 0)
+title.Position = UDim2.new(0, 15, 0, 0)
+title.Text = "⚡ SCRIPT EXECUTOR"
+title.TextColor3 = COLORS.text
+title.TextSize = 16
+title.Font = Enum.Font.GothamBold
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 150, 0, 20)
+statusLabel.Position = UDim2.new(1, -165, 0, 15)
+statusLabel.Text = "Ready"
+statusLabel.TextColor3 = COLORS.success
+statusLabel.TextSize = 11
+statusLabel.Font = Enum.Font.GothamMedium
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+statusLabel.Parent = header
+
+local editorContainer = Instance.new("Frame")
+editorContainer.Size = UDim2.new(1, -20, 1, -120)
+editorContainer.Position = UDim2.new(0, 10, 0, 60)
+editorContainer.BackgroundColor3 = COLORS.codeBg
+editorContainer.BackgroundTransparency = 0.2
+editorContainer.BorderSizePixel = 0
+editorContainer.ClipsDescendants = true
+editorContainer.Parent = mainFrame
+
+local editorCorner = Instance.new("UICorner")
+editorCorner.CornerRadius = UDim.new(0, 8)
+editorCorner.Parent = editorContainer
+
+local editorStroke = Instance.new("UIStroke")
+editorStroke.Color = COLORS.border
+editorStroke.Thickness = 1
+editorStroke.Transparency = 0.5
+editorStroke.Parent = editorContainer
+
+local lineNumberScroll = Instance.new("ScrollingFrame")
+lineNumberScroll.Size = UDim2.new(0, 40, 1, 0)
+lineNumberScroll.Position = UDim2.new(0, 5, 0, 0)
+lineNumberScroll.BackgroundTransparency = 1
+lineNumberScroll.BorderSizePixel = 0
+lineNumberScroll.ScrollBarThickness = 0
+lineNumberScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+lineNumberScroll.ScrollingEnabled = false
+lineNumberScroll.Parent = editorContainer
+
+local lineNumbers = Instance.new("TextLabel")
+lineNumbers.Size = UDim2.new(1, 0, 0, 300)
+lineNumbers.Position = UDim2.new(0, 0, 0, 5)
+lineNumbers.BackgroundTransparency = 1
+lineNumbers.Text = "1"
+lineNumbers.TextColor3 = COLORS.textDim
+lineNumbers.TextSize = 12
+lineNumbers.Font = Enum.Font.Code
+lineNumbers.TextXAlignment = Enum.TextXAlignment.Right
+lineNumbers.TextYAlignment = Enum.TextYAlignment.Top
+lineNumbers.Parent = lineNumberScroll
+
+local separator = Instance.new("Frame")
+separator.Size = UDim2.new(0, 1, 1, 0)
+separator.Position = UDim2.new(0, 48, 0, 0)
+separator.BackgroundColor3 = COLORS.border
+separator.BackgroundTransparency = 0.5
+separator.BorderSizePixel = 0
+separator.Parent = editorContainer
+
+local codeScroll = Instance.new("ScrollingFrame")
+codeScroll.Size = UDim2.new(1, -55, 1, 0)
+codeScroll.Position = UDim2.new(0, 50, 0, 0)
+codeScroll.BackgroundTransparency = 1
+codeScroll.BorderSizePixel = 0
+codeScroll.ScrollBarThickness = 6
+codeScroll.ScrollBarImageColor3 = COLORS.accent
+codeScroll.ScrollBarImageTransparency = 0.3
+codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+codeScroll.Parent = editorContainer
+
+local codeBox = Instance.new("TextBox")
+codeBox.Size = UDim2.new(1, -10, 0, 300)
+codeBox.Position = UDim2.new(0, 5, 0, 5)
+codeBox.BackgroundTransparency = 1
+codeBox.Text = "-- Paste your script here\nprint('Hello World!')"
+codeBox.TextColor3 = COLORS.text
+codeBox.TextSize = 12
+codeBox.Font = Enum.Font.Code
+codeBox.TextXAlignment = Enum.TextXAlignment.Left
+codeBox.TextYAlignment = Enum.TextYAlignment.Top
+codeBox.MultiLine = true
+codeBox.ClearTextOnFocus = false
+codeBox.PlaceholderText = ""
+codeBox.TextWrapped = true
+codeBox.Parent = codeScroll
+
+local function syncScroll()
+    lineNumberScroll.CanvasPosition = Vector2.new(0, codeScroll.CanvasPosition.Y)
+end
+
+codeScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(syncScroll)
+
+local function updateEditor()
+    local text = codeBox.Text
+    local lines = 1
+    for _ in text:gmatch("\n") do
+        lines = lines + 1
+    end
+
+    local textHeight = math.max(300, lines * 18 + 20)
+
+    codeScroll.CanvasSize = UDim2.new(0, 0, 0, textHeight)
+    lineNumberScroll.CanvasSize = UDim2.new(0, 0, 0, textHeight)
+    
+    codeBox.Size = UDim2.new(1, -10, 0, textHeight)
+
+    local lineText = ""
+    for i = 1, lines do
+        lineText = lineText .. i .. "\n"
+    end
+    lineNumbers.Text = lineText
+    lineNumbers.Size = UDim2.new(1, 0, 0, textHeight)
+end
+
+codeBox:GetPropertyChangedSignal("Text"):Connect(function()
+    updateEditor()
+end)
+
+updateEditor()
+
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Size = UDim2.new(1, -20, 0, 45)
+buttonContainer.Position = UDim2.new(0, 10, 1, -55)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = mainFrame
+
+local buttonLayout = Instance.new("UIListLayout")
+buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout.Padding = UDim.new(0, 10)
+buttonLayout.Parent = buttonContainer
+
+local function createButton(text, color, order)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 170, 0, 45)
+    button.BackgroundColor3 = color
+    button.BackgroundTransparency = 0.2
+    button.BorderSizePixel = 0
+    button.Text = text
+    button.TextColor3 = COLORS.text
+    button.TextSize = 13
+    button.Font = Enum.Font.GothamBold
+    button.AutoButtonColor = false
+    button.LayoutOrder = order
+    button.Parent = buttonContainer
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = button
+    
+    local buttonStroke = Instance.new("UIStroke")
+    buttonStroke.Color = COLORS.border
+    buttonStroke.Thickness = 1
+    buttonStroke.Transparency = 0.4
+    buttonStroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        ts:Create(button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0,
+            Size = UDim2.new(0, 175, 0, 47)
+        }):Play()
+        ts:Create(buttonStroke, TweenInfo.new(0.2), {
+            Transparency = 0.2
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        ts:Create(button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.2,
+            Size = UDim2.new(0, 170, 0, 45)
+        }):Play()
+        ts:Create(buttonStroke, TweenInfo.new(0.2), {
+            Transparency = 0.4
+        }):Play()
+    end)
+    
+    return button
+end
+
+local executeBtn = createButton("▶ EXECUTE", COLORS.success, 1)
+local clearBtn = createButton("✖ CLEAR", COLORS.error, 2)
+local copyBtn = createButton("📋 COPY", COLORS.accent, 3)
+
+local function setStatus(text, color)
+    statusLabel.Text = text
+    statusLabel.TextColor3 = color
+    ts:Create(statusLabel, TweenInfo.new(0.3), {
+        TextTransparency = 0
+    }):Play()
+    
+    task.wait(3)
+    
+    ts:Create(statusLabel, TweenInfo.new(0.5), {
+        TextTransparency = 0
+    }):Play()
+    task.wait(0.5)
+    statusLabel.Text = "Ready"
+    statusLabel.TextColor3 = COLORS.success
+end
+
+executeBtn.MouseButton1Click:Connect(function()
+    local code = codeBox.Text
+    
+    if code == "" or code == "-- Paste your script here\nprint('Hello World!')" then
+        setStatus("⚠ No code to execute", COLORS.error)
+        return
+    end
+    
+    setStatus("⚡ Executing...", COLORS.accent)
+    
+    local success, err = pcall(function()
+        local func, loadErr = loadstring(code)
+        if not func then
+            error(loadErr)
+        end
+        func()
+    end)
+    
+    if success then
+        setStatus("✓ Executed successfully", COLORS.success)
+    else
+        setStatus("✗ Error: " .. tostring(err), COLORS.error)
+        warn("Executor Error:", err)
+    end
+end)
+
+clearBtn.MouseButton1Click:Connect(function()
+    codeBox.Text = ""
+    setStatus("✓ Cleared", COLORS.success)
+end)
+
+copyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(codeBox.Text)
+        setStatus("✓ Copied to clipboard", COLORS.success)
+    else
+        setStatus("✗ Clipboard not supported", COLORS.error)
+    end
+end)
+
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then update(input) end
+end)
+
+local uiVisible = true
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Delete and not gameProcessed then
+        uiVisible = not uiVisible
+        mainFrame.Visible = uiVisible
+        
+        if uiVisible then
+            ts:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 600, 0, 400)
+            }):Play()
+        end
+    end
+end)
+
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+ts:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 600, 0, 400)
+}):Play()
+
+game.StarterGui:SetCore("SendNotification", {
+    Title = "Script Executor Loaded",
+    Text = "Press DELETE to toggle UI",
+    Duration = 4
+})
+
+print("✓ Script Executor loaded successfully!")
+print("✓ Press DELETE to toggle UI")
