@@ -1,0 +1,487 @@
+repeat wait() until game:IsLoaded()
+repeat wait() until game.Players and game.Players.LocalPlayer
+
+if not game.Players.LocalPlayer.Team then 
+    game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates") 
+end
+repeat wait() until game.Players.LocalPlayer.Team
+
+local CONFIG_URLS = {
+    tiki_boat = "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/accboattiki",
+    hydra_boat = "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/accboathydra",
+}
+
+local TIKI_HELPER_CONFIG = {
+    ["Shoot Heart When Ice Spike Breaks"] = false,
+    ["Drive Boat To Tiki"] = false,
+    ["No Frog"] = false,
+    ["Random Devil Fruit"] = false,
+    ["Use skill fast dont hold"] = true,
+    ["Drive Boat To Hydra"] = false,
+    ["Webhook Shoot Heart Leviathan"] = false,
+    ["Webhook Drive To Tiki/Hydra"] = false,
+    ["Webhook Destroy IDK"] = false,
+    ["Auto Farm Material Sanguine Art"] = true,
+    ["Webhook Unlock Draco v4"] = false,
+    ["Auto light the torch"] = false,
+    ["Use New  Method Drive"] = false,
+    ["Use Click M1 Fruit"] = false,
+    ["Use New Method Shoot Heart"] = false,
+    ["Ping Discord"] = false,
+    ["Select Owner Boat Beast Hunter"] = "",
+    ["Boost Fps"] = true,
+    ["Value Collect Chest to Hop"] = "80",
+    ["Webhook Find Leviathan"] = false,
+    ["Auto Chest Hop"] = true,
+    ["Auto Craft Scroll"] = false,
+    ["Account Buy Boat"] = false,
+    ["Auto Store Fruit"] = false,
+    ["Start Hunt Leviathan"] = true
+}
+
+local HYDRA_HELPER_CONFIG = {
+    ["Shoot Heart When Ice Spike Breaks"] = false,
+    ["Drive Boat To Tiki"] = false,
+    ["No Frog"] = false,
+    ["Random Devil Fruit"] = false,
+    ["Use skill fast dont hold"] = true,
+    ["Webhook Shoot Heart Leviathan"] = false,
+    ["Drive Boat To Hydra"] = false,
+    ["Webhook Destroy IDK"] = false,
+    ["Auto Farm Material Sanguine Art"] = false,
+    ["Webhook Unlock Draco v4"] = false,
+    ["Auto light the torch"] = true,
+    ["Use New  Method Drive"] = false,
+    ["Use Click M1 Fruit"] = false,
+    ["Use New Method Shoot Heart"] = false,
+    ["Auto Chest Hop"] = false,
+    ["Select Owner Boat Beast Hunter"] = "",
+    ["Boost Fps"] = true,
+    ["Webhook Drive To Tiki/Hydra"] = false,
+    ["Webhook Find Leviathan"] = false,
+    ["Ping Discord"] = false,
+    ["Auto Craft Scroll"] = false,
+    ["Account Buy Boat"] = false,
+    ["Auto Store Fruit"] = false,
+    ["Start Hunt Leviathan"] = true
+}
+
+-- ======================== VARIABLES ========================
+local lp = game.Players.LocalPlayer
+local rs = game.ReplicatedStorage
+local ts = game:GetService("TweenService")
+
+getgenv().Main = getgenv().Main or {}
+Main.CurrentTween = nil
+Main.IsMoving = false
+getgenv().DracoNoClip = getgenv().DracoNoClip or false
+local DracoNoClipConnection
+
+-- ======================== NOCLIP FUNCTIONS ========================
+local function enableDracoNoClip()
+    if DracoNoClipConnection then return end
+    DracoNoClipConnection = game:GetService("RunService").Stepped:Connect(function()
+        pcall(function()
+            if not getgenv().DracoNoClip then return end
+            if not (lp.Character and lp.Character:FindFirstChild("Head") and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
+            if not lp.Character.Head:FindFirstChild("DracoBodyClip") then
+                local bv = Instance.new("BodyVelocity")
+                bv.Name = "DracoBodyClip"
+                bv.Velocity = Vector3.new(0, 0, 0)
+                bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                bv.P = 15000
+                bv.Parent = lp.Character.Head
+            end
+            for _, v in ipairs(lp.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+        end)
+    end)
+end
+
+local function disableDracoNoClip()
+    if lp.Character and lp.Character:FindFirstChild("Head") then
+        local clip = lp.Character.Head:FindFirstChild("DracoBodyClip")
+        if clip then clip:Destroy() end
+        for _, v in ipairs(lp.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+                v.CanCollide = true
+            end
+        end
+    end
+end
+
+enableDracoNoClip()
+
+-- ======================== HELPER FUNCTIONS ========================
+local function sendNotification(title, text, duration)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = duration or 3
+    })
+end
+
+local function calcpos(a, b)
+    if not a then return math.huge end
+    b = b or (lp.Character and lp.Character.PrimaryPart and lp.Character.PrimaryPart.CFrame) or CFrame.new(0, 0, 0)
+    return (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
+end
+
+function TP1(Pos)
+    local char = lp.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    
+    getgenv().DracoNoClip = true
+    local MyCFrame = hrp.CFrame
+    local DistanceToPos = calcpos(MyCFrame, Pos)
+
+    if DistanceToPos <= 100 then
+        Main.IsMoving = false
+        Main.CurrentTween = nil
+        wait(0.1)
+        hrp.CFrame = Pos
+        getgenv().DracoNoClip = false
+        disableDracoNoClip()
+        return true
+    end
+
+    local Speed = 300
+    local TweenTime = math.max(0.3, DistanceToPos / Speed)
+    Main.IsMoving = true
+    local TweenInfo = TweenInfo.new(TweenTime, Enum.EasingStyle.Linear)
+    Main.CurrentTween = ts:Create(hrp, TweenInfo, {CFrame = Pos})
+    Main.CurrentTween.Completed:Connect(function()
+        Main.IsMoving = false
+        Main.CurrentTween = nil
+        getgenv().DracoNoClip = false
+        disableDracoNoClip()
+    end)
+    Main.CurrentTween:Play()
+    hrp.CFrame = CFrame.new(hrp.Position.X, Pos.Y, hrp.Position.Z)
+    return true
+end
+
+local function findNPC(npcName)
+    for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
+        if container then
+            for _, npc in ipairs(container:GetChildren()) do
+                if npc.Name == npcName and npc:FindFirstChild("HumanoidRootPart") then
+                    return npc
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function tpToNPC(npcName)
+    local npc = findNPC(npcName)
+    if npc and npc:FindFirstChild("HumanoidRootPart") then
+        TP1(CFrame.new(npc.HumanoidRootPart.Position))
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5
+        return true
+    end
+    return false
+end
+
+-- ======================== MELEE CHECK & BUY ========================
+local function checkMelee(meleeName)
+    sendNotification("⏳ Kiểm tra", "Đang kiểm tra " .. meleeName .. "...", 3)
+    
+    local inBackpack = lp.Backpack:FindFirstChild(meleeName)
+    local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+    local inCharacter = char and char:FindFirstChild(meleeName)
+    
+    if not inBackpack and not inCharacter then
+        sendNotification("⏳ Đợi", "Đợi Backpack load...", 3)
+        
+        local maxWait = 10
+        local waited = 0
+        
+        while waited < maxWait do
+            task.wait(1)
+            waited = waited + 1
+            
+            inBackpack = lp.Backpack:FindFirstChild(meleeName)
+            char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+            inCharacter = char and char:FindFirstChild(meleeName)
+            
+            if inBackpack or inCharacter then
+                sendNotification("✅ Thành công", "Tìm thấy " .. meleeName .. "!", 3)
+                return true
+            end
+        end
+        
+        return false
+    end
+    
+    sendNotification("✅ Thành công", "Đã có " .. meleeName .. "!", 3)
+    return true
+end
+
+local function buySharkmanKarate()
+    local maxRetries = 5
+    local retryCount = 0
+    
+    while retryCount < maxRetries do
+        retryCount = retryCount + 1
+        sendNotification("⏳ Mua Melee", "Lần thử " .. retryCount .. "/" .. maxRetries, 3)
+        
+        local npc = findNPC("Sharkman Teacher")
+        if not npc or not npc:FindFirstChild("HumanoidRootPart") then
+            sendNotification("❌ Lỗi", "Không tìm thấy NPC!", 3)
+            task.wait(2)
+            if retryCount >= maxRetries then
+                return false
+            end
+            continue
+        end
+        
+        TP1(CFrame.new(npc.HumanoidRootPart.Position))
+        repeat task.wait() until not Main.IsMoving
+        task.wait(1)
+        
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local distance = (hrp.Position - npc.HumanoidRootPart.Position).Magnitude
+        
+        if distance > 15 then
+            sendNotification("⚠️ Cảnh báo", "Bị dịch chuyển! Đang thử lại...", 3)
+            task.wait(1)
+            if retryCount >= maxRetries then
+                sendNotification("❌ Lỗi", "Không thể đến NPC sau " .. maxRetries .. " lần thử!", 5)
+                return false
+            end
+            continue
+        end
+        
+        -- Đã đến đúng vị trí, tiến hành mua
+        task.wait(1)
+        local args = {"BuySharkmanKarate"}
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+        
+        sendNotification("✅ Thành công", "Đã mua Sharkman Karate!", 3)
+        return true
+    end
+    
+    sendNotification("❌ Lỗi", "Không thể mua sau " .. maxRetries .. " lần thử!", 5)
+    return false
+end
+
+-- ======================== ACCOUNT CHECK ========================
+local function isAccBoat(username)
+    for _, accName in ipairs(getgenv().accboat) do
+        if username == accName then
+            return true
+        end
+    end
+    return false
+end
+
+local function findAccBoatInServer()
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        if isAccBoat(player.Name) then
+            return player.Name
+        end
+    end
+    return nil
+end
+
+-- ======================== UI EXECUTE FOR BOAT ACCOUNT ========================
+local function createExecuteUI(onExecuteCallback)
+    local ScreenGui = Instance.new("ScreenGui")
+    local MainFrame = Instance.new("Frame")
+    local UICorner = Instance.new("UICorner")
+    local Title = Instance.new("TextLabel")
+    local ExecuteButton = Instance.new("TextButton")
+    local ButtonUICorner = Instance.new("UICorner")
+    local StatusLabel = Instance.new("TextLabel")
+    
+    -- ScreenGui
+    ScreenGui.Name = "BoatExecuteUI"
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+    
+    -- MainFrame
+    MainFrame.Name = "MainFrame"
+    MainFrame.Parent = ScreenGui
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+    MainFrame.Size = UDim2.new(0, 300, 0, 200)
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    
+    -- UICorner
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    -- Title
+    Title.Name = "Title"
+    Title.Parent = MainFrame
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.new(0, 0, 0, 10)
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = "🚢 BOAT ACCOUNT"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 20
+    
+    -- StatusLabel
+    StatusLabel.Name = "StatusLabel"
+    StatusLabel.Parent = MainFrame
+    StatusLabel.BackgroundTransparency = 1
+    StatusLabel.Position = UDim2.new(0, 20, 0, 60)
+    StatusLabel.Size = UDim2.new(1, -40, 0, 50)
+    StatusLabel.Font = Enum.Font.Gotham
+    StatusLabel.Text = "Bạn là account boat!\nNhấn Execute để chạy script"
+    StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    StatusLabel.TextSize = 14
+    StatusLabel.TextWrapped = true
+    StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+    
+    -- ExecuteButton
+    ExecuteButton.Name = "ExecuteButton"
+    ExecuteButton.Parent = MainFrame
+    ExecuteButton.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    ExecuteButton.BorderSizePixel = 0
+    ExecuteButton.Position = UDim2.new(0.5, -100, 1, -60)
+    ExecuteButton.Size = UDim2.new(0, 200, 0, 45)
+    ExecuteButton.Font = Enum.Font.GothamBold
+    ExecuteButton.Text = "⚡ EXECUTE"
+    ExecuteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ExecuteButton.TextSize = 16
+    
+    -- ButtonUICorner
+    ButtonUICorner.CornerRadius = UDim.new(0, 8)
+    ButtonUICorner.Parent = ExecuteButton
+    
+    -- Button hover effect
+    ExecuteButton.MouseEnter:Connect(function()
+        ExecuteButton.BackgroundColor3 = Color3.fromRGB(70, 170, 255)
+    end)
+    
+    ExecuteButton.MouseLeave:Connect(function()
+        ExecuteButton.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    end)
+    
+    -- Button click
+    ExecuteButton.MouseButton1Click:Connect(function()
+        ExecuteButton.Text = "⏳ Đang chạy..."
+        ExecuteButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        ExecuteButton.Active = false
+        
+        task.wait(0.5)
+        
+        -- Execute callback
+        if onExecuteCallback then
+            onExecuteCallback()
+        end
+        
+        -- Destroy UI
+        task.wait(1)
+        ScreenGui:Destroy()
+    end)
+    
+    return ScreenGui
+end
+
+-- ======================== MAIN LOGIC ========================
+local function executeBoatScript()
+    local configUrl
+    if getgenv().levi == "tiki" then
+        configUrl = CONFIG_URLS.tiki_boat
+    else
+        configUrl = CONFIG_URLS.hydra_boat
+    end
+    
+    sendNotification("⏳ Loading", "Đang load config boat...", 3)
+    
+    local success, result = pcall(function()
+        return game:HttpGet(configUrl)
+    end)
+    
+    if success then
+        loadstring(result)()
+        sendNotification("✅ Thành công", "Load config boat hoàn tất!", 3)
+    else
+        sendNotification("❌ Lỗi", "Không thể tải config boat!", 5)
+    end
+end
+
+local function main()
+    sendNotification("🚀 Bắt đầu", "Khởi động script...", 3)
+    
+    -- Bước 1: Kiểm tra và mua melee nếu chưa có
+    if not checkMelee(getgenv().melee) then
+        sendNotification("⚠️ Cảnh báo", "Chưa có " .. getgenv().melee .. ", đang mua...", 3)
+        
+        if buySharkmanKarate() then
+            task.wait(2)
+
+            sendNotification("⏳ Di chuyển", "Đang quay về vị trí...", 3)
+            TP1(CFrame.new(-16664.458984375, 189.5279998779297, 523.4910278320312))
+
+            repeat task.wait() until not Main.IsMoving
+            
+            sendNotification("✅ Hoàn thành", "Đã quay về vị trí!", 3)
+        else
+            sendNotification("❌ Lỗi", "Không thể mua " .. getgenv().melee .. "!", 5)
+            return
+        end
+    end
+    
+    local myUsername = lp.Name
+    local amIBoatAccount = isAccBoat(myUsername)
+    
+    if amIBoatAccount then
+        sendNotification("🚢 Account Boat", "Bạn là account boat: " .. myUsername, 5)
+        
+        -- Hiển thị UI Execute
+        createExecuteUI(executeBoatScript)
+        
+    else
+        local boatAccountName = findAccBoatInServer()
+        
+        if boatAccountName then
+            sendNotification("🤝 Account Helper", "Tìm thấy boat: " .. boatAccountName, 5)
+            
+            local helperConfig
+            if getgenv().levi == "tiki" then
+                helperConfig = TIKI_HELPER_CONFIG
+            else
+                helperConfig = HYDRA_HELPER_CONFIG
+            end
+            
+            helperConfig["Select Owner Boat Beast Hunter"] = boatAccountName
+
+            getgenv().Config = helperConfig
+            
+            sendNotification("✅ Set Owner", "Owner: " .. boatAccountName, 3)
+            sendNotification("⏳ Loading", "Đang load script helper...", 3)
+            
+            local success, result = pcall(function()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"))()
+            end)
+            
+            if success then
+                sendNotification("✅ Thành công", "Load script helper hoàn tất!", 3)
+            else
+                sendNotification("❌ Lỗi", "Không thể tải script helper!", 5)
+            end
+        else
+            sendNotification("⚠️ Cảnh báo", "Không tìm thấy boat account trong server. Không làm gì.", 5)
+            return
+        end
+    end
+end
+
+-- ======================== START SCRIPT ========================
+main()
