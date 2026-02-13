@@ -16,74 +16,12 @@ end
 repeat wait() until game.Players.LocalPlayer.Team
 task.wait(5)
 
--- ===== CHECK & BUY DRAGON TALON (nếu cần) =====
-if getgenv().Melee == "Dragon Talon" then
-    StarterGui:SetCore("SendNotification", {
-        Title = "🔍 Check Dragon Talon", 
-        Text = "Đang kiểm tra...", 
-        Duration = 2
-    })
-    task.wait(2)
-    
-    -- Check trong Backpack và Character
-    local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
-    local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-    local inCharacter = char and char:FindFirstChild("Dragon Talon")
-    
-    -- Nếu không tìm thấy ngay -> Đợi Backpack load
-    if not inBackpack and not inCharacter then
-        StarterGui:SetCore("SendNotification", {
-            Title = "⏳ Đợi Backpack load", 
-            Text = "Chờ 5 giây...", 
-            Duration = 2
-        })
-        
-        local maxWait = 5
-        local waited = 0
-        
-        while waited < maxWait do
-            task.wait(1)
-            waited = waited + 1
-            
-            inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
-            char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-            inCharacter = char and char:FindFirstChild("Dragon Talon")
-            
-            if inBackpack or inCharacter then
-                StarterGui:SetCore("SendNotification", {
-                    Title = "✅ Tìm thấy Dragon Talon", 
-                    Text = "Đã có trong Backpack/Character!", 
-                    Duration = 3
-                })
-                break
-            end
-        end
-        
-        -- Sau 5s vẫn không có -> Mua
-        if not inBackpack and not inCharacter then
-            StarterGui:SetCore("SendNotification", {
-                Title = "❌ Chưa có Dragon Talon", 
-                Text = "Đang mua...", 
-                Duration = 3
-            })
-            buytalon()
-            task.wait(3)
-            StarterGui:SetCore("SendNotification", {
-                Title = "✅ Đã mua Dragon Talon", 
-                Text = "Hoàn tất!", 
-                Duration = 2
-            })
-        end
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = "✅ Đã có Dragon Talon", 
-            Text = "Tìm thấy trong Backpack/Character!", 
-            Duration = 2
-        })
-    end
-    
-    task.wait(2)
-end
+-- ===== KHAI BÁO BIẾN =====
+local lp = game.Players.LocalPlayer
+local rs = game.ReplicatedStorage
+local ts = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local HttpService = game:GetService("HttpService")
 
 if not getgenv().Keybanana or getgenv().Keybanana == "" then
     game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -93,12 +31,6 @@ if not getgenv().Keybanana or getgenv().Keybanana == "" then
     })
     return 
 end
-
-local lp = game.Players.LocalPlayer
-local rs = game.ReplicatedStorage
-local ts = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
 
 -- State Management
 local playerName = lp.Name
@@ -831,6 +763,75 @@ local currentState = readState()
 local state = currentState.state
 
 updateStatusUI(state)
+
+-- ===== CHECK & BUY DRAGON TALON (nếu cần) =====
+if getgenv().Melee == "Dragon Talon" then
+    StarterGui:SetCore("SendNotification", {
+        Title = "🔍 Check Dragon Talon", 
+        Text = "Đang kiểm tra...", 
+        Duration = 2
+    })
+    task.wait(2)
+    
+    -- Check trong Backpack và Character
+    local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
+    local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+    local inCharacter = char and char:FindFirstChild("Dragon Talon")
+    
+    -- Nếu không tìm thấy ngay -> Đợi Backpack load
+    if not inBackpack and not inCharacter then
+        StarterGui:SetCore("SendNotification", {
+            Title = "⏳ Đợi Backpack load", 
+            Text = "Chờ 5 giây...", 
+            Duration = 2
+        })
+        
+        local maxWait = 5
+        local waited = 0
+        
+        while waited < maxWait do
+            task.wait(1)
+            waited = waited + 1
+            
+            inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
+            char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+            inCharacter = char and char:FindFirstChild("Dragon Talon")
+            
+            if inBackpack or inCharacter then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "✅ Tìm thấy Dragon Talon", 
+                    Text = "Đã có trong Backpack/Character!", 
+                    Duration = 3
+                })
+                break
+            end
+        end
+        
+        -- Sau 5s vẫn không có -> Mua
+        if not inBackpack and not inCharacter then
+            StarterGui:SetCore("SendNotification", {
+                Title = "❌ Chưa có Dragon Talon", 
+                Text = "Đang mua...", 
+                Duration = 3
+            })
+            buytalon()
+            task.wait(3)
+            StarterGui:SetCore("SendNotification", {
+                Title = "✅ Đã mua Dragon Talon", 
+                Text = "Hoàn tất!", 
+                Duration = 2
+            })
+        end
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "✅ Đã có Dragon Talon", 
+            Text = "Tìm thấy trong Backpack/Character!", 
+            Duration = 2
+        })
+    end
+    
+    task.wait(2)
+end
 
 -- STATE 1: CHECK PURPLE BELT
 if state == "CHECK_PURPLE" then
