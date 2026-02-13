@@ -16,6 +16,75 @@ end
 repeat wait() until game.Players.LocalPlayer.Team
 task.wait(5)
 
+-- ===== CHECK & BUY DRAGON TALON (nếu cần) =====
+if getgenv().Melee == "Dragon Talon" then
+    StarterGui:SetCore("SendNotification", {
+        Title = "🔍 Check Dragon Talon", 
+        Text = "Đang kiểm tra...", 
+        Duration = 2
+    })
+    task.wait(2)
+    
+    -- Check trong Backpack và Character
+    local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
+    local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+    local inCharacter = char and char:FindFirstChild("Dragon Talon")
+    
+    -- Nếu không tìm thấy ngay -> Đợi Backpack load
+    if not inBackpack and not inCharacter then
+        StarterGui:SetCore("SendNotification", {
+            Title = "⏳ Đợi Backpack load", 
+            Text = "Chờ 5 giây...", 
+            Duration = 2
+        })
+        
+        local maxWait = 5
+        local waited = 0
+        
+        while waited < maxWait do
+            task.wait(1)
+            waited = waited + 1
+            
+            inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
+            char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+            inCharacter = char and char:FindFirstChild("Dragon Talon")
+            
+            if inBackpack or inCharacter then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "✅ Tìm thấy Dragon Talon", 
+                    Text = "Đã có trong Backpack/Character!", 
+                    Duration = 3
+                })
+                break
+            end
+        end
+        
+        -- Sau 5s vẫn không có -> Mua
+        if not inBackpack and not inCharacter then
+            StarterGui:SetCore("SendNotification", {
+                Title = "❌ Chưa có Dragon Talon", 
+                Text = "Đang mua...", 
+                Duration = 3
+            })
+            buytalon()
+            task.wait(3)
+            StarterGui:SetCore("SendNotification", {
+                Title = "✅ Đã mua Dragon Talon", 
+                Text = "Hoàn tất!", 
+                Duration = 2
+            })
+        end
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "✅ Đã có Dragon Talon", 
+            Text = "Tìm thấy trong Backpack/Character!", 
+            Duration = 2
+        })
+    end
+    
+    task.wait(2)
+end
+
 if not getgenv().Keybanana or getgenv().Keybanana == "" then
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "❌ THIẾU KEY!", 
@@ -82,6 +151,7 @@ function determineInitialState()
         Text = "Đang check toàn bộ items...", 
         Duration = 3
     })
+    task.wait(2)
     
     -- Check Purple Belt
     if not checkInventory("Dojo Belt (Purple)") then
@@ -124,22 +194,74 @@ function determineInitialState()
         return "GET_DAI8_TETHER"
     end
     
-    -- Check Dragon Egg
-    local dragonEggs = getItemCount("Dragon Egg")
-    if dragonEggs < 4 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 State: FARM_VOLCANO_EGG", 
-            Text = "Dragon Egg: " .. dragonEggs .. "/4", 
-            Duration = 3
-        })
-        return "FARM_VOLCANO_EGG"
-    end
-    
     -- Check Dragonheart & Dragonstorm
     local hasDragonheart = checkInventory("Dragonheart")
     local hasDragonstorm = checkInventory("Dragonstorm")
     
+    -- Check Dragon Egg
+    local dragonEggs = getItemCount("Dragon Egg")
+    
+    -- Nếu ĐÃ CÓ cả 2 vũ khí → Check mastery
+    if hasDragonheart and hasDragonstorm then
+        local dhMas = checkMastery("Sword", "Dragonheart")
+        local dsMas = checkMastery("Gun", "Dragonstorm")
+        
+        -- Check đã mua Draco chưa
+        local currentRace = ""
+        pcall(function()
+            currentRace = lp.Data.Race.Value
+        end)
+        
+        if currentRace == "Draco" then
+            StarterGui:SetCore("SendNotification", {
+                Title = "📍 State: FARM_V2V3", 
+                Text = "Đã mua Draco! Farm V2-V3", 
+                Duration = 3
+            })
+            return "FARM_V2V3"
+        end
+        
+        -- Nếu đủ mastery → mua Draco
+        if dhMas >= 500 and dsMas >= 500 then
+            StarterGui:SetCore("SendNotification", {
+                Title = "📍 State: RESET_BUYDRACO", 
+                Text = "Đủ mastery! Sẵn sàng mua Draco", 
+                Duration = 3
+            })
+            return "RESET_BUYDRACO"
+        end
+        
+        -- Chưa đủ mastery → farm mastery
+        if dsMas < 500 then
+            StarterGui:SetCore("SendNotification", {
+                Title = "📍 State: FARM_DS_MAS", 
+                Text = "DS Mas: " .. dsMas .. "/500", 
+                Duration = 3
+            })
+            return "FARM_DS_MAS"
+        else
+            StarterGui:SetCore("SendNotification", {
+                Title = "📍 State: FARM_DH_MAS", 
+                Text = "DH Mas: " .. dhMas .. "/500", 
+                Duration = 3
+            })
+            return "FARM_DH_MAS"
+        end
+    end
+    
+    -- CHƯA CÓ vũ khí → Check materials
     if not hasDragonheart or not hasDragonstorm then
+        -- Nếu thiếu egg → farm egg
+        if dragonEggs < 4 then
+            StarterGui:SetCore("SendNotification", {
+                Title = "📍 State: FARM_VOLCANO_EGG", 
+                Text = "Dragon Egg: " .. dragonEggs .. "/4", 
+                Duration = 3
+            })
+            return "FARM_VOLCANO_EGG"
+        end
+        
+        -- Đủ egg rồi → check materials để craft
         local dragonScale = getItemCount("Dragon Scale")
         local blazeEmber = getItemCount("Blaze Ember")
         
@@ -167,35 +289,7 @@ function determineInitialState()
         end
     end
     
-    -- Check Mastery
-    local dhMas = checkMastery("Sword", "Dragonheart")
-    local dsMas = checkMastery("Gun", "Dragonstorm")
-    
-    if dhMas < 500 or dsMas < 500 then
-        if dsMas < 500 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_DS_MAS", 
-                Text = "DS Mas: " .. dsMas .. "/500", 
-                Duration = 3
-            })
-            return "FARM_DS_MAS"
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_DH_MAS", 
-                Text = "DH Mas: " .. dhMas .. "/500", 
-                Duration = 3
-            })
-            return "FARM_DH_MAS"
-        end
-    end
-    
-    -- Đã đủ điều kiện mua Draco
-    StarterGui:SetCore("SendNotification", {
-        Title = "📍 State: RESET_BUYDRACO", 
-        Text = "Sẵn sàng mua Draco Race!", 
-        Duration = 3
-    })
-    return "RESET_BUYDRACO"
+    return "CHECK_PURPLE"
 end
 
 function readState()
@@ -556,76 +650,6 @@ function GetDragonWizard()
 end
 
 function BuyDraco()
-    -- Kiểm tra xem có cần mua Dragon Talon không
-    if getgenv().Melee == "Dragon Talon" then
-        StarterGui:SetCore("SendNotification", {
-            Title = "🔍 Check Dragon Talon", 
-            Text = "Đang kiểm tra...", 
-            Duration = 2
-        })
-        task.wait(2)
-        
-        -- Check trong Backpack và Character
-        local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
-        local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-        local inCharacter = char and char:FindFirstChild("Dragon Talon")
-        
-        -- Nếu không tìm thấy ngay -> Đợi Backpack load
-        if not inBackpack and not inCharacter then
-            StarterGui:SetCore("SendNotification", {
-                Title = "⏳ Đợi Backpack load", 
-                Text = "Chờ 5 giây...", 
-                Duration = 2
-            })
-            
-            local maxWait = 5
-            local waited = 0
-            
-            while waited < maxWait do
-                task.wait(1)
-                waited = waited + 1
-                
-                inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
-                char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-                inCharacter = char and char:FindFirstChild("Dragon Talon")
-                
-                if inBackpack or inCharacter then
-                    StarterGui:SetCore("SendNotification", {
-                        Title = "✅ Tìm thấy Dragon Talon", 
-                        Text = "Đã có trong Backpack/Character!", 
-                        Duration = 3
-                    })
-                    break
-                end
-            end
-            
-            -- Sau 5s vẫn không có -> Mua
-            if not inBackpack and not inCharacter then
-                StarterGui:SetCore("SendNotification", {
-                    Title = "❌ Chưa có Dragon Talon", 
-                    Text = "Đang mua...", 
-                    Duration = 3
-                })
-                buytalon()
-                task.wait(3)
-                StarterGui:SetCore("SendNotification", {
-                    Title = "✅ Đã mua Dragon Talon", 
-                    Text = "Hoàn tất!", 
-                    Duration = 2
-                })
-            end
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "✅ Đã có Dragon Talon", 
-                Text = "Tìm thấy trong Backpack/Character!", 
-                Duration = 2
-            })
-        end
-        
-        task.wait(2)
-    end
-    
-    -- Mua Draco Race
     if tpToNPC("Dragon Wizard") then
         rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dragon Wizard", Command = "DragonRace"})
         StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã mua Draco!", Duration = 2})
@@ -769,10 +793,23 @@ function startMonitoring(currentStateType)
                 updateStatusUI(state, "DH: " .. dhMas .. " | DS: " .. dsMas)
                 
                 if dhMas >= 500 and dsMas >= 500 then
-                    writeState("RESET_BUYDRACO")
-                    task.wait(2)
-                    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-                    break
+                    -- Check xem đã mua Draco chưa
+                    local currentRace = ""
+                    pcall(function()
+                        currentRace = lp.Data.Race.Value
+                    end)
+                    
+                    if currentRace == "Draco" then
+                        writeState("FARM_V2V3")
+                        task.wait(2)
+                        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+                        break
+                    else
+                        writeState("RESET_BUYDRACO")
+                        task.wait(2)
+                        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+                        break
+                    end
                 elseif state == "FARM_DS_MAS" and dsMas >= 500 then
                     writeState("FARM_DH_MAS")
                     task.wait(2)
@@ -948,13 +985,55 @@ if state == "RESET_BUYDRACO" then
     local dsMas = checkMastery("Gun", "Dragonstorm")
     
     if dhMas >= 500 and dsMas >= 500 then
-        resetStatTo("Melee", "Sword")
-        task.wait(2)
-        BuyDraco()
-        task.wait(5)
-        writeState("FARM_V2V3")
-        executeConfig("FARM_V2V3")
-        startMonitoring("FARM_V2V3")
+        -- Check xem đã mua Draco chưa
+        local currentRace = ""
+        pcall(function()
+            currentRace = lp.Data.Race.Value
+        end)
+        
+        if currentRace == "Draco" then
+            -- Đã mua Draco rồi -> Chuyển sang farm V2V3
+            StarterGui:SetCore("SendNotification", {
+                Title = "✅ Đã có Draco Race", 
+                Text = "Chuyển sang farm V2-V3!", 
+                Duration = 3
+            })
+            writeState("FARM_V2V3")
+            task.wait(2)
+            executeConfig("FARM_V2V3")
+            startMonitoring("FARM_V2V3")
+        else
+            -- Chưa mua -> Reset stat và mua Draco
+            resetStatTo("Melee", "Sword")
+            task.wait(2)
+            BuyDraco()
+            task.wait(5)
+            
+            -- Check lại xem đã mua thành công chưa
+            pcall(function()
+                currentRace = lp.Data.Race.Value
+            end)
+            
+            if currentRace == "Draco" then
+                StarterGui:SetCore("SendNotification", {
+                    Title = "✅ Mua Draco thành công", 
+                    Text = "Chuyển sang farm V2-V3!", 
+                    Duration = 3
+                })
+                writeState("FARM_V2V3")
+                task.wait(2)
+                executeConfig("FARM_V2V3")
+                startMonitoring("FARM_V2V3")
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "⚠️ Chưa mua được Draco", 
+                    Text = "Rejoin thử lại...", 
+                    Duration = 3
+                })
+                task.wait(2)
+                game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+            end
+        end
     end
 end
 
