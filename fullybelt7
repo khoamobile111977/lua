@@ -660,7 +660,7 @@ function executeConfig(configType)
     end
 end
 
--- ===== MONITORING FUNCTION =====
+-- ===== MONITORING FUNCTION - FIXED =====
 function startMonitoring(currentStateType)
     task.spawn(function()
         task.wait(10)
@@ -742,36 +742,70 @@ function startMonitoring(currentStateType)
                 end
             end
             
+            -- ===== FIX LỖI CHÍNH Ở ĐÂY =====
             if state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
                 local dhMas = checkMastery("Sword", "Dragonheart")
                 local dsMas = checkMastery("Gun", "Dragonstorm")
                 
+                -- Debug notification
+                StarterGui:SetCore("SendNotification", {
+                    Title = "🔍 Check Mastery", 
+                    Text = "DH: " .. dhMas .. " | DS: " .. dsMas, 
+                    Duration = 2
+                })
+                
                 updateStatusUI(state, "DH: " .. dhMas .. " | DS: " .. dsMas)
                 
+                -- CHECK XEM ĐÃ MUA DRACO CHƯA TRƯỚC
+                local currentRace = ""
+                pcall(function()
+                    currentRace = lp.Data.Race.Value
+                end)
+                
+                -- Nếu ĐÃ MUA DRACO rồi → chuyển sang V2V3
+                if currentRace == "Draco" then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "✅ Đã có Draco", 
+                        Text = "Chuyển sang farm V2-V3!", 
+                        Duration = 3
+                    })
+                    writeState("FARM_V2V3")
+                    task.wait(2)
+                    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+                    break
+                end
+                
+                -- Nếu CẢ HAI đều >= 500 → mua Draco
                 if dhMas >= 500 and dsMas >= 500 then
-                    -- Check xem đã mua Draco chưa
-                    local currentRace = ""
-                    pcall(function()
-                        currentRace = lp.Data.Race.Value
-                    end)
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "🎉 Đủ Mastery!", 
+                        Text = "Chuyển sang mua Draco!", 
+                        Duration = 3
+                    })
+                    writeState("RESET_BUYDRACO")
+                    task.wait(2)
+                    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+                    break
                     
-                    if currentRace == "Draco" then
-                        writeState("FARM_V2V3")
-                        task.wait(2)
-                        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-                        break
-                    else
-                        writeState("RESET_BUYDRACO")
-                        task.wait(2)
-                        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-                        break
-                    end
+                -- Nếu đang farm DS và DS >= 500 → chuyển sang farm DH
                 elseif state == "FARM_DS_MAS" and dsMas >= 500 then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "✅ DS Đủ 500!", 
+                        Text = "Chuyển sang farm DH!", 
+                        Duration = 3
+                    })
                     writeState("FARM_DH_MAS")
                     task.wait(2)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
+                    
+                -- Nếu đang farm DH và DH >= 500 → chuyển sang farm DS
                 elseif state == "FARM_DH_MAS" and dhMas >= 500 then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "✅ DH Đủ 500!", 
+                        Text = "Chuyển sang farm DS!", 
+                        Duration = 3
+                    })
                     writeState("FARM_DS_MAS")
                     task.wait(2)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
