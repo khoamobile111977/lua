@@ -660,7 +660,7 @@ function startMonitoring(currentStateType)
             if state == "FARM_DOJOTRAINER" then
                 if checkInventory("Dojo Belt (Red)") then
                     writeState("FARM_VOLCANO_DINOBONE")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
@@ -672,7 +672,7 @@ function startMonitoring(currentStateType)
                 
                 if bones >= 5 then
                     writeState("GET_DAI8_TETHER")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
@@ -686,7 +686,7 @@ function startMonitoring(currentStateType)
                     writeState("CHECK_DRAGONEGG")
                     task.wait(30)
                     writeState("CRAFT_WEAPONS")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
@@ -703,12 +703,12 @@ function startMonitoring(currentStateType)
                         resetStatTo("Gun", "Sword")
                         task.wait(2)
                         writeState("FARM_DS_MAS")
-                        task.wait(2)
+                        task.wait(3)
                         game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                         break
                     else
                         writeState("FARM_EMBER")
-                        task.wait(2)
+                        task.wait(3)
                         game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                         break
                     end
@@ -724,14 +724,15 @@ function startMonitoring(currentStateType)
                     resetStatTo("Gun", "Sword")
                     task.wait(2)
                     writeState("FARM_DS_MAS")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
             end
             
+            -- ✅ FIX CHÍNH Ở ĐÂY - LOGIC MONITORING MASTERY
             if state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
-                -- CHECK RACE TRƯỚC
+                -- CHECK RACE TRƯỚC - NẾU ĐÃ LÀ DRACO → CHUYỂN LUÔN V2V3
                 local currentRace = getCurrentRace()
                 
                 if currentRace == "Draco" then
@@ -741,7 +742,7 @@ function startMonitoring(currentStateType)
                         Duration = 5
                     })
                     writeState("FARM_V2V3")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
@@ -757,6 +758,7 @@ function startMonitoring(currentStateType)
                 
                 updateStatusUI(state, "DH: " .. dhMas .. " | DS: " .. dsMas)
                 
+                -- ✅ ƯU TIÊN 1: CHECK CẢ 2 ĐỦ 500 TRƯỚC (QUAN TRỌNG NHẤT!)
                 if dhMas >= 500 and dsMas >= 500 then
                     StarterGui:SetCore("SendNotification", {
                         Title = "🎉 MAX MASTERY!", 
@@ -764,29 +766,33 @@ function startMonitoring(currentStateType)
                         Duration = 5
                     })
                     writeState("RESET_BUYDRACO")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
-                    
-                elseif state == "FARM_DS_MAS" and dsMas >= 500 then
+                end
+                
+                -- ✅ ƯU TIÊN 2: ĐANG FARM DS, DS ĐÃ MAX NHƯNG DH CHƯA → FARM DH
+                if state == "FARM_DS_MAS" and dsMas >= 500 and dhMas < 500 then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "✅ DS Max!", 
-                        Text = "→ FARM DH", 
+                        Title = "✅ DS Max! DH chưa đủ", 
+                        Text = "→ FARM DH (" .. dhMas .. "/500)", 
                         Duration = 5
                     })
                     writeState("FARM_DH_MAS")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
-                    
-                elseif state == "FARM_DH_MAS" and dhMas >= 500 then
+                end
+                
+                -- ✅ ƯU TIÊN 3: ĐANG FARM DH, DH ĐÃ MAX NHƯNG DS CHƯA → FARM DS
+                if state == "FARM_DH_MAS" and dhMas >= 500 and dsMas < 500 then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "✅ DH Max!", 
-                        Text = "→ FARM DS", 
+                        Title = "✅ DH Max! DS chưa đủ", 
+                        Text = "→ FARM DS (" .. dsMas .. "/500)", 
                         Duration = 5
                     })
                     writeState("FARM_DS_MAS")
-                    task.wait(2)
+                    task.wait(3)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                 end
