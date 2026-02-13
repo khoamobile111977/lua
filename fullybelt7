@@ -76,7 +76,7 @@ function checkMastery(weaponType, weaponName)
     return mas
 end
 
--- ===== DETERMINE INITIAL STATE =====
+-- ===== DETERMINE INITIAL STATE (CHỈ DÙNG KHI CHƯA CÓ FILE STATE) =====
 function determineInitialState()
     StarterGui:SetCore("SendNotification", {
         Title = "🔍 First Run", 
@@ -224,16 +224,40 @@ function determineInitialState()
     return "CHECK_PURPLE"
 end
 
+-- ===== READ STATE - CHỈ CHECK TOÀN BỘ KHI CHƯA CÓ FILE =====
 function readState()
+    -- Nếu có file state → đọc và trả về luôn
     if isfile(stateFile) then
         local content = readfile(stateFile)
         local success, data = pcall(function() return HttpService:JSONDecode(content) end)
-        if success and data then return data end
+        if success and data and data.state then
+            StarterGui:SetCore("SendNotification", {
+                Title = "📂 Load State", 
+                Text = "State: " .. data.state, 
+                Duration = 3
+            })
+            return data
+        end
     end
     
-    -- First run: check toàn bộ items
+    -- Nếu CHƯA có file → check toàn bộ items lần đầu
+    StarterGui:SetCore("SendNotification", {
+        Title = "🆕 First Run", 
+        Text = "Chưa có state file, đang check...", 
+        Duration = 3
+    })
+    
     local initialState = determineInitialState()
-    return {state = initialState, data = {}}
+    
+    -- Lưu state đầu tiên vào file
+    local initialData = {
+        state = initialState,
+        data = {},
+        timestamp = os.time()
+    }
+    writefile(stateFile, HttpService:JSONEncode(initialData))
+    
+    return initialData
 end
 
 function writeState(state, extraData)
@@ -759,6 +783,7 @@ function startMonitoring(currentStateType)
 end
 
 -- ===== MAIN LOGIC =====
+-- Đọc state (nếu chưa có file thì sẽ check toàn bộ và tạo file)
 local currentState = readState()
 local state = currentState.state
 
@@ -833,6 +858,7 @@ if getgenv().Melee == "Dragon Talon" then
     task.wait(2)
 end
 
+-- ===== EXECUTE THEO STATE ĐÃ LOAD =====
 -- STATE 1: CHECK PURPLE BELT
 if state == "CHECK_PURPLE" then
     local hasPurple = checkInventory("Dojo Belt (Purple)")
@@ -875,16 +901,8 @@ end
 
 -- STATE 4: FARM VOLCANO (Dinobone)
 if state == "FARM_VOLCANO_DINOBONE" then
-    local dinoBones = getItemCount("Dinosaur Bones")
-    
-    if dinoBones >= 5 then
-        writeState("GET_DAI8_TETHER")
-        task.wait(2)
-        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-    else
-        executeConfig("FARM_VOLCANO_DINOBONE")
-        startMonitoring("FARM_VOLCANO_DINOBONE")
-    end
+    executeConfig("FARM_VOLCANO_DINOBONE")
+    startMonitoring("FARM_VOLCANO_DINOBONE")
 end
 
 -- STATE 4.5: GET DAI 8 + LEARN TETHER 
@@ -901,16 +919,8 @@ end
 
 -- STATE 5: FARM VOLCANO (Dragon Egg)
 if state == "FARM_VOLCANO_EGG" then
-    local dragonEggs = getItemCount("Dragon Egg")
-    
-    if dragonEggs >= 4 then
-        writeState("CRAFT_WEAPONS")
-        task.wait(2)
-        game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
-    else
-        executeConfig("FARM_VOLCANO_EGG")
-        startMonitoring("FARM_VOLCANO_EGG")
-    end
+    executeConfig("FARM_VOLCANO_EGG")
+    startMonitoring("FARM_VOLCANO_EGG")
 end
 
 -- STATE 6: CRAFT WEAPONS
