@@ -1,6 +1,7 @@
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
 task.wait(2)
 
+-- Anti-AFK
 local vu = game:GetService("VirtualUser")
 game:GetService("Players").LocalPlayer.Idled:connect(function()
     vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
@@ -8,6 +9,7 @@ game:GetService("Players").LocalPlayer.Idled:connect(function()
     vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
 end)
 
+-- Select Team
 if not game.Players.LocalPlayer.Team then 
     game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates") 
 end
@@ -104,7 +106,9 @@ local statusTexts = {
     FARM_DH_MAS = "📈 Farm Dragonheart Mas",
     RESET_BUYDRACO = "🐉 Buy Draco Race",
     FARM_V2V3 = "⭐ Farm V2-V3",
-    COMPLETED = "✅ HOÀN THÀNH!"
+    COMPLETED = "✅ HOÀN THÀNH!",
+    CHECK_DRAGONTALON = "🗡️ Check Dragon Talon",
+    FIRST_RUN = "🔍 First Run Check"
 }
 
 function updateStatusUI(state, extraText)
@@ -491,21 +495,12 @@ end
 
 -- ===== TÍNH NĂNG MỚI 1: CHECK NGƯỢC TỪ CAO XUỐNG THẤP =====
 function determineInitialState()
-    StarterGui:SetCore("SendNotification", {
-        Title = "🔍 First Run", 
-        Text = "Đang check ngược từ cao xuống thấp...", 
-        Duration = 3
-    })
+    updateStatusUI("FIRST_RUN", "🔍 Check ngược từ cao → thấp...")
     task.wait(2)
     
     -- BƯỚC 12: ĐÃ MUA DRACO? → FARM V2V3
     local currentRace = getCurrentRace()
     if currentRace == "Draco" then
-        StarterGui:SetCore("SendNotification", {
-            Title = "✅ Đã mua Draco!", 
-            Text = "State: FARM_V2V3", 
-            Duration = 3
-        })
         return "FARM_V2V3"
     end
     
@@ -517,37 +512,16 @@ function determineInitialState()
         local dhMas = checkMastery("Sword", "Dragonheart")
         local dsMas = checkMastery("Gun", "Dragonstorm")
         
-        StarterGui:SetCore("SendNotification", {
-            Title = "🔍 Check Mastery", 
-            Text = "DH: " .. dhMas .. " | DS: " .. dsMas, 
-            Duration = 3
-        })
-        
         -- CẢ HAI ĐỦ 500 → MUA DRACO
         if dhMas >= 500 and dsMas >= 500 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "✅ Đủ mastery!", 
-                Text = "State: RESET_BUYDRACO", 
-                Duration = 3
-            })
             return "RESET_BUYDRACO"
         end
         
         -- BƯỚC 10: FARM MASTERY
         -- Ưu tiên farm Dragonstorm trước
         if dsMas < 500 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 DS chưa đủ", 
-                Text = "State: FARM_DS_MAS (" .. dsMas .. "/500)", 
-                Duration = 3
-            })
             return "FARM_DS_MAS"
         else
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 DH chưa đủ", 
-                Text = "State: FARM_DH_MAS (" .. dhMas .. "/500)", 
-                Duration = 3
-            })
             return "FARM_DH_MAS"
         end
     end
@@ -558,85 +532,45 @@ function determineInitialState()
     local dragonEggs = getItemCount("Dragon Egg")
     
     if dragonEggs >= 4 and dragonScale >= 5 and blazeEmber >= 45 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "✅ Đủ materials!", 
-            Text = "State: CRAFT_WEAPONS", 
-            Duration = 3
-        })
         return "CRAFT_WEAPONS"
     end
     
     -- BƯỚC 8: FARM EMBER
     if dragonEggs >= 4 and dragonScale >= 5 and blazeEmber < 45 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Thiếu Blaze Ember", 
-            Text = "State: FARM_EMBER (" .. blazeEmber .. "/45)", 
-            Duration = 3
-        })
         return "FARM_EMBER"
     end
     
     -- BƯỚC 7: FARM DRAGON SCALE
     if dragonEggs >= 4 and dragonScale < 5 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Thiếu Dragon Scale", 
-            Text = "State: FARM_SCALE (" .. dragonScale .. "/5)", 
-            Duration = 3
-        })
         return "FARM_SCALE"
     end
     
     -- BƯỚC 6: ĐÃ CÓ BLACK BELT? → FARM EGG
     local hasBlackBelt = checkInventory("Dojo Belt (Black)")
     if hasBlackBelt and dragonEggs < 4 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Thiếu Dragon Egg", 
-            Text = "State: FARM_VOLCANO_EGG (" .. dragonEggs .. "/4)", 
-            Duration = 3
-        })
         return "FARM_VOLCANO_EGG"
     end
     
     -- BƯỚC 5: ĐỦ DINOBONE? → GET BLACK BELT + TETHER
     local dinoBones = getItemCount("Dinosaur Bones")
     if not hasBlackBelt and dinoBones >= 5 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Chưa có Black Belt", 
-            Text = "State: GET_DAI8_TETHER", 
-            Duration = 3
-        })
         return "GET_DAI8_TETHER"
     end
     
     -- BƯỚC 4: ĐÃ CÓ RED BELT? → FARM DINOBONE
     local hasRedBelt = checkInventory("Dojo Belt (Red)")
     if hasRedBelt and dinoBones < 5 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Thiếu Dinobone", 
-            Text = "State: FARM_VOLCANO_DINOBONE (" .. dinoBones .. "/5)", 
-            Duration = 3
-        })
         return "FARM_VOLCANO_DINOBONE"
     end
     
     -- BƯỚC 3: ĐÃ CÓ PURPLE BELT? → FARM RED BELT
     local hasPurpleBelt = checkInventory("Dojo Belt (Purple)")
     if hasPurpleBelt and not hasRedBelt then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 Chưa có Red Belt", 
-            Text = "State: FARM_DOJOTRAINER", 
-            Duration = 3
-        })
         return "FARM_DOJOTRAINER"
     end
     
     -- BƯỚC 2: KHÔNG CÓ PURPLE BELT
     if not hasPurpleBelt then
-        StarterGui:SetCore("SendNotification", {
-            Title = "❌ Thiếu Purple Belt!", 
-            Text = "State: CHECK_PURPLE", 
-            Duration = 5
-        })
         return "CHECK_PURPLE"
     end
     
@@ -644,7 +578,6 @@ function determineInitialState()
     return "CHECK_PURPLE"
 end
 
--- ===== MONITORING FUNCTION (GIỐNG 100% fullyddraco7addkey.lua) =====
 function startMonitoring(currentStateType)
     task.spawn(function()
         task.wait(10)
@@ -731,7 +664,7 @@ function startMonitoring(currentStateType)
                 end
             end
             
-            -- 5. CHECK MASTERY (GIỐNG 100% fullyddraco7addkey.lua)
+            -- 5. CHECK MASTERY
             if state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
                 local dhMas = checkMastery("Sword", "Dragonheart")
                 local dsMas = checkMastery("Gun", "Dragonstorm")
@@ -759,13 +692,8 @@ function startMonitoring(currentStateType)
     end)
 end
 
--- ===== TÍNH NĂNG MỚI 2: CHECK & BUY DRAGON TALON =====
 if getgenv().Melee == "Dragon Talon" then
-    StarterGui:SetCore("SendNotification", {
-        Title = "🔍 Check Dragon Talon", 
-        Text = "Đang kiểm tra...", 
-        Duration = 2
-    })
+    updateStatusUI("CHECK_DRAGONTALON", "🔍 Đang kiểm tra...")
     task.wait(2)
     
     local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
@@ -773,11 +701,7 @@ if getgenv().Melee == "Dragon Talon" then
     local inCharacter = char and char:FindFirstChild("Dragon Talon")
     
     if not inBackpack and not inCharacter then
-        StarterGui:SetCore("SendNotification", {
-            Title = "⏳ Đợi Backpack load", 
-            Text = "Chờ 5 giây...", 
-            Duration = 2
-        })
+        updateStatusUI("CHECK_DRAGONTALON", "⏳ Đợi Backpack load (5s)...")
         
         local maxWait = 5
         local waited = 0
@@ -791,35 +715,19 @@ if getgenv().Melee == "Dragon Talon" then
             inCharacter = char and char:FindFirstChild("Dragon Talon")
             
             if inBackpack or inCharacter then
-                StarterGui:SetCore("SendNotification", {
-                    Title = "✅ Tìm thấy Dragon Talon", 
-                    Text = "Đã có trong Backpack/Character!", 
-                    Duration = 3
-                })
+                updateStatusUI("CHECK_DRAGONTALON", "✅ Đã có Dragon Talon!")
                 break
             end
         end
         
         if not inBackpack and not inCharacter then
-            StarterGui:SetCore("SendNotification", {
-                Title = "❌ Chưa có Dragon Talon", 
-                Text = "Đang mua...", 
-                Duration = 3
-            })
+            updateStatusUI("CHECK_DRAGONTALON", "❌ Chưa có → Đang mua...")
             buytalon()
             task.wait(3)
-            StarterGui:SetCore("SendNotification", {
-                Title = "✅ Đã mua Dragon Talon", 
-                Text = "Hoàn tất!", 
-                Duration = 2
-            })
+            updateStatusUI("CHECK_DRAGONTALON", "✅ Đã mua xong!")
         end
     else
-        StarterGui:SetCore("SendNotification", {
-            Title = "✅ Đã có Dragon Talon", 
-            Text = "Tìm thấy trong Backpack/Character!", 
-            Duration = 2
-        })
+        updateStatusUI("CHECK_DRAGONTALON", "✅ Đã có Dragon Talon!")
     end
     
     task.wait(2)
@@ -828,13 +736,9 @@ end
 -- ===== MAIN LOGIC =====
 local currentState = readState()
 
--- ✅ TÍNH NĂNG MỚI: NẾU CHƯA CÓ STATE FILE → DETERMINE INITIAL STATE
 if not currentState then
-    StarterGui:SetCore("SendNotification", {
-        Title = "🆕 First Run", 
-        Text = "Chưa có state file...", 
-        Duration = 3
-    })
+    updateStatusUI("FIRST_RUN", "🆕 Chưa có state file...")
+    task.wait(1)
     
     local initialState = determineInitialState()
     writeState(initialState)
@@ -844,11 +748,7 @@ end
 local state = currentState.state
 updateStatusUI(state)
 
-StarterGui:SetCore("SendNotification", {
-    Title = "📂 Current State", 
-    Text = state, 
-    Duration = 3
-})
+-- ===== EXECUTE THEO STATE (GIỐNG 100% fullyddraco7addkey.lua) =====
 
 -- STATE 1: CHECK PURPLE
 if state == "CHECK_PURPLE" then
@@ -860,11 +760,6 @@ if state == "CHECK_PURPLE" then
         game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
     else
         updateStatusUI("CHECK_PURPLE", "❌ Cần Purple Belt!")
-        StarterGui:SetCore("SendNotification", {
-            Title = "Cần Purple Belt!", 
-            Text = "Hãy farm Purple Belt trước!", 
-            Duration = 5
-        })
     end
 end
 
@@ -997,7 +892,7 @@ if state == "FARM_DH_MAS" then
     startMonitoring("FARM_DH_MAS")
 end
 
--- STATE 11: RESET & BUY DRACO 
+-- STATE 11: RESET & BUY DRACO
 if state == "RESET_BUYDRACO" then
     local dhMas = checkMastery("Sword", "Dragonheart")
     local dsMas = checkMastery("Gun", "Dragonstorm")
@@ -1008,7 +903,7 @@ if state == "RESET_BUYDRACO" then
         BuyDraco()
         task.wait(5)
         writeState("FARM_V2V3")
-        executeConfig("FARM_V2V3")  
+        executeConfig("FARM_V2V3")  -- ✅ CHẠY LUÔN, KHÔNG REJOIN
         startMonitoring("FARM_V2V3")
     end
 end
