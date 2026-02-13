@@ -16,13 +16,6 @@ end
 repeat wait() until game.Players.LocalPlayer.Team
 task.wait(5)
 
--- ===== KHAI BÁO BIẾN =====
-local lp = game.Players.LocalPlayer
-local rs = game.ReplicatedStorage
-local ts = game:GetService("TweenService")
-local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
-
 if not getgenv().Keybanana or getgenv().Keybanana == "" then
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "❌ THIẾU KEY!", 
@@ -32,232 +25,23 @@ if not getgenv().Keybanana or getgenv().Keybanana == "" then
     return 
 end
 
+local lp = game.Players.LocalPlayer
+local rs = game.ReplicatedStorage
+local ts = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local HttpService = game:GetService("HttpService")
+
 -- State Management
 local playerName = lp.Name
 local stateFile = playerName .. "_autodracoflow.json"
 
--- ===== HELPER FUNCTIONS =====
-function checkInventory(name)
-    local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
-    if inv then
-        for _, item in pairs(inv) do 
-            if type(item) == "table" and item.Name == name then return true end
-        end
-    end
-    return false
-end
-
-function getItemCount(itemName)
-    local count = 0
-    pcall(function()
-        local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
-        if inv then
-            for _, item in pairs(inv) do
-                if type(item) == "table" and item.Name == itemName then
-                    count = item.Count or 0
-                    break
-                end
-            end
-        end
-    end)
-    return count
-end
-
-function checkMastery(weaponType, weaponName)
-    local mas = 0
-    pcall(function()
-        for _, v in pairs(rs.Remotes.CommF_:InvokeServer("getInventory")) do
-            if v.Type == weaponType and v.Name == weaponName then 
-                mas = v.Mastery or 0
-                break
-            end
-        end
-    end)
-    return mas
-end
-
--- ===== DETERMINE INITIAL STATE (CHỈ DÙNG KHI CHƯA CÓ FILE STATE) =====
-function determineInitialState()
-    StarterGui:SetCore("SendNotification", {
-        Title = "🔍 First Run", 
-        Text = "Đang check toàn bộ items...", 
-        Duration = 3
-    })
-    task.wait(2)
-    
-    -- Check Purple Belt
-    if not checkInventory("Dojo Belt (Purple)") then
-        StarterGui:SetCore("SendNotification", {
-            Title = "❌ Thiếu Purple Belt", 
-            Text = "Cần Purple Belt để bắt đầu!", 
-            Duration = 5
-        })
-        return "CHECK_PURPLE"
-    end
-    
-    -- Check Red Belt
-    if not checkInventory("Dojo Belt (Red)") then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 State: FARM_DOJOTRAINER", 
-            Text = "Cần farm Red Belt", 
-            Duration = 3
-        })
-        return "FARM_DOJOTRAINER"
-    end
-    
-    -- Check Dinobone
-    local dinoBones = getItemCount("Dinosaur Bones")
-    if dinoBones < 5 then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 State: FARM_VOLCANO_DINOBONE", 
-            Text = "Dinobone: " .. dinoBones .. "/5", 
-            Duration = 3
-        })
-        return "FARM_VOLCANO_DINOBONE"
-    end
-    
-    -- Check Black Belt (đã học Tether chưa)
-    if not checkInventory("Dojo Belt (Black)") then
-        StarterGui:SetCore("SendNotification", {
-            Title = "📍 State: GET_DAI8_TETHER", 
-            Text = "Cần claim Black Belt và học Tether", 
-            Duration = 3
-        })
-        return "GET_DAI8_TETHER"
-    end
-    
-    -- Check Dragonheart & Dragonstorm
-    local hasDragonheart = checkInventory("Dragonheart")
-    local hasDragonstorm = checkInventory("Dragonstorm")
-    
-    -- Check Dragon Egg
-    local dragonEggs = getItemCount("Dragon Egg")
-    
-    -- Nếu ĐÃ CÓ cả 2 vũ khí → Check mastery
-    if hasDragonheart and hasDragonstorm then
-        local dhMas = checkMastery("Sword", "Dragonheart")
-        local dsMas = checkMastery("Gun", "Dragonstorm")
-        
-        -- Check đã mua Draco chưa
-        local currentRace = ""
-        pcall(function()
-            currentRace = lp.Data.Race.Value
-        end)
-        
-        if currentRace == "Draco" then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_V2V3", 
-                Text = "Đã mua Draco! Farm V2-V3", 
-                Duration = 3
-            })
-            return "FARM_V2V3"
-        end
-        
-        -- Nếu đủ mastery → mua Draco
-        if dhMas >= 500 and dsMas >= 500 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: RESET_BUYDRACO", 
-                Text = "Đủ mastery! Sẵn sàng mua Draco", 
-                Duration = 3
-            })
-            return "RESET_BUYDRACO"
-        end
-        
-        -- Chưa đủ mastery → farm mastery
-        if dsMas < 500 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_DS_MAS", 
-                Text = "DS Mas: " .. dsMas .. "/500", 
-                Duration = 3
-            })
-            return "FARM_DS_MAS"
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_DH_MAS", 
-                Text = "DH Mas: " .. dhMas .. "/500", 
-                Duration = 3
-            })
-            return "FARM_DH_MAS"
-        end
-    end
-    
-    -- CHƯA CÓ vũ khí → Check materials
-    if not hasDragonheart or not hasDragonstorm then
-        -- Nếu thiếu egg → farm egg
-        if dragonEggs < 4 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_VOLCANO_EGG", 
-                Text = "Dragon Egg: " .. dragonEggs .. "/4", 
-                Duration = 3
-            })
-            return "FARM_VOLCANO_EGG"
-        end
-        
-        -- Đủ egg rồi → check materials để craft
-        local dragonScale = getItemCount("Dragon Scale")
-        local blazeEmber = getItemCount("Blaze Ember")
-        
-        if dragonScale < 5 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_SCALE", 
-                Text = "Dragon Scale: " .. dragonScale .. "/5", 
-                Duration = 3
-            })
-            return "FARM_SCALE"
-        elseif blazeEmber < 45 then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: FARM_EMBER", 
-                Text = "Blaze Ember: " .. blazeEmber .. "/45", 
-                Duration = 3
-            })
-            return "FARM_EMBER"
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "📍 State: CRAFT_WEAPONS", 
-                Text = "Đã đủ materials để craft", 
-                Duration = 3
-            })
-            return "CRAFT_WEAPONS"
-        end
-    end
-    
-    return "CHECK_PURPLE"
-end
-
--- ===== READ STATE - CHỈ CHECK TOÀN BỘ KHI CHƯA CÓ FILE =====
 function readState()
-    -- Nếu có file state → đọc và trả về luôn
     if isfile(stateFile) then
         local content = readfile(stateFile)
         local success, data = pcall(function() return HttpService:JSONDecode(content) end)
-        if success and data and data.state then
-            StarterGui:SetCore("SendNotification", {
-                Title = "📂 Load State", 
-                Text = "State: " .. data.state, 
-                Duration = 3
-            })
-            return data
-        end
+        if success and data then return data end
     end
-    
-    -- Nếu CHƯA có file → check toàn bộ items lần đầu
-    StarterGui:SetCore("SendNotification", {
-        Title = "🆕 First Run", 
-        Text = "Chưa có state file, đang check...", 
-        Duration = 3
-    })
-    
-    local initialState = determineInitialState()
-    
-    -- Lưu state đầu tiên vào file
-    local initialData = {
-        state = initialState,
-        data = {},
-        timestamp = os.time()
-    }
-    writefile(stateFile, HttpService:JSONEncode(initialData))
-    
-    return initialData
+    return {state = "CHECK_PURPLE", data = {}}
 end
 
 function writeState(state, extraData)
@@ -342,6 +126,49 @@ function updateStatusUI(state, extraText)
     else
         UIStroke.Color = Color3.fromRGB(88, 101, 242)
     end
+end
+
+function checkInventory(name)
+    local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
+    if inv then
+        for _, item in pairs(inv) do 
+            if type(item) == "table" and item.Name == name then return true end
+        end
+    end
+    return false
+end
+
+function getItemCount(itemName)
+    local count = 0
+    pcall(function()
+        local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
+        if inv then
+            for _, item in pairs(inv) do
+                if type(item) == "table" and item.Name == itemName then
+                    count = item.Count or 0
+                    break
+                end
+            end
+        end
+    end)
+    return count
+end
+
+-- ===== FIXED: checkMastery function =====
+function checkMastery(weaponType, weaponName)
+    local mas = 0
+    pcall(function()
+        local inv = rs.Remotes.CommF_:InvokeServer("getInventory")
+        if inv and type(inv) == "table" then
+            for _, v in pairs(inv) do
+                if type(v) == "table" and v.Type == weaponType and v.Name == weaponName then 
+                    mas = v.Mastery or 0
+                    break
+                end
+            end
+        end
+    end)
+    return mas
 end
 
 function resetStatTo(type1, type2)
@@ -660,12 +487,12 @@ function executeConfig(configType)
     end
 end
 
--- ===== MONITORING FUNCTION - FIXED =====
+-- ===== FIXED: startMonitoring function =====
 function startMonitoring(currentStateType)
     task.spawn(function()
         task.wait(10)
         
-        while wait(30) do
+        while wait(20) do  -- Giảm từ 30s xuống 20s để check nhanh hơn
             local stateData = readState()
             local state = stateData.state
             
@@ -742,32 +569,20 @@ function startMonitoring(currentStateType)
                 end
             end
             
-            -- ===== FIX LỖI CHÍNH Ở ĐÂY =====
+            -- ===== FIXED: CHECK MASTERY với kiểm tra Race TRƯỚC =====
             if state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
-                local dhMas = checkMastery("Sword", "Dragonheart")
-                local dsMas = checkMastery("Gun", "Dragonstorm")
-                
-                -- Debug notification
-                StarterGui:SetCore("SendNotification", {
-                    Title = "🔍 Check Mastery", 
-                    Text = "DH: " .. dhMas .. " | DS: " .. dsMas, 
-                    Duration = 2
-                })
-                
-                updateStatusUI(state, "DH: " .. dhMas .. " | DS: " .. dsMas)
-                
-                -- CHECK XEM ĐÃ MUA DRACO CHƯA TRƯỚC
+                -- CHECK RACE TRƯỚC TIÊN
                 local currentRace = ""
                 pcall(function()
                     currentRace = lp.Data.Race.Value
                 end)
                 
-                -- Nếu ĐÃ MUA DRACO rồi → chuyển sang V2V3
+                -- NẾU ĐÃ MUA DRACO RỒI → Chuyển sang V2V3 ngay
                 if currentRace == "Draco" then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "✅ Đã có Draco", 
-                        Text = "Chuyển sang farm V2-V3!", 
-                        Duration = 3
+                        Title = "✅ Already Draco!", 
+                        Text = "Switching to V2-V3 farm!", 
+                        Duration = 5
                     })
                     writeState("FARM_V2V3")
                     task.wait(2)
@@ -775,36 +590,49 @@ function startMonitoring(currentStateType)
                     break
                 end
                 
-                -- Nếu CẢ HAI đều >= 500 → mua Draco
+                -- CHECK MASTERY (với function đã fix)
+                local dhMas = checkMastery("Sword", "Dragonheart")
+                local dsMas = checkMastery("Gun", "Dragonstorm")
+                
+                -- Debug notification
+                StarterGui:SetCore("SendNotification", {
+                    Title = "🔍 Check Mastery", 
+                    Text = "DH: " .. dhMas .. " | DS: " .. dsMas, 
+                    Duration = 3
+                })
+                
+                updateStatusUI(state, "DH: " .. dhMas .. " | DS: " .. dsMas)
+                
+                -- NẾU CẢ HAI ĐỦ 500 → MUA DRACO
                 if dhMas >= 500 and dsMas >= 500 then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "🎉 Đủ Mastery!", 
-                        Text = "Chuyển sang mua Draco!", 
-                        Duration = 3
+                        Title = "🎉 MAX MASTERY!", 
+                        Text = "DH:" .. dhMas .. " DS:" .. dsMas .. " → BUY DRACO!", 
+                        Duration = 5
                     })
                     writeState("RESET_BUYDRACO")
                     task.wait(2)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                     
-                -- Nếu đang farm DS và DS >= 500 → chuyển sang farm DH
+                -- NẾU ĐANG FARM DS VÀ DS ĐỦ 500 → CHUYỂN FARM DH
                 elseif state == "FARM_DS_MAS" and dsMas >= 500 then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "✅ DS Đủ 500!", 
-                        Text = "Chuyển sang farm DH!", 
-                        Duration = 3
+                        Title = "✅ DS Max!", 
+                        Text = "Switch to DH farm (DH: " .. dhMas .. ")", 
+                        Duration = 5
                     })
                     writeState("FARM_DH_MAS")
                     task.wait(2)
                     game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
                     break
                     
-                -- Nếu đang farm DH và DH >= 500 → chuyển sang farm DS
+                -- NẾU ĐANG FARM DH VÀ DH ĐỦ 500 → CHUYỂN FARM DS
                 elseif state == "FARM_DH_MAS" and dhMas >= 500 then
                     StarterGui:SetCore("SendNotification", {
-                        Title = "✅ DH Đủ 500!", 
-                        Text = "Chuyển sang farm DS!", 
-                        Duration = 3
+                        Title = "✅ DH Max!", 
+                        Text = "Switch to DS farm (DS: " .. dsMas .. ")", 
+                        Duration = 5
                     })
                     writeState("FARM_DS_MAS")
                     task.wait(2)
@@ -817,7 +645,6 @@ function startMonitoring(currentStateType)
 end
 
 -- ===== MAIN LOGIC =====
--- Đọc state (nếu chưa có file thì sẽ check toàn bộ và tạo file)
 local currentState = readState()
 local state = currentState.state
 
@@ -832,12 +659,10 @@ if getgenv().Melee == "Dragon Talon" then
     })
     task.wait(2)
     
-    -- Check trong Backpack và Character
     local inBackpack = lp.Backpack:FindFirstChild("Dragon Talon")
     local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
     local inCharacter = char and char:FindFirstChild("Dragon Talon")
     
-    -- Nếu không tìm thấy ngay -> Đợi Backpack load
     if not inBackpack and not inCharacter then
         StarterGui:SetCore("SendNotification", {
             Title = "⏳ Đợi Backpack load", 
@@ -866,7 +691,6 @@ if getgenv().Melee == "Dragon Talon" then
             end
         end
         
-        -- Sau 5s vẫn không có -> Mua
         if not inBackpack and not inCharacter then
             StarterGui:SetCore("SendNotification", {
                 Title = "❌ Chưa có Dragon Talon", 
@@ -1030,14 +854,12 @@ if state == "RESET_BUYDRACO" then
     local dsMas = checkMastery("Gun", "Dragonstorm")
     
     if dhMas >= 500 and dsMas >= 500 then
-        -- Check xem đã mua Draco chưa
         local currentRace = ""
         pcall(function()
             currentRace = lp.Data.Race.Value
         end)
         
         if currentRace == "Draco" then
-            -- Đã mua Draco rồi -> Chuyển sang farm V2V3
             StarterGui:SetCore("SendNotification", {
                 Title = "✅ Đã có Draco Race", 
                 Text = "Chuyển sang farm V2-V3!", 
@@ -1048,13 +870,11 @@ if state == "RESET_BUYDRACO" then
             executeConfig("FARM_V2V3")
             startMonitoring("FARM_V2V3")
         else
-            -- Chưa mua -> Reset stat và mua Draco
             resetStatTo("Melee", "Sword")
             task.wait(2)
             BuyDraco()
             task.wait(5)
             
-            -- Check lại xem đã mua thành công chưa
             pcall(function()
                 currentRace = lp.Data.Race.Value
             end)
