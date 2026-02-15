@@ -6,6 +6,9 @@ local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
+-- Khai báo biến title để dùng sau
+local title
+
 -- Giữ nguyên tất cả các function từ script gốc
 getgenv().FullyDai5Running = getgenv().FullyDai5Running or false
 getgenv().FullyBelt3Running = getgenv().FullyBelt3Running or false
@@ -1024,7 +1027,9 @@ local COLORS = {
     accentHover = Color3.fromRGB(129, 132, 255),
     text = Color3.fromRGB(230, 230, 240),
     textDim = Color3.fromRGB(140, 140, 160),
-    border = Color3.fromRGB(45, 45, 60)
+    border = Color3.fromRGB(45, 45, 60),
+    success = Color3.fromRGB(34, 197, 94),
+    danger = Color3.fromRGB(239, 68, 68)
 }
 
 local gui = Instance.new("ScreenGui")
@@ -1062,10 +1067,10 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 12)
 headerCorner.Parent = header
 
-local title = Instance.new("TextLabel")
+title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -20, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
-title.Text = "DRACO TOOLS"
+title.Text = "⏳ Đợi team..."
 title.TextColor3 = COLORS.text
 title.TextSize = 14
 title.Font = Enum.Font.GothamBold
@@ -1076,7 +1081,7 @@ title.Parent = header
 local version = Instance.new("TextLabel")
 version.Size = UDim2.new(0, 60, 0, 16)
 version.Position = UDim2.new(1, -70, 0, 14)
-version.Text = "v3.0"
+version.Text = "v3.1"
 version.TextColor3 = COLORS.textDim
 version.TextSize = 9
 version.Font = Enum.Font.GothamMedium
@@ -1404,7 +1409,7 @@ belt3StartBtn.MouseButton1Click:Connect(function()
     
     if getgenv().FullyBelt3Running then
         belt3StartBtn.Text = "STOP AUTO"
-        belt3StartBtn.BackgroundColor3 = Color3.fromRGB(239, 68, 68)
+        belt3StartBtn.BackgroundColor3 = COLORS.danger
         table1Btn.Active = false
         table2Btn.Active = false
         table3Btn.Active = false
@@ -1476,6 +1481,120 @@ switchTab("info")
 updateInfoDisplay()
 updateTableSelection(1)
 
+-- ===== PORTAL STATUS CHECKER FUNCTIONS =====
+getgenv().CurrentPortalStatus = nil
+
+local function updatePortalStatusDisplay(status)
+    if title then
+        if status == nil then
+            title.Text = "🔒 CHƯA MỞ CỔNG"
+            title.TextColor3 = Color3.fromRGB(239, 68, 68)
+        else
+            title.Text = "✅ ĐÃ MỞ CỔNG"
+            title.TextColor3 = Color3.fromRGB(34, 197, 94)
+        end
+    end
+end
+
+local function checkPortalStatusAndUpdate()
+    -- Kiểm tra có phải Draco không
+    local isDraco = false
+    pcall(function()
+        isDraco = game:GetService("Players").LocalPlayer.Data.Race.Value == "Draco"
+    end)
+    
+    if not isDraco then
+        -- Không phải Draco → không check
+        if title then
+            title.Text = "❌ NOT DRACO"
+            title.TextColor3 = Color3.fromRGB(156, 163, 175)
+        end
+        return nil
+    end
+    
+    -- Là Draco → Check portal
+    local success, result = pcall(function()
+        local args = {"UpgradeRace", "Check", 2}
+        return rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    end)
+    
+    local status = success and result or nil
+    updatePortalStatusDisplay(status)
+    getgenv().CurrentPortalStatus = status
+    return status
+end
+
+-- ===== KHỞI ĐỘNG KIỂM TRA CỔNG =====
+task.spawn(function()
+    -- Đợi người chơi select team
+    repeat task.wait(0.5) until game.Players.LocalPlayer.Team
+    
+    -- Đợi thêm 1 giây để đảm bảo data load xong
+    task.wait(1)
+    
+    -- Check xem có phải Draco không
+    local function isDraco()
+        local success, result = pcall(function()
+            return game:GetService("Players").LocalPlayer.Data.Race.Value == "Draco"
+        end)
+        return success and result
+    end
+    
+    if not isDraco() then
+        -- Không phải Draco → Hiển thị "Not Draco"
+        if title then
+            title.Text = "❌ NOT DRACO"
+            title.TextColor3 = Color3.fromRGB(156, 163, 175) -- Gray
+        end
+        return -- Dừng lại, không check cổng và không setup hook
+    end
+    
+    -- Là Draco → Setup hook SAU KHI join team xong
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        if method == "InvokeServer" and self.Name == "CommF_" then
+            if args[1] == "UpgradeRace" and args[2] == "Check" and args[3] == 2 then
+                local result = oldNamecall(self, ...)
+                
+                -- Kiểm tra Draco trước khi update
+                local isDracoNow = false
+                pcall(function()
+                    isDracoNow = game:GetService("Players").LocalPlayer.Data.Race.Value == "Draco"
+                end)
+                
+                if isDracoNow then
+                    updatePortalStatusDisplay(result)
+                    getgenv().CurrentPortalStatus = result
+                end
+                
+                return result
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    
+    -- Check portal lần đầu
+    checkPortalStatusAndUpdate()
+    
+    -- Periodic check mỗi 30 giây
+    while gui.Parent do
+        task.wait(30)
+        if isDraco() then
+            checkPortalStatusAndUpdate()
+        else
+            -- Nếu đổi race khác Draco → Update UI
+            if title then
+                title.Text = "❌ NOT DRACO"
+                title.TextColor3 = Color3.fromRGB(156, 163, 175)
+            end
+        end
+    end
+end)
+
 task.spawn(function()
     while gui.Parent do
         task.wait(10)
@@ -1487,9 +1606,7 @@ end)
 
 task.wait(0.3)
 StarterGui:SetCore("SendNotification", {
-    Title = "Draco Tools v3.0", 
+    Title = "Draco Tools v3.1", 
     Text = "Press ALT to toggle UI", 
     Duration = 3
 })
-
-
