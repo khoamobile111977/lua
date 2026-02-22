@@ -6,10 +6,8 @@ local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
--- Khai báo biến title để dùng sau
 local title
 
--- Giữ nguyên tất cả các function từ script gốc
 getgenv().FullyDai5Running = getgenv().FullyDai5Running or false
 getgenv().FullyBelt3Running = getgenv().FullyBelt3Running or false
 getgenv().SelectedTable = getgenv().SelectedTable or 1
@@ -621,7 +619,6 @@ local function checkAndEnsureTurtleMap()
     
     local turtle = map:FindFirstChild("Turtle")
     
-    -- Check Trade Tables thẳng luôn
     local hasTradeTable = false
     if turtle then
         for _, obj in ipairs(turtle:GetChildren()) do
@@ -632,7 +629,6 @@ local function checkAndEnsureTurtleMap()
         end
     end
     
-    -- Nếu không có Trade Table thì tp để load
     if not hasTradeTable then
         local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
         
@@ -668,7 +664,6 @@ local function checkAndEnsureTurtleMap()
         repeat task.wait(0.1) until not Main.IsMoving or foundTables
         task.wait(0.5)
         
-        -- Check lại lần cuối
         local finalMap = workspace:FindFirstChild("Map")
         if finalMap then
             local finalTurtle = finalMap:FindFirstChild("Turtle")
@@ -708,14 +703,11 @@ function TeleportToTradeTable(tableIndex, useInstant)
     
     local targetCFrame = p1CFrame
     
-    -- Nếu dùng Instant TP
     if useInstant or getgenv().InstantTP then
-        -- Check xem P1 có người không
         if IsChairOccupied(p1) then
             targetCFrame = p2CFrame
         end
         
-        -- Instant teleport
         local char = lp.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = targetCFrame
@@ -723,7 +715,6 @@ function TeleportToTradeTable(tableIndex, useInstant)
         return true
     end
     
-    -- Dùng Tween bình thường
     local isCheckingP1 = true
     
     local checkConnection
@@ -1476,17 +1467,17 @@ switchTab("info")
 updateInfoDisplay()
 updateTableSelection(1)
 
--- ===== PORTAL STATUS CHECKER FUNCTIONS =====
+-- ===== PORTAL STATUS CHECKER =====
 getgenv().CurrentPortalStatus = nil
 
 local function updatePortalStatusDisplay(status)
     if title then
-        if status == nil then
-            title.Text = "🔒 CHƯA MỞ CỔNG"
-            title.TextColor3 = Color3.fromRGB(239, 68, 68)
-        else
+        if status then
             title.Text = "✅ ĐÃ MỞ CỔNG"
             title.TextColor3 = Color3.fromRGB(34, 197, 94)
+        else
+            title.Text = "🔒 CHƯA MỞ CỔNG"
+            title.TextColor3 = Color3.fromRGB(239, 68, 68)
         end
     end
 end
@@ -1496,7 +1487,7 @@ local function checkPortalStatusAndUpdate()
     pcall(function()
         isDraco = game:GetService("Players").LocalPlayer.Data.Race.Value == "Draco"
     end)
-    
+
     if not isDraco then
         if title then
             title.Text = "❌ NOT DRACO"
@@ -1504,13 +1495,17 @@ local function checkPortalStatusAndUpdate()
         end
         return nil
     end
-    
+
     local success, result = pcall(function()
-        local args = {"UpgradeRace", "Check", 2}
-        return rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+        local args = {"progress"}
+        return workspace:WaitForChild("HydraIslandClient"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
     end)
-    
-    local status = success and result or nil
+
+    local status = nil
+    if success and type(result) == "table" and result.complete == 2 then
+        status = true
+    end
+
     updatePortalStatusDisplay(status)
     getgenv().CurrentPortalStatus = status
     return status
@@ -1531,7 +1526,7 @@ task.spawn(function()
         end)
         if hasRace or waited >= maxWaitTime then break end
     until false
-    
+
     task.wait(1)
 
     local function isDraco()
@@ -1540,43 +1535,15 @@ task.spawn(function()
         end)
         return success and result
     end
-    
+
     if not isDraco() then
         if title then
             title.Text = "❌ NOT DRACO"
-            title.TextColor3 = Color3.fromRGB(156, 163, 175) 
+            title.TextColor3 = Color3.fromRGB(156, 163, 175)
         end
-        return 
+        return
     end
 
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        
-        if method == "InvokeServer" and self.Name == "CommF_" then
-            if args[1] == "UpgradeRace" and args[2] == "Check" and args[3] == 2 then
-                local result = oldNamecall(self, ...)
-                
-                local isDracoNow = false
-                pcall(function()
-                    isDracoNow = game:GetService("Players").LocalPlayer.Data.Race.Value == "Draco"
-                end)
-                
-                if isDracoNow then
-                    updatePortalStatusDisplay(result)
-                    getgenv().CurrentPortalStatus = result
-                end
-                
-                return result
-            end
-        end
-        
-        return oldNamecall(self, ...)
-    end)
-    
-    task.wait(2)
-    
     checkPortalStatusAndUpdate()
 
     while gui.Parent do
