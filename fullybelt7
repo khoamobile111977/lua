@@ -1,11 +1,10 @@
-
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 task.wait(2)
 
 if not getgenv().Keybanana or getgenv().Keybanana == "" then
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "❌ THIẾU KEY!",
+        Title = " THIẾU KEY!",
         Text = "Hãy set: getgenv().Keybanana = 'YOUR_KEY'",
         Duration = 10
     })
@@ -42,77 +41,295 @@ pcall(function()
     end
 end)
 
+
+
 local StatusGui = Instance.new("ScreenGui")
 StatusGui.Name         = "AutoDracoStatus"
 StatusGui.Parent       = game.CoreGui
 StatusGui.ResetOnSpawn = false
+StatusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local StatusFrame = Instance.new("Frame")
-StatusFrame.Parent               = StatusGui
-StatusFrame.BackgroundColor3     = Color3.fromRGB(20, 20, 25)
-StatusFrame.BackgroundTransparency = 0.25
-StatusFrame.Position             = UDim2.new(0.5, -170, 0, 10)
-StatusFrame.Size                 = UDim2.new(0, 340, 0, 75)
-StatusFrame.BorderSizePixel      = 0
-Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 10)
+local Wrapper = Instance.new("Frame")
+Wrapper.Name                   = "Wrapper"
+Wrapper.Parent                 = StatusGui
+Wrapper.BackgroundTransparency = 1
+Wrapper.Size                   = UDim2.new(0, 390, 0, 120)
+Wrapper.Position               = UDim2.new(0.5, -195, 0, 12)
+Wrapper.BorderSizePixel        = 0
 
-local StatusStroke = Instance.new("UIStroke", StatusFrame)
-StatusStroke.Color       = Color3.fromRGB(88, 101, 242)
-StatusStroke.Thickness   = 2
-StatusStroke.Transparency = 0.4
+local Panel = Instance.new("Frame")
+Panel.Name                   = "Panel"
+Panel.Parent                 = Wrapper
+Panel.Size                   = UDim2.new(1, 0, 1, 0)
+Panel.BackgroundColor3       = Color3.fromRGB(8, 8, 14)
+Panel.BackgroundTransparency = 0.18
+Panel.BorderSizePixel        = 0
+Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 14)
 
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Parent               = StatusFrame
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Size                 = UDim2.new(1, -12, 1, -10)
-StatusLabel.Position             = UDim2.new(0, 6, 0, 5)
-StatusLabel.Font                 = Enum.Font.GothamBold
-StatusLabel.TextColor3           = Color3.fromRGB(240, 240, 240)
-StatusLabel.TextSize             = 13
-StatusLabel.TextWrapped          = true
-StatusLabel.TextXAlignment       = Enum.TextXAlignment.Left
-StatusLabel.TextYAlignment       = Enum.TextYAlignment.Top
+pcall(function()
+    local blur = Instance.new("UIBlur")
+    blur.BlurType    = Enum.BlurType.Gaussian
+    blur.Size        = 16
+    blur.Parent      = Panel
+end)
+
+local BorderStroke = Instance.new("UIStroke", Panel)
+BorderStroke.Color       = Color3.fromRGB(139, 92, 246)
+BorderStroke.Thickness   = 1.5
+BorderStroke.Transparency = 0.25
+
+local Header = Instance.new("Frame")
+Header.Name                   = "Header"
+Header.Parent                 = Panel
+Header.Size                   = UDim2.new(1, 0, 0, 30)
+Header.BackgroundColor3       = Color3.fromRGB(15, 10, 25)
+Header.BackgroundTransparency = 0.35
+Header.BorderSizePixel        = 0
+do
+    local c = Instance.new("UICorner", Header)
+    c.CornerRadius = UDim.new(0, 14)
+    local cover = Instance.new("Frame", Header)
+    cover.Size = UDim2.new(1, 0, 0.5, 0)
+    cover.Position = UDim2.new(0, 0, 0.5, 0)
+    cover.BackgroundColor3 = Color3.fromRGB(15, 10, 25)
+    cover.BackgroundTransparency = 0.35
+    cover.BorderSizePixel = 0
+end
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Parent               = Header
+TitleLabel.Size                 = UDim2.new(0, 160, 1, 0)
+TitleLabel.Position             = UDim2.new(0, 14, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text                 = "DRACO  FLOW"
+TitleLabel.Font                 = Enum.Font.GothamBold
+TitleLabel.TextSize             = 12
+TitleLabel.TextColor3           = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextXAlignment       = Enum.TextXAlignment.Left
+
+local VerLabel = Instance.new("TextLabel")
+VerLabel.Parent               = Header
+VerLabel.Size                 = UDim2.new(0, 80, 0, 16)
+VerLabel.Position             = UDim2.new(0, 158, 0.5, -8)
+VerLabel.BackgroundColor3     = Color3.fromRGB(60, 50, 100)
+VerLabel.BackgroundTransparency = 0.3
+VerLabel.Text                 = "v2.0  by elite"
+VerLabel.Font                 = Enum.Font.Gotham
+VerLabel.TextSize             = 9
+VerLabel.TextColor3           = Color3.fromRGB(180, 160, 255)
+VerLabel.BorderSizePixel      = 0
+Instance.new("UICorner", VerLabel).CornerRadius = UDim.new(1, 0)
+
+local PlayerPill = Instance.new("Frame")
+PlayerPill.Parent               = Header
+PlayerPill.Size                 = UDim2.new(0, 130, 0, 18)
+PlayerPill.Position             = UDim2.new(1, -144, 0.5, -9)
+PlayerPill.BackgroundColor3     = Color3.fromRGB(30, 25, 55)
+PlayerPill.BackgroundTransparency = 0.3
+PlayerPill.BorderSizePixel      = 0
+Instance.new("UICorner", PlayerPill).CornerRadius = UDim.new(1, 0)
+
+local PlayerLabel = Instance.new("TextLabel")
+PlayerLabel.Parent               = PlayerPill
+PlayerLabel.Size                 = UDim2.new(1, -8, 1, 0)
+PlayerLabel.Position             = UDim2.new(0, 4, 0, 0)
+PlayerLabel.BackgroundTransparency = 1
+PlayerLabel.Text                 = playerName
+PlayerLabel.Font                 = Enum.Font.Gotham
+PlayerLabel.TextSize             = 10
+PlayerLabel.TextColor3           = Color3.fromRGB(200, 185, 255)
+PlayerLabel.TextXAlignment       = Enum.TextXAlignment.Center
+PlayerLabel.TextTruncate         = Enum.TextTruncate.AtEnd
+
+local Content = Instance.new("Frame")
+Content.Name                   = "Content"
+Content.Parent                 = Panel
+Content.Size                   = UDim2.new(1, 0, 0, 76)
+Content.Position               = UDim2.new(0, 0, 0, 32)
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel        = 0
+
+local ImgFrame = Instance.new("Frame")
+ImgFrame.Parent               = Content
+ImgFrame.Size                 = UDim2.new(0, 60, 0, 60)
+ImgFrame.Position             = UDim2.new(0, 14, 0.5, -30)
+ImgFrame.BackgroundColor3     = Color3.fromRGB(20, 14, 35)
+ImgFrame.BackgroundTransparency = 0.45
+ImgFrame.BorderSizePixel      = 0
+Instance.new("UICorner", ImgFrame).CornerRadius = UDim.new(0, 10)
+
+local ImgStroke = Instance.new("UIStroke", ImgFrame)
+ImgStroke.Color       = Color3.fromRGB(139, 92, 246)
+ImgStroke.Thickness   = 1
+ImgStroke.Transparency = 0.5
+
+local ItemImage = Instance.new("ImageLabel")
+ItemImage.Parent               = ImgFrame
+ItemImage.Size                 = UDim2.new(1, -8, 1, -8)
+ItemImage.Position             = UDim2.new(0, 4, 0, 4)
+ItemImage.BackgroundTransparency = 1
+ItemImage.ScaleType            = Enum.ScaleType.Fit
+ItemImage.Image                = ""
+
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Parent               = Content
+InfoFrame.Size                 = UDim2.new(1, -90, 0, 60)
+InfoFrame.Position             = UDim2.new(0, 84, 0.5, -30)
+InfoFrame.BackgroundTransparency = 1
+InfoFrame.BorderSizePixel      = 0
+
+local StateLabel = Instance.new("TextLabel")
+StateLabel.Parent               = InfoFrame
+StateLabel.Size                 = UDim2.new(1, 0, 0, 26)
+StateLabel.Position             = UDim2.new(0, 0, 0, 6)
+StateLabel.BackgroundTransparency = 1
+StateLabel.Text                 = "INITIALIZING..."
+StateLabel.Font                 = Enum.Font.GothamBold
+StateLabel.TextSize             = 15
+StateLabel.TextColor3           = Color3.fromRGB(245, 245, 255)
+StateLabel.TextXAlignment       = Enum.TextXAlignment.Left
+StateLabel.TextTruncate         = Enum.TextTruncate.AtEnd
+
+local ExtraLabel = Instance.new("TextLabel")
+ExtraLabel.Parent               = InfoFrame
+ExtraLabel.Size                 = UDim2.new(1, 0, 0, 28)
+ExtraLabel.Position             = UDim2.new(0, 0, 0, 32)
+ExtraLabel.BackgroundTransparency = 1
+ExtraLabel.Text                 = ""
+ExtraLabel.Font                 = Enum.Font.Gotham
+ExtraLabel.TextSize             = 11
+ExtraLabel.TextColor3           = Color3.fromRGB(160, 150, 200)
+ExtraLabel.TextXAlignment       = Enum.TextXAlignment.Left
+ExtraLabel.TextWrapped          = true
+
+local AccentTrack = Instance.new("Frame")
+AccentTrack.Parent               = Panel
+AccentTrack.Size                 = UDim2.new(1, -28, 0, 3)
+AccentTrack.Position             = UDim2.new(0, 14, 1, -9)
+AccentTrack.BackgroundColor3     = Color3.fromRGB(30, 20, 50)
+AccentTrack.BackgroundTransparency = 0.3
+AccentTrack.BorderSizePixel      = 0
+Instance.new("UICorner", AccentTrack).CornerRadius = UDim.new(1, 0)
+
+local AccentBar = Instance.new("Frame")
+AccentBar.Parent               = AccentTrack
+AccentBar.Size                 = UDim2.new(0.6, 0, 1, 0)
+AccentBar.BackgroundColor3     = Color3.fromRGB(139, 92, 246)
+AccentBar.BorderSizePixel      = 0
+Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(1, 0)
 
 local stateColors = {
     CHECK_PURPLE          = Color3.fromRGB(168, 85, 247),
     FARM_DOJOTRAINER      = Color3.fromRGB(249, 115, 22),
-    FARM_VOLCANO_DINOBONE = Color3.fromRGB(120, 113, 108),
-    GET_DAI8_TETHER       = Color3.fromRGB(99, 102, 241),
+    FARM_VOLCANO_DINOBONE = Color3.fromRGB(150, 130, 110),
+    GET_DAI8_TETHER       = Color3.fromRGB(99, 182, 241),
     FARM_VOLCANO_EGG      = Color3.fromRGB(245, 158, 11),
     FARM_SCALE            = Color3.fromRGB(34, 197, 94),
     FARM_EMBER            = Color3.fromRGB(239, 68, 68),
     CRAFT_WEAPONS         = Color3.fromRGB(139, 92, 246),
     FARM_DS_MAS           = Color3.fromRGB(59, 130, 246),
-    FARM_DH_MAS           = Color3.fromRGB(220, 38, 38),
+    FARM_DH_MAS           = Color3.fromRGB(220, 50, 50),
     RESET_BUYDRACO        = Color3.fromRGB(16, 185, 129),
     FARM_V2V3             = Color3.fromRGB(234, 179, 8),
-    COMPLETED             = Color3.fromRGB(0, 255, 127),
 }
 
-local stateIcons = {
-    CHECK_PURPLE          = "🟣 CHECK PURPLE BELT",
-    FARM_DOJOTRAINER      = "🥋 FARM RED BELT",
-    FARM_VOLCANO_DINOBONE = "🦴 FARM DINOSAUR BONES",
-    GET_DAI8_TETHER       = "🎓 GET ĐAI 8 + TETHER",
-    FARM_VOLCANO_EGG      = "🥚 FARM DRAGON EGG",
-    FARM_SCALE            = "🐉 FARM DRAGON SCALE",
-    FARM_EMBER            = "🔥 FARM BLAZE EMBER",
-    CRAFT_WEAPONS         = "⚒️ CRAFT WEAPONS",
-    FARM_DS_MAS           = "🔫 FARM DRAGONSTORM MAS",
-    FARM_DH_MAS           = "⚔️ FARM DRAGONHEART MAS",
-    RESET_BUYDRACO        = "🐉 BUY DRACO RACE",
-    FARM_V2V3             = "⭐ FARM V2-V3",
-    COMPLETED             = "✅ HOÀN THÀNH!",
+local stateLabels = {
+    CHECK_PURPLE          = "CHECK PURPLE BELT",
+    FARM_DOJOTRAINER      = "FARM RED BELT",
+    FARM_VOLCANO_DINOBONE = "FARM DINOSAUR BONES",
+    GET_DAI8_TETHER       = "GET DAI 8 + TETHER",
+    FARM_VOLCANO_EGG      = "FARM DRAGON EGG",
+    FARM_SCALE            = "FARM DRAGON SCALE",
+    FARM_EMBER            = "FARM BLAZE EMBER",
+    CRAFT_WEAPONS         = "CRAFT WEAPONS",
+    FARM_DS_MAS           = "FARM DRAGONSTORM MAS",
+    FARM_DH_MAS           = "FARM DRAGONHEART MAS",
+    RESET_BUYDRACO        = "BUY DRACO RACE",
+    FARM_V2V3             = "FARM V2 — V3",
 }
 
+local stateImages = {
+    CHECK_PURPLE          = "rbxassetid://131486487072529",    
+    FARM_DOJOTRAINER      = "rbxassetid://115220711272647",  
+    FARM_VOLCANO_DINOBONE = "rbxassetid://89027020779329",   
+    GET_DAI8_TETHER       = "rbxassetid://126586224331826",  
+    FARM_VOLCANO_EGG      = "rbxassetid://124802143699510",   
+    FARM_SCALE            = "rbxassetid://95984531047163",  
+    FARM_EMBER            = "rbxassetid://138369941033247",   
+    CRAFT_WEAPONS         = "rbxassetid://79928864861207",  
+    FARM_DS_MAS           = "rbxassetid://79928864861207",   
+    FARM_DH_MAS           = "rbxassetid://123343725047424",  
+    RESET_BUYDRACO        = "rbxassetid://76443289198008",  
+    FARM_V2V3             = "rbxassetid://136851554418762",    
+}
+
+do
+    local dragging, dragStart, startPos
+    Panel.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging  = true
+            dragStart = inp.Position
+            startPos  = Wrapper.Position
+        end
+    end)
+    Panel.InputChanged:Connect(function(inp)
+        if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = inp.Position - dragStart
+            Wrapper.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    Panel.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+local _pulseConn
 local function updateStatus(state, extraText)
     pcall(function()
-        local icon = stateIcons[state] or ("📋 " .. tostring(state))
-        StatusLabel.Text  = icon .. (extraText and ("\n" .. extraText) or "")
-        StatusStroke.Color = stateColors[state] or Color3.fromRGB(88, 101, 242)
+        local color = stateColors[state]  or Color3.fromRGB(139, 92, 246)
+        local label = stateLabels[state]  or tostring(state)
+        local img   = stateImages[state]  or ""
+
+        StateLabel.Text  = label
+        ExtraLabel.Text  = extraText and extraText:gsub("^%s+", "") or ""
+
+
+
+        ItemImage.Image  = img
+        ImgStroke.Color  = color
+
+        BorderStroke.Color        = color
+        BorderStroke.Transparency = 0.3
+        AccentBar.BackgroundColor3 = color
+
+        if _pulseConn then _pulseConn:Disconnect(); _pulseConn = nil end
+        local function doPulse()
+            TweenService:Create(AccentBar,
+                TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                { BackgroundTransparency = 0.55 }
+            ):Play()
+            task.wait(1.2)
+            TweenService:Create(AccentBar,
+                TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                { BackgroundTransparency = 0 }
+            ):Play()
+            task.wait(1.2)
+        end
+        task.spawn(function()
+            while true do
+                local ok = pcall(doPulse)
+                if not ok then break end
+            end
+        end)
     end)
     print("[DRACO] " .. tostring(state) .. (extraText and (" | " .. extraText:gsub("\n", " ")) or ""))
 end
+
 
 local function readState()
     if isfile(stateFile) then
@@ -138,6 +355,9 @@ local function writeState(state, overrides)
         has_black_belt   = (overrides and overrides.has_black_belt ~= nil)
                             and overrides.has_black_belt
                             or (existing.has_black_belt == true),
+        stat_reset       = (overrides and overrides.stat_reset ~= nil)
+                            and overrides.stat_reset
+                            or (existing.stat_reset == true),
     }
     writefile(stateFile, HttpService:JSONEncode(data))
     updateStatus(state)
@@ -316,17 +536,19 @@ local function findNPC(npcName)
     return nil
 end
 
-local function tpToNPC(npcName, timeout)
+local function tpToNPC(npcName)
     local npc = findNPC(npcName)
     if not (npc and npc:FindFirstChild("HumanoidRootPart")) then return false end
+
     TP1(CFrame.new(npc.HumanoidRootPart.Position))
+
     local char = lp.Character or lp.CharacterAdded:Wait()
     local hrp  = char:WaitForChild("HumanoidRootPart")
-    local t    = 0
-    timeout    = timeout or 10
-    repeat
-        task.wait(0.5); t = t + 0.5
-    until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5 or t >= timeout
+
+    repeat task.wait(0.5) until not Main.IsMoving
+
+    repeat task.wait(0.5) until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 8
+
     return true
 end
 
@@ -379,19 +601,19 @@ local function hasDragonTalonInGame()
 end
 
 local function buyDragonTalon()
-    updateStatus("FARM_V2V3", "🛒 Mua Dragon Talon từ Uzoth...")
+ updateStatus("FARM_V2V3", "Mua Dragon Talon từ Uzoth...")
     task.wait(5)
 
-    if tpToNPC("Uzoth", 15) then
+    if tpToNPC("Uzoth") then
         task.wait(2)
         pcall(function() safeInvoke("BuyDragonTalon") end)
         task.wait(3)
         if hasDragonTalonInGame() then
-            updateStatus("FARM_V2V3", "✅ Đã mua Dragon Talon!")
+ updateStatus("FARM_V2V3", "Đã mua Dragon Talon!")
             return true
         end
     end
-    updateStatus("FARM_V2V3", "⚠️ Không mua được Talon (thiếu frag?)")
+ updateStatus("FARM_V2V3", "Không mua được Talon (thiếu frag?)")
     return false
 end
 
@@ -413,10 +635,10 @@ end
 
 
 local function GetDai8Tether()
-    updateStatus("GET_DAI8_TETHER", "🎓 TP đến Dojo Trainer...")
+ updateStatus("GET_DAI8_TETHER", "TP đến Dojo Trainer...")
     task.wait(2)
 
-    if tpToNPC("Dojo Trainer", 12) then
+    if tpToNPC("Dojo Trainer") then
         task.wait(3)
         pcall(function()
             rs:WaitForChild("Modules"):WaitForChild("Net")
@@ -426,8 +648,8 @@ local function GetDai8Tether()
         task.wait(1)
     end
 
-    updateStatus("GET_DAI8_TETHER", "🎓 TP đến Dragon Wizard...")
-    if tpToNPC("Dragon Wizard", 12) then
+ updateStatus("GET_DAI8_TETHER", "TP đến Dragon Wizard...")
+    if tpToNPC("Dragon Wizard") then
         task.wait(2)
         pcall(function()
             rs:WaitForChild("Modules"):WaitForChild("Net")
@@ -439,10 +661,10 @@ local function GetDai8Tether()
 
     local hasBlack = hasDojoBelt("Black")
     if hasBlack then
-        updateStatus("GET_DAI8_TETHER", "✅ Đã có Black Belt! Hoàn tất.")
+ updateStatus("GET_DAI8_TETHER", "Đã có Black Belt! Hoàn tất.")
         return true
     else
-        updateStatus("GET_DAI8_TETHER", "⏳ Chờ 60s để quest cooldown...")
+ updateStatus("GET_DAI8_TETHER", " Chờ 60s để quest cooldown...")
         task.wait(60)
         TeleportService:Teleport(game.PlaceId, lp)
         return false
@@ -450,21 +672,37 @@ local function GetDai8Tether()
 end
 
 local function BuyDracoRace()
-    if tpToNPC("Dragon Wizard", 12) then
-        pcall(function()
-            rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest")
-               :InvokeServer({NPC = "Dragon Wizard", Command = "DragonRace"})
-        end)
+    for attempt = 1, 3 do
+ updateStatus("RESET_BUYDRACO", "Đang bay tới Dragon Wizard... (lần " .. attempt .. "/3)")
+
+        if not tpToNPC("Dragon Wizard") then
+            task.wait(3)
+        else
+            task.wait(2) 
+
+            pcall(function()
+                rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest")
+                   :InvokeServer({NPC = "Dragon Wizard", Command = "DragonRace"})
+            end)
+
+            local waited = 0
+            while waited < 8 do
+                task.wait(1); waited = waited + 1
+                if getDracoRace() == "Draco" then
+                    return true
+                end
+            end
+        end
+
         task.wait(2)
-        local race = getDracoRace()
-        return race == "Draco"
     end
-    return false
+
+    return getDracoRace() == "Draco"
 end
 
 
 local function rejoin(reason)
-    updateStatus("FARM_V2V3", "🔄 " .. (reason or "Rejoin..."))
+ updateStatus("FARM_V2V3", (reason or "Rejoin..."))
     task.wait(3)
     TeleportService:Teleport(game.PlaceId, lp)
 end
@@ -499,45 +737,11 @@ local function executeConfig(configType)
     end
 
     getgenv().Key = getgenv().Keybanana
-    updateStatus(configType, "⏳ Đang load BananaHub...")
+ updateStatus(configType, " Đang load BananaHub...")
     task.wait(2)
     loadstring(game:HttpGet(url))()
 end
 
-
-local function showCompletionGUI()
-    pcall(function()
-        if game.CoreGui:FindFirstChild("DracoCompleteGui") then
-            game.CoreGui.DracoCompleteGui:Destroy()
-        end
-        local gui   = Instance.new("ScreenGui")
-        gui.Parent  = game.CoreGui
-        gui.Name    = "DracoCompleteGui"
-        gui.ResetOnSpawn = false
-
-        local frame = Instance.new("Frame")
-        frame.Parent           = gui
-        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-        frame.Position         = UDim2.new(0.5, -160, 0.5, -70)
-        frame.Size             = UDim2.new(0, 320, 0, 140)
-        frame.BorderSizePixel  = 0
-        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
-
-        local stroke = Instance.new("UIStroke", frame)
-        stroke.Color = Color3.fromRGB(0, 255, 127); stroke.Thickness = 2
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Parent             = frame
-        lbl.BackgroundTransparency = 1
-        lbl.Size               = UDim2.new(1, -20, 1, -20)
-        lbl.Position           = UDim2.new(0, 10, 0, 10)
-        lbl.Font               = Enum.Font.GothamBold
-        lbl.Text               = "🎉 FULLY DRACO HOÀN THÀNH!\n\nRace: Draco ✅\nDragonheart & Dragonstorm: 500/500 ✅\nDraco V2-V3: ✅"
-        lbl.TextColor3         = Color3.fromRGB(0, 255, 127)
-        lbl.TextSize           = 16
-        lbl.TextWrapped        = true
-    end)
-end
 
 
 local monitorActive = false
@@ -566,19 +770,19 @@ local function startMonitoring(initState)
 
                 local extraText = ""
                 if state == "FARM_DOJOTRAINER" then
-                    extraText = "🥋 Chờ Red Belt..."
+                    extraText = " Chờ Red Belt..."
                 elseif state == "FARM_VOLCANO_DINOBONE" then
-                    extraText = "🦴 Bones: " .. bones .. "/5"
+                    extraText = " Bones: " .. bones .. "/5"
                 elseif state == "FARM_VOLCANO_EGG" then
-                    extraText = "🥚 Eggs: " .. eggs .. "/4"
+                    extraText = " Eggs: " .. eggs .. "/4"
                 elseif state == "FARM_SCALE" then
-                    extraText = "🐉 Scale: " .. scale .. "/5 | 🔥 Ember: " .. ember .. "/45"
+                    extraText = " Scale: " .. scale .. "/5 |  Ember: " .. ember .. "/45"
                 elseif state == "FARM_EMBER" then
-                    extraText = "🔥 Ember: " .. ember .. "/45 | 🐉 Scale: " .. scale
+                    extraText = " Ember: " .. ember .. "/45 |  Scale: " .. scale
                 elseif state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
-                    extraText = "⚔️ DH: " .. dh .. "/500  🔫 DS: " .. ds .. "/500"
+                    extraText = " DH: " .. dh .. "/500   DS: " .. ds .. "/500"
                 elseif state == "FARM_V2V3" then
-                    extraText = "🐉 Race: " .. getDracoRace()
+                    extraText = " Race: " .. getDracoRace()
                 end
                 updateStatus(state, extraText)
 
@@ -676,12 +880,12 @@ end
 
 
 local function reverseCheck()
-    updateStatus("FARM_V2V3", "🔍 Lần đầu chạy — Reverse check...")
+ updateStatus("CHECK_PURPLE", "Reverse check...")
     task.wait(3)
 
     local race = getDracoRace()
     if race == "Draco" then
-        updateStatus("FARM_V2V3", "✅ Đã có Draco Race!")
+ updateStatus("FARM_V2V3", "Đã có Draco Race!")
         task.wait(1)
         writeState("FARM_V2V3")
         return "FARM_V2V3"
@@ -693,7 +897,7 @@ local function reverseCheck()
     local hasDS = checkInventory("Dragonstorm")
 
     if hasDH and hasDS then
-        updateStatus("CRAFT_WEAPONS", "📊 DH: " .. dh .. " | DS: " .. ds)
+ updateStatus("CRAFT_WEAPONS", "DH: " .. dh .. " | DS: " .. ds)
         task.wait(1)
 
         if dh >= 500 and ds >= 500 then
@@ -720,9 +924,9 @@ local function reverseCheck()
     local eggs  = getItemCount("Dragon Egg")
     local bones = getItemCount("Dinosaur Bones")
 
-    updateStatus("CRAFT_WEAPONS",
-        "🐉 Scale: " .. scale .. " | 🔥 Ember: " .. ember ..
-        "\n🥚 Eggs: " .. eggs .. " | 🦴 Bones: " .. bones)
+ updateStatus("CRAFT_WEAPONS",
+        "Scale: " .. scale .. " |  Ember: " .. ember ..
+        "\n Eggs: " .. eggs .. " |  Bones: " .. bones)
     task.wait(2)
 
     if scale >= 5 and ember >= 45 and eggs >= 4 then
@@ -770,12 +974,8 @@ local function reverseCheck()
         return "FARM_DOJOTRAINER"
     end
 
-    writeState("CHECK_PURPLE")
     return "CHECK_PURPLE"
 end
-
-updateStatus("CHECK_PURPLE", "🚀 Khởi động...")
-task.wait(3)
 
 local savedData = readState()
 local state
@@ -786,35 +986,37 @@ if savedData == nil then
 else
     state = savedData.state
     updateStatus(state,
-        "📋 Đọc từ file | DH: " .. (savedData.dh_mastery or 0) ..
+        "DH: " .. (savedData.dh_mastery or 0) ..
         " | DS: " .. (savedData.ds_mastery or 0)
     )
-    task.wait(2)
+    task.wait(1)
 end
 
--- ============================================================
---  DISPATCH THEO STATE
--- ============================================================
+checkAndBuyTalonOnce()
+task.wait(1)
 
--- ─── STATE: CHECK_PURPLE ────────────────────────────────────
+
 if state == "CHECK_PURPLE" then
+    if savedData ~= nil and isfile(stateFile) then
+        delfile(stateFile)
+    end
+
     if hasDojoBelt("Purple") then
         writeState("FARM_DOJOTRAINER")
         task.wait(1)
         rejoin("Có Purple Belt → FARM_DOJOTRAINER")
     else
-        updateStatus("CHECK_PURPLE", "❌ Cần Purple Belt trước!")
+ updateStatus("CHECK_PURPLE", "Cần Purple Belt trước!")
         StarterGui:SetCore("SendNotification", {
-            Title = "❌ Cần Purple Belt!",
+            Title = " Cần Purple Belt!",
             Text  = "Hãy farm Dojo đến Purple Belt rồi chạy lại.",
             Duration = 8
         })
     end
 end
 
--- ─── STATE: FARM_DOJOTRAINER ────────────────────────────────
+--  STATE: FARM_DOJOTRAINER 
 if state == "FARM_DOJOTRAINER" then
-    -- Đã có Red thì nhảy luôn
     if hasDojoBelt("Red") then
         writeState("FARM_VOLCANO_DINOBONE")
         task.wait(1)
@@ -825,7 +1027,7 @@ if state == "FARM_DOJOTRAINER" then
     end
 end
 
--- ─── STATE: FARM_VOLCANO_DINOBONE ───────────────────────────
+--  STATE: FARM_VOLCANO_DINOBONE 
 if state == "FARM_VOLCANO_DINOBONE" then
     local bones = getItemCount("Dinosaur Bones")
     if bones >= 5 then
@@ -833,16 +1035,15 @@ if state == "FARM_VOLCANO_DINOBONE" then
         task.wait(1)
         rejoin("Đủ Dinobone → GET_DAI8_TETHER")
     else
-        updateStatus(state, "🦴 Bones: " .. bones .. "/5")
+ updateStatus(state, "Bones: " .. bones .. "/5")
         startMonitoring(state)
         executeConfig("FARM_VOLCANO_DINOBONE")
     end
 end
 
--- ─── STATE: GET_DAI8_TETHER ─────────────────────────────────
+--  STATE: GET_DAI8_TETHER 
 if state == "GET_DAI8_TETHER" then
     if hasDojoBelt("Black") then
-        -- Đã có Black Belt rồi
         writeState("FARM_VOLCANO_EGG")
         task.wait(1)
         rejoin("Đã có Black Belt → FARM_VOLCANO_EGG")
@@ -853,11 +1054,10 @@ if state == "GET_DAI8_TETHER" then
             task.wait(2)
             rejoin("Xong Tether → FARM_VOLCANO_EGG")
         end
-        -- Nếu fail thì GetDai8Tether đã tự rejoin bên trong
     end
 end
 
--- ─── STATE: FARM_VOLCANO_EGG ────────────────────────────────
+--  STATE: FARM_VOLCANO_EGG 
 if state == "FARM_VOLCANO_EGG" then
     local eggs = getItemCount("Dragon Egg")
     if eggs >= 4 then
@@ -870,13 +1070,13 @@ if state == "FARM_VOLCANO_EGG" then
         task.wait(1)
         rejoin("Đủ Dragon Egg → " .. next)
     else
-        updateStatus(state, "🥚 Eggs: " .. eggs .. "/4")
+ updateStatus(state, "Eggs: " .. eggs .. "/4")
         startMonitoring(state)
         executeConfig("FARM_VOLCANO_EGG")
     end
 end
 
--- ─── STATE: FARM_SCALE ──────────────────────────────────────
+--  STATE: FARM_SCALE 
 if state == "FARM_SCALE" then
     local scale = getItemCount("Dragon Scale")
     local ember = getItemCount("Blaze Ember")
@@ -886,13 +1086,13 @@ if state == "FARM_SCALE" then
         task.wait(1)
         rejoin("Đủ Scale → " .. next)
     else
-        updateStatus(state, "🐉 Scale: " .. scale .. "/5")
+ updateStatus(state, "Scale: " .. scale .. "/5")
         startMonitoring(state)
         executeConfig("FARM_SCALE")
     end
 end
 
--- ─── STATE: FARM_EMBER ──────────────────────────────────────
+--  STATE: FARM_EMBER 
 if state == "FARM_EMBER" then
     local scale = getItemCount("Dragon Scale")
     local ember = getItemCount("Blaze Ember")
@@ -901,25 +1101,24 @@ if state == "FARM_EMBER" then
         task.wait(1)
         rejoin("Đủ Ember → CRAFT_WEAPONS")
     else
-        updateStatus(state, "🔥 Ember: " .. ember .. "/45 | 🐉 Scale: " .. scale .. "/5")
+ updateStatus(state, "Ember: " .. ember .. "/45 | Scale: " .. scale .. "/5")
         startMonitoring(state)
         executeConfig("FARM_EMBER")
     end
 end
 
--- ─── STATE: CRAFT_WEAPONS ───────────────────────────────────
+--  STATE: CRAFT_WEAPONS 
 if state == "CRAFT_WEAPONS" then
     local scale = getItemCount("Dragon Scale")
     local ember = getItemCount("Blaze Ember")
     local eggs  = getItemCount("Dragon Egg")
 
     updateStatus(state,
-        "🐉 Scale: " .. scale ..
-        " | 🔥 Ember: " .. ember ..
-        " | 🥚 Eggs: " .. eggs
+        "Scale: " .. scale ..
+        " |  Ember: " .. ember ..
+        " |  Eggs: " .. eggs
     )
 
-    -- Thiếu nguyên liệu thì farm tiếp
     if scale < 5 then
         writeState("FARM_SCALE")
         task.wait(1)
@@ -929,7 +1128,6 @@ if state == "CRAFT_WEAPONS" then
         task.wait(1)
         rejoin("Thiếu Ember → FARM_EMBER")
     else
-        -- Đủ hết, craft và reset stat
         craftDragonWeapons()
         task.wait(2)
         resetStatTo("Gun", "Sword")
@@ -940,7 +1138,7 @@ if state == "CRAFT_WEAPONS" then
     end
 end
 
--- ─── STATE: FARM_DS_MAS ─────────────────────────────────────
+--  STATE: FARM_DS_MAS 
 if state == "FARM_DS_MAS" then
     local dh = checkMastery("Sword", "Dragonheart")
     local ds = checkMastery("Gun",   "Dragonstorm")
@@ -954,13 +1152,13 @@ if state == "FARM_DS_MAS" then
         task.wait(1)
         rejoin("DS 500 → FARM_DH_MAS")
     else
-        updateStatus(state, "⚔️ DH: " .. dh .. "/500  🔫 DS: " .. ds .. "/500")
+ updateStatus(state, "DH: " .. dh .. "/500 DS: " .. ds .. "/500")
         startMonitoring(state)
         executeConfig("FARM_DS_MAS")
     end
 end
 
--- ─── STATE: FARM_DH_MAS ─────────────────────────────────────
+--  STATE: FARM_DH_MAS 
 if state == "FARM_DH_MAS" then
     local dh = checkMastery("Sword", "Dragonheart")
     local ds = checkMastery("Gun",   "Dragonstorm")
@@ -974,64 +1172,58 @@ if state == "FARM_DH_MAS" then
         task.wait(1)
         rejoin("DH 500 → FARM_DS_MAS")
     else
-        updateStatus(state, "⚔️ DH: " .. dh .. "/500  🔫 DS: " .. ds .. "/500")
+ updateStatus(state, "DH: " .. dh .. "/500 DS: " .. ds .. "/500")
         startMonitoring(state)
         executeConfig("FARM_DH_MAS")
     end
 end
 
--- ─── STATE: RESET_BUYDRACO ──────────────────────────────────
+--  STATE: RESET_BUYDRACO 
 if state == "RESET_BUYDRACO" then
     local dh   = checkMastery("Sword", "Dragonheart")
     local ds   = checkMastery("Gun",   "Dragonstorm")
     local race = getDracoRace()
 
     if race == "Draco" then
-        -- Đã có rồi
-        writeState("FARM_V2V3")
+        writeState("FARM_V2V3", { stat_reset = true })
         task.wait(1)
         rejoin("Đã có Draco → FARM_V2V3")
+
     elseif dh >= 500 and ds >= 500 then
-        updateStatus(state, "🐉 Reset stat + Mua Draco...")
-        resetStatTo("Melee", "Sword")
-        task.wait(3)
+        local alreadyReset = savedData and savedData.stat_reset == true
+        if not alreadyReset then
+ updateStatus(state, "Reset stat (1 lần duy nhất)...")
+            resetStatTo("Melee", "Sword")
+            task.wait(3)
+            writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds, stat_reset = true })
+            task.wait(1)
+        else
+ updateStatus(state, "Stat đã reset. Đang mua Draco...")
+        end
+
         local bought = BuyDracoRace()
         if bought then
-            writeState("FARM_V2V3")
+            writeState("FARM_V2V3", { stat_reset = true })
             task.wait(2)
             rejoin("Mua Draco xong → FARM_V2V3")
         else
-            -- Thử lại lần tiếp sau rejoin
-            writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
-            task.wait(2)
-            rejoin("Mua Draco thất bại → Thử lại")
+ updateStatus(state, "Mua Draco thất bại, rejoin thử lại...")
+            task.wait(3)
+            rejoin("Retry mua Draco (stat đã reset, không tốn frag)")
         end
+
     else
-        -- Mastery chưa đủ, về farm tiếp
         if dh < 500 then
-            writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds })
+            writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds, stat_reset = false })
         else
-            writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
+            writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds, stat_reset = false })
         end
         task.wait(1)
         rejoin("Mastery chưa đủ → về farm")
     end
 end
 
--- ─── STATE: FARM_V2V3 ───────────────────────────────────────
+--  STATE: FARM_V2V3 
 if state == "FARM_V2V3" then
-    -- Mua Dragon Talon 1 lần (lưu vào file, lần sau skip)
-    checkAndBuyTalonOnce()
-    task.wait(2)
-
-    updateStatus("FARM_V2V3", "⭐ Dragon Talon: " .. tostring(hasDragonTalonInGame()))
-    startMonitoring(state)
     executeConfig("FARM_V2V3")
-end
-
--- ─── STATE: COMPLETED ───────────────────────────────────────
-if state == "COMPLETED" then
-    showCompletionGUI()
-    updateStatus("COMPLETED", "🎉 Tất cả đã hoàn thành!")
-    monitorActive = false
 end
