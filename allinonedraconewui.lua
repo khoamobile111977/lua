@@ -1536,27 +1536,51 @@ task.spawn(function()
         return success and result
     end
 
+    -- ===== HOOK DETECT ĐỔI RACE SANG DRACO =====
+    -- Lắng nghe sự kiện thay đổi race realtime, không cần đợi interval 30s
+    local raceHookConnection
+    pcall(function()
+        local raceValue = game:GetService("Players").LocalPlayer.Data.Race
+        raceHookConnection = raceValue.Changed:Connect(function(newRace)
+            if newRace == "Draco" then
+                -- Vừa đổi sang Draco → báo và check cổng ngay
+                if title then
+                    title.Text = "⏳ Đang kiểm tra cổng..."
+                    title.TextColor3 = Color3.fromRGB(250, 204, 21)
+                end
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Race Changed!",
+                    Text = "Đã đổi sang Draco! Đang kiểm tra cổng...",
+                    Duration = 3
+                })
+                task.wait(1) -- chờ server sync data xong
+                checkPortalStatusAndUpdate()
+            else
+                -- Đổi sang tộc khác → cập nhật UI ngay
+                if title then
+                    title.Text = "❌ NOT DRACO"
+                    title.TextColor3 = Color3.fromRGB(156, 163, 175)
+                end
+            end
+        end)
+    end)
+    -- ===== KẾT THÚC HOOK =====
+
     if not isDraco() then
         if title then
             title.Text = "❌ NOT DRACO"
             title.TextColor3 = Color3.fromRGB(156, 163, 175)
         end
-        return
+    else
+        checkPortalStatusAndUpdate()
     end
 
-    checkPortalStatusAndUpdate()
-
-    while gui.Parent do
-        task.wait(30)
-        if isDraco() then
-            checkPortalStatusAndUpdate()
-        else
-            if title then
-                title.Text = "❌ NOT DRACO"
-                title.TextColor3 = Color3.fromRGB(156, 163, 175)
-            end
+    -- Dọn dẹp khi GUI bị destroy
+    gui.AncestryChanged:Connect(function()
+        if not gui.Parent and raceHookConnection then
+            raceHookConnection:Disconnect()
         end
-    end
+    end)
 end)
 
 task.spawn(function()
