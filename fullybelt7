@@ -219,6 +219,7 @@ AccentBar.BorderSizePixel      = 0
 Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(1, 0)
 
 local stateColors = {
+    BUY_TALON             = Color3.fromRGB(99, 182, 241),
     CHECK_PURPLE          = Color3.fromRGB(168, 85, 247),
     FARM_DOJOTRAINER      = Color3.fromRGB(249, 115, 22),
     FARM_VOLCANO_DINOBONE = Color3.fromRGB(150, 130, 110),
@@ -234,6 +235,7 @@ local stateColors = {
 }
 
 local stateLabels = {
+    BUY_TALON             = "BUYING DRAGON TALON",
     CHECK_PURPLE          = "CHECK PURPLE BELT",
     FARM_DOJOTRAINER      = "FARM RED BELT",
     FARM_VOLCANO_DINOBONE = "FARM DINOSAUR BONES",
@@ -249,6 +251,7 @@ local stateLabels = {
 }
 
 local stateImages = {
+    BUY_TALON             = "rbxassetid://102272645527842",
     CHECK_PURPLE          = "rbxassetid://131486487072529",    
     FARM_DOJOTRAINER      = "rbxassetid://115220711272647",  
     FARM_VOLCANO_DINOBONE = "rbxassetid://89027020779329",   
@@ -370,50 +373,155 @@ local function safeInvoke(...)
     return result
 end
 
-local function checkInventory(name)
-    local found = false
-    pcall(function()
-        local inv = safeInvoke("getInventory")
-        if inv then
-            for _, item in pairs(inv) do
-                if type(item) == "table" and item.Name == name then
-                    found = true; return
-                end
-            end
+local CACHE_TTL  = 8      
+local invCache   = {}     
+local invCacheTs = 0      
+
+local function _refreshCache()
+    local inv
+    pcall(function() inv = safeInvoke("getInventory") end)
+    if type(inv) ~= "table" then return end
+    invCache = {}
+    for _, item in pairs(inv) do
+        if type(item) == "table" and item.Name then
+            invCache[item.Name] = {
+                count   = item.Count   or 1,
+                mastery = item.Mastery or 0,
+                itype   = item.Type    or "",
+            }
         end
-    end)
-    return found
+    end
+    invCacheTs = tick()
+end
+
+local function _ensureCache()
+    if tick() - invCacheTs > CACHE_TTL then
+        _refreshCache()
+    end
+end
+
+local function warmupInventoryCache()
+    _refreshCache()
+end
+
+local function checkInventory(name)
+    _ensureCache()
+    return invCache[name] ~= nil
 end
 
 local function getItemCount(itemName)
-    local count = 0
-    pcall(function()
-        local inv = safeInvoke("getInventory")
-        if inv then
-            for _, item in pairs(inv) do
-                if type(item) == "table" and item.Name == itemName then
-                    count = item.Count or 0; return
-                end
+    _ensureCache()
+    local e = invCache[itemName]
+    return e and e.count or 0
+end
+
+local function findWeaponLevel(weaponName)
+    local locations = {
+        workspace.Characters and workspace.Characters:FindFirstChild(playerName),
+        lp.Character,
+        lp.Backpack,
+    }
+    for _, container in ipairs(locations) do
+        if container then
+            local tool = container:FindFirstChild(weaponName)
+            if tool then
+                local lv = tool:FindFirstChild("Level")
+                if lv then return lv, tool end
             end
         end
-    end)
-    return count
+    end
+    return nil, nil
 end
 
 local function checkMastery(weaponType, weaponName)
-    local mas = 0
-    pcall(function()
-        local inv = safeInvoke("getInventory")
-        if inv then
-            for _, v in pairs(inv) do
-                if type(v) == "table" and v.Type == weaponType and v.Name == weaponName then
-                    mas = v.Mastery or 0; return
-                end
-            end
-        end
-    end)
-    return mas
+    local lv, _ = findWeaponLevel(weaponName)
+    if lv then return lv.Value end
+    _ensureCache()
+    local e = invCache[weaponName]
+    return (e and e.mastery) or 0
 end
+
+local masteryWatcherActive = {} 
+
+local function startWeaponMasteryWatcher(weaponType, weaponName, targetMastery, onReached, currentState)
+    if masteryWatcherActive[weaponName] then return end
+    masteryWatcherActive[weaponName] = true
+
+    local triggered = false
+
+    local uiState = currentState or "FARM_DS_MAS"
+
+    local function handleMastery(mas)
+        if triggered then return end
+        local dh = checkMastery("Sword", "Dragonheart")
+        local ds = checkMastery("Gun",   "Dragonstorm")
+        updateStatus(uiState, "DH: " .. dh .. "/500   DS: " .. ds .. "/500")
+        if mas >= targetMastery then
+            triggered = true
+            masteryWatcherActive[weaponName] = false
+            onReached(mas)
+        end
+    end
+
+    task.spawn(function()
+        task.wait(5)
+
+        local currentConn = nil
+
+        local function reconnect()
+            if currentConn then pcall(function() currentConn:Disconnect() end); currentConn = nil end
+            if triggered then return end
+            local lv, _ = findWeaponLevel(weaponName)
+            if not lv then return end
+            handleMastery(lv.Value)
+            currentConn = lv.Changed:Connect(function(newVal)
+                handleMastery(newVal)
+            end)
+        end
+
+        reconnect()
+
+        local bpConn = lp.Backpack.ChildAdded:Connect(function(child)
+            if child.Name == weaponName then task.wait(0.1); reconnect() end
+        end)
+
+        local function watchChar(char)
+            if not char then return end
+            char.ChildAdded:Connect(function(child)
+                if child.Name == weaponName then task.wait(0.1); reconnect() end
+            end)
+        end
+
+        local wsChars = workspace:FindFirstChild("Characters")
+        if wsChars then
+            local myChar = wsChars:FindFirstChild(playerName)
+            if myChar then watchChar(myChar) end
+            wsChars.ChildAdded:Connect(function(child)
+                if child.Name == playerName then task.wait(1); watchChar(child); reconnect() end
+            end)
+        end
+
+        lp.CharacterAdded:Connect(function(char)
+            task.wait(1); watchChar(char); reconnect()
+        end)
+
+        while masteryWatcherActive[weaponName] do
+            task.wait(10)
+            pcall(function()
+                if triggered then return end
+                local lv, _ = findWeaponLevel(weaponName)
+                if lv then
+                    handleMastery(lv.Value)
+                    if not currentConn then reconnect() end
+                end
+            end)
+        end
+
+        pcall(function() if currentConn then currentConn:Disconnect() end end)
+        pcall(function() bpConn:Disconnect() end)
+    end)
+end
+-- ============================================================
 
 local function getDracoRace()
     local race = ""
@@ -601,7 +709,7 @@ local function hasDragonTalonInGame()
 end
 
 local function buyDragonTalon()
- updateStatus("FARM_V2V3", "Mua Dragon Talon từ Uzoth...")
+    updateStatus("BUY_TALON", "Đang mua Dragon Talon từ Uzoth...")
     task.wait(5)
 
     if tpToNPC("Uzoth") then
@@ -609,11 +717,11 @@ local function buyDragonTalon()
         pcall(function() safeInvoke("BuyDragonTalon") end)
         task.wait(3)
         if hasDragonTalonInGame() then
- updateStatus("FARM_V2V3", "Đã mua Dragon Talon!")
+            updateStatus("BUY_TALON", "Đã mua Dragon Talon thành công!")
             return true
         end
     end
- updateStatus("FARM_V2V3", "Không mua được Talon (thiếu frag?)")
+    updateStatus("BUY_TALON", "Không mua được Talon (thiếu frag?)")
     return false
 end
 
@@ -626,6 +734,8 @@ local function checkAndBuyTalonOnce()
 
     local hasTalon = hasDragonTalonInGame()
     if not hasTalon then
+        updateStatus("BUY_TALON", "Chưa có Dragon Talon → Kiểm tra...")
+        task.wait(1)
         hasTalon = buyDragonTalon()
     end
 
@@ -750,226 +860,196 @@ local function startMonitoring(initState)
     if monitorActive then return end
     monitorActive = true
 
-    task.spawn(function()
-        task.wait(15)  
+    if initState == "FARM_DS_MAS" then
+        startWeaponMasteryWatcher("Gun", "Dragonstorm", 500, function(ds)
+            local dh = checkMastery("Sword", "Dragonheart")
+            if dh >= 500 then
+                writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
+                task.wait(2)
+                rejoin("DH+DS 500 → RESET_BUYDRACO")
+            else
+                writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds })
+                task.wait(2)
+                rejoin("DS 500 → FARM_DH_MAS")
+            end
+        end, "FARM_DS_MAS")
+        return
+    end
 
-        while monitorActive do
-            local ok, err = pcall(function()
-                local saved = readState()
-                if not saved then return end
-                local state = saved.state
+    if initState == "FARM_DH_MAS" then
+        startWeaponMasteryWatcher("Sword", "Dragonheart", 500, function(dh)
+            local ds = checkMastery("Gun", "Dragonstorm")
+            if ds >= 500 then
+                writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
+                task.wait(2)
+                rejoin("DH+DS 500 → RESET_BUYDRACO")
+            else
+                writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
+                task.wait(2)
+                rejoin("DH 500 → FARM_DS_MAS")
+            end
+        end, "FARM_DH_MAS")
+        return
+    end
 
-                local dh    = checkMastery("Sword", "Dragonheart")
-                local ds    = checkMastery("Gun",   "Dragonstorm")
-                local bones = getItemCount("Dinosaur Bones")
-                local eggs  = getItemCount("Dragon Egg")
-                local scale = getItemCount("Dragon Scale")
-                local ember = getItemCount("Blaze Ember")
+    local function checkStateTransition()
+        local saved = readState()
+        if not saved then return end
+        local state = saved.state
 
-                writeState(state, { dh_mastery = dh, ds_mastery = ds })
+        local bones = getItemCount("Dinosaur Bones")
+        local eggs  = getItemCount("Dragon Egg")
+        local scale = getItemCount("Dragon Scale")
+        local ember = getItemCount("Blaze Ember")
 
-                local extraText = ""
-                if state == "FARM_DOJOTRAINER" then
-                    extraText = " Chờ Red Belt..."
-                elseif state == "FARM_VOLCANO_DINOBONE" then
-                    extraText = " Bones: " .. bones .. "/5"
-                elseif state == "FARM_VOLCANO_EGG" then
-                    extraText = " Eggs: " .. eggs .. "/4"
-                elseif state == "FARM_SCALE" then
-                    extraText = " Scale: " .. scale .. "/5 |  Ember: " .. ember .. "/45"
-                elseif state == "FARM_EMBER" then
-                    extraText = " Ember: " .. ember .. "/45 |  Scale: " .. scale
-                elseif state == "FARM_DS_MAS" or state == "FARM_DH_MAS" then
-                    extraText = " DH: " .. dh .. "/500   DS: " .. ds .. "/500"
-                elseif state == "FARM_V2V3" then
-                    extraText = " Race: " .. getDracoRace()
-                end
-                updateStatus(state, extraText)
+        local extraText = ""
+        if state == "FARM_DOJOTRAINER" then
+            extraText = "Chờ Red Belt... (belt: " .. (hasDojoBelt("Red") and "GOT" or "waiting") .. ")"
+        elseif state == "FARM_VOLCANO_DINOBONE" then
+            extraText = "Bones: " .. bones .. "/5"
+        elseif state == "FARM_VOLCANO_EGG" then
+            extraText = "Eggs: " .. eggs .. "/4"
+        elseif state == "FARM_SCALE" then
+            extraText = "Scale: " .. scale .. "/5"
+        elseif state == "FARM_EMBER" then
+            extraText = "Ember: " .. ember .. "/45"
+        elseif state == "FARM_V2V3" then
+            extraText = "Race: " .. getDracoRace()
+        end
+        updateStatus(state, extraText)
 
-
-                if state == "FARM_DOJOTRAINER" then
-                    if hasDojoBelt("Red") then
-                        writeState("FARM_VOLCANO_DINOBONE")
-                        task.wait(2)
-                        rejoin("Có Red Belt → FARM_VOLCANO_DINOBONE")
-                    end
-
-                elseif state == "FARM_VOLCANO_DINOBONE" then
-                    if bones >= 5 then
-                        writeState("GET_DAI8_TETHER")
-                        task.wait(2)
-                        rejoin("Đủ Dinobone → GET_DAI8_TETHER")
-                    end
-
-
-                elseif state == "FARM_VOLCANO_EGG" then
-                    if eggs >= 4 then
-                        if scale >= 5 and ember >= 45 then
-                            writeState("CRAFT_WEAPONS")
-                        elseif scale >= 5 then
-                            writeState("FARM_EMBER")
-                        else
-                            writeState("FARM_SCALE")
-                        end
-                        task.wait(2)
-                        rejoin("Đủ Dragon Egg → " .. readState().state)
-                    end
-
-                elseif state == "FARM_SCALE" then
-                    if scale >= 5 then
-                        if ember >= 45 then
-                            writeState("CRAFT_WEAPONS")
-                            task.wait(2)
-                            rejoin("Đủ vật liệu → CRAFT_WEAPONS")
-                        else
-                            writeState("FARM_EMBER")
-                            task.wait(2)
-                            rejoin("Đủ Scale → FARM_EMBER")
-                        end
-                    end
-
-                elseif state == "FARM_EMBER" then
-                    if ember >= 45 and scale >= 5 then
-                        writeState("CRAFT_WEAPONS")
-                        task.wait(2)
-                        rejoin("Đủ Ember → CRAFT_WEAPONS")
-                    end
-
-                elseif state == "FARM_DS_MAS" then
-                    if dh >= 500 and ds >= 500 then
-                        writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
-                        task.wait(2)
-                        rejoin("DH+DS 500 → RESET_BUYDRACO")
-                    elseif ds >= 500 then
-                        writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds })
-                        task.wait(2)
-                        rejoin("DS 500 → FARM_DH_MAS")
-                    end
-
-                elseif state == "FARM_DH_MAS" then
-                    if dh >= 500 and ds >= 500 then
-                        writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
-                        task.wait(2)
-                        rejoin("DH+DS 500 → RESET_BUYDRACO")
-                    elseif dh >= 500 then
-                        writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
-                        task.wait(2)
-                        rejoin("DH 500 → FARM_DS_MAS")
-                    end
-
-                elseif state == "RESET_BUYDRACO" then
-                    local race = getDracoRace()
-                    if race == "Draco" then
-                        writeState("FARM_V2V3")
-                        task.wait(2)
-                        rejoin("Đã có Draco → FARM_V2V3")
-                    end
-
-                end
-            end)
-
-            if not ok then
-                print("[MONITOR ERROR] " .. tostring(err))
-                task.wait(5)
+        if state == "FARM_DOJOTRAINER" then
+            if hasDojoBelt("Red") then
+                writeState("FARM_VOLCANO_DINOBONE")
+                task.wait(2)
+                rejoin("Có Red Belt → FARM_VOLCANO_DINOBONE")
             end
 
-            task.wait(20) 
+        elseif state == "FARM_VOLCANO_DINOBONE" then
+            if bones >= 5 then
+                writeState("GET_DAI8_TETHER")
+                task.wait(2)
+                rejoin("Đủ Bones → GET_DAI8_TETHER")
+            end
+
+        elseif state == "FARM_VOLCANO_EGG" then
+            if eggs >= 4 then
+                local next = (scale >= 5) and ((ember >= 45) and "CRAFT_WEAPONS" or "FARM_EMBER") or "FARM_SCALE"
+                writeState(next)
+                task.wait(2)
+                rejoin("Đủ Eggs → " .. next)
+            end
+
+        elseif state == "FARM_SCALE" then
+            if scale >= 5 then
+                local next = (ember >= 45) and "CRAFT_WEAPONS" or "FARM_EMBER"
+                writeState(next)
+                task.wait(2)
+                rejoin("Đủ Scale → " .. next)
+            end
+
+        elseif state == "FARM_EMBER" then
+            if ember >= 45 and scale >= 5 then
+                writeState("CRAFT_WEAPONS")
+                task.wait(2)
+                rejoin("Đủ Ember → CRAFT_WEAPONS")
+            end
+
+        elseif state == "RESET_BUYDRACO" then
+            if getDracoRace() == "Draco" then
+                writeState("FARM_V2V3")
+                task.wait(2)
+                rejoin("Đã có Draco → FARM_V2V3")
+            end
+        end
+    end
+
+    task.spawn(function()
+        task.wait(15) 
+        while monitorActive do
+            pcall(checkStateTransition)
+            task.wait(5)
         end
     end)
 end
 
 
 local function reverseCheck()
- updateStatus("CHECK_PURPLE", "Reverse check...")
-    task.wait(3)
+    updateStatus("CHECK_PURPLE", "Đang reverse check...")
 
-    local race = getDracoRace()
+    task.wait(5)
+
+    local race      = getDracoRace()
+    local hasDH     = checkInventory("Dragonheart")
+    local hasDS     = checkInventory("Dragonstorm")
+    local dh        = (hasDH or hasDS) and checkMastery("Sword", "Dragonheart") or 0
+    local ds        = (hasDH or hasDS) and checkMastery("Gun",   "Dragonstorm") or 0
+    local hasPurple = hasDojoBelt("Purple")
+    local hasRed    = hasDojoBelt("Red")
+    local hasBlack  = hasDojoBelt("Black")
+    local bones     = getItemCount("Dinosaur Bones")
+    local eggs      = getItemCount("Dragon Egg")
+    local scale     = getItemCount("Dragon Scale")
+    local ember     = getItemCount("Blaze Ember")
+
+    updateStatus("CHECK_PURPLE",
+        "Race:" .. race
+        .. " | DH:" .. (hasDH and tostring(dh) or "x")
+        .. " DS:" .. (hasDS and tostring(ds) or "x")
+        .. "\nBelt:" .. (hasBlack and "Black" or hasRed and "Red" or hasPurple and "Purple" or "None")
+        .. " Bones:" .. bones .. " Eggs:" .. eggs
+        .. " Scale:" .. scale .. " Ember:" .. ember)
+    task.wait(2)
+
     if race == "Draco" then
- updateStatus("FARM_V2V3", "Đã có Draco Race!")
-        task.wait(1)
         writeState("FARM_V2V3")
         return "FARM_V2V3"
     end
 
-    local dh = checkMastery("Sword", "Dragonheart")
-    local ds = checkMastery("Gun",   "Dragonstorm")
-    local hasDH = checkInventory("Dragonheart")
-    local hasDS = checkInventory("Dragonstorm")
-
     if hasDH and hasDS then
- updateStatus("CRAFT_WEAPONS", "DH: " .. dh .. " | DS: " .. ds)
-        task.wait(1)
-
         if dh >= 500 and ds >= 500 then
             writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
             return "RESET_BUYDRACO"
         elseif dh >= 500 then
-            ensureInBackpack("Dragonstorm")
             writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
             return "FARM_DS_MAS"
         elseif ds >= 500 then
-            ensureInBackpack("Dragonheart")
             writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds })
             return "FARM_DH_MAS"
         else
-            ensureInBackpack("Dragonheart")
-            ensureInBackpack("Dragonstorm")
             writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
             return "FARM_DS_MAS"
         end
     end
 
-    local scale = getItemCount("Dragon Scale")
-    local ember = getItemCount("Blaze Ember")
-    local eggs  = getItemCount("Dragon Egg")
-    local bones = getItemCount("Dinosaur Bones")
-
- updateStatus("CRAFT_WEAPONS",
-        "Scale: " .. scale .. " |  Ember: " .. ember ..
-        "\n Eggs: " .. eggs .. " |  Bones: " .. bones)
-    task.wait(2)
-
-    if scale >= 5 and ember >= 45 and eggs >= 4 then
+    if hasBlack then
+        if eggs < 4 then
+            writeState("FARM_VOLCANO_EGG")
+            return "FARM_VOLCANO_EGG"
+        end
+        if scale < 5 then
+            writeState("FARM_SCALE")
+            return "FARM_SCALE"
+        end
+        if ember < 45 then
+            writeState("FARM_EMBER")
+            return "FARM_EMBER"
+        end
         writeState("CRAFT_WEAPONS")
         return "CRAFT_WEAPONS"
     end
 
-    if scale >= 5 and ember >= 45 then
-        writeState("FARM_VOLCANO_EGG")
-        return "FARM_VOLCANO_EGG"
-    end
-
-    if eggs >= 4 then
-        if scale < 5 then
-            writeState("FARM_SCALE")
-            return "FARM_SCALE"
-        else
-            writeState("FARM_EMBER")
-            return "FARM_EMBER"
-        end
-    end
-
-    if scale >= 5 then
-        writeState("FARM_EMBER")
-        return "FARM_EMBER"
-    end
-
     if bones >= 5 then
-        if hasDojoBelt("Black") then
-            writeState("FARM_VOLCANO_EGG")
-            return "FARM_VOLCANO_EGG"
-        else
-            writeState("GET_DAI8_TETHER")
-            return "GET_DAI8_TETHER"
-        end
+        writeState("GET_DAI8_TETHER")
+        return "GET_DAI8_TETHER"
     end
 
-    if hasDojoBelt("Red") then
+    if hasRed then
         writeState("FARM_VOLCANO_DINOBONE")
         return "FARM_VOLCANO_DINOBONE"
     end
 
-    if hasDojoBelt("Purple") then
+    if hasPurple then
         writeState("FARM_DOJOTRAINER")
         return "FARM_DOJOTRAINER"
     end
@@ -977,18 +1057,21 @@ local function reverseCheck()
     return "CHECK_PURPLE"
 end
 
+warmupInventoryCache()
+task.wait(1)
+
 local savedData = readState()
 local state
 
-if savedData == nil then
-    state = reverseCheck()
-    task.wait(2)
-else
+if savedData and savedData.state then
     state = savedData.state
     updateStatus(state,
-        "DH: " .. (savedData.dh_mastery or 0) ..
-        " | DS: " .. (savedData.ds_mastery or 0)
+        "Tiếp tục từ state đã lưu..."
+        .. (savedData.dh_mastery and ("\nDH: " .. savedData.dh_mastery .. " | DS: " .. (savedData.ds_mastery or 0)) or "")
     )
+    task.wait(2)
+else
+    state = reverseCheck()
     task.wait(1)
 end
 
@@ -997,16 +1080,12 @@ task.wait(1)
 
 
 if state == "CHECK_PURPLE" then
-    if savedData ~= nil and isfile(stateFile) then
-        delfile(stateFile)
-    end
-
     if hasDojoBelt("Purple") then
         writeState("FARM_DOJOTRAINER")
         task.wait(1)
         rejoin("Có Purple Belt → FARM_DOJOTRAINER")
     else
- updateStatus("CHECK_PURPLE", "Cần Purple Belt trước!")
+        updateStatus("CHECK_PURPLE", "Cần Purple Belt trước!")
         StarterGui:SetCore("SendNotification", {
             Title = " Cần Purple Belt!",
             Text  = "Hãy farm Dojo đến Purple Belt rồi chạy lại.",
@@ -1015,7 +1094,6 @@ if state == "CHECK_PURPLE" then
     end
 end
 
---  STATE: FARM_DOJOTRAINER 
 if state == "FARM_DOJOTRAINER" then
     if hasDojoBelt("Red") then
         writeState("FARM_VOLCANO_DINOBONE")
@@ -1027,7 +1105,6 @@ if state == "FARM_DOJOTRAINER" then
     end
 end
 
---  STATE: FARM_VOLCANO_DINOBONE 
 if state == "FARM_VOLCANO_DINOBONE" then
     local bones = getItemCount("Dinosaur Bones")
     if bones >= 5 then
@@ -1041,7 +1118,6 @@ if state == "FARM_VOLCANO_DINOBONE" then
     end
 end
 
---  STATE: GET_DAI8_TETHER 
 if state == "GET_DAI8_TETHER" then
     if hasDojoBelt("Black") then
         writeState("FARM_VOLCANO_EGG")
@@ -1057,76 +1133,74 @@ if state == "GET_DAI8_TETHER" then
     end
 end
 
---  STATE: FARM_VOLCANO_EGG 
 if state == "FARM_VOLCANO_EGG" then
     local eggs = getItemCount("Dragon Egg")
     if eggs >= 4 then
         local scale = getItemCount("Dragon Scale")
         local ember = getItemCount("Blaze Ember")
-        local next  = (scale >= 5 and ember >= 45) and "CRAFT_WEAPONS"
-                   or (scale >= 5)                 and "FARM_EMBER"
-                   or "FARM_SCALE"
+        local next
+        if scale < 5 then
+            next = "FARM_SCALE"
+        elseif ember < 45 then
+            next = "FARM_EMBER"
+        else
+            next = "CRAFT_WEAPONS"
+        end
         writeState(next)
         task.wait(1)
         rejoin("Đủ Dragon Egg → " .. next)
     else
- updateStatus(state, "Eggs: " .. eggs .. "/4")
+        updateStatus(state, "Eggs: " .. eggs .. "/4")
         startMonitoring(state)
         executeConfig("FARM_VOLCANO_EGG")
     end
 end
 
---  STATE: FARM_SCALE 
 if state == "FARM_SCALE" then
     local scale = getItemCount("Dragon Scale")
-    local ember = getItemCount("Blaze Ember")
     if scale >= 5 then
+        local ember = getItemCount("Blaze Ember")
         local next = (ember >= 45) and "CRAFT_WEAPONS" or "FARM_EMBER"
         writeState(next)
         task.wait(1)
         rejoin("Đủ Scale → " .. next)
     else
- updateStatus(state, "Scale: " .. scale .. "/5")
+        local eggs = getItemCount("Dragon Egg")
+        updateStatus(state, "Scale: " .. scale .. "/5 | Eggs: " .. eggs .. "/4")
         startMonitoring(state)
         executeConfig("FARM_SCALE")
     end
 end
 
---  STATE: FARM_EMBER 
 if state == "FARM_EMBER" then
-    local scale = getItemCount("Dragon Scale")
     local ember = getItemCount("Blaze Ember")
+    local scale = getItemCount("Dragon Scale")
     if ember >= 45 and scale >= 5 then
         writeState("CRAFT_WEAPONS")
         task.wait(1)
         rejoin("Đủ Ember → CRAFT_WEAPONS")
     else
- updateStatus(state, "Ember: " .. ember .. "/45 | Scale: " .. scale .. "/5")
+        updateStatus(state, "Ember: " .. ember .. "/45 | Scale: " .. scale .. "/5")
         startMonitoring(state)
         executeConfig("FARM_EMBER")
     end
 end
 
---  STATE: CRAFT_WEAPONS 
 if state == "CRAFT_WEAPONS" then
     local scale = getItemCount("Dragon Scale")
     local ember = getItemCount("Blaze Ember")
     local eggs  = getItemCount("Dragon Egg")
 
     updateStatus(state,
-        "Scale: " .. scale ..
-        " |  Ember: " .. ember ..
-        " |  Eggs: " .. eggs
+        "Scale: " .. scale .. " | Ember: " .. ember .. " | Eggs: " .. eggs
     )
 
-    if scale < 5 then
-        writeState("FARM_SCALE")
-        task.wait(1)
-        rejoin("Thiếu Scale → FARM_SCALE")
+    if eggs < 4 then
+        writeState("FARM_VOLCANO_EGG"); task.wait(1); rejoin("Thiếu Egg → FARM_VOLCANO_EGG")
+    elseif scale < 5 then
+        writeState("FARM_SCALE"); task.wait(1); rejoin("Thiếu Scale → FARM_SCALE")
     elseif ember < 45 then
-        writeState("FARM_EMBER")
-        task.wait(1)
-        rejoin("Thiếu Ember → FARM_EMBER")
+        writeState("FARM_EMBER"); task.wait(1); rejoin("Thiếu Ember → FARM_EMBER")
     else
         craftDragonWeapons()
         task.wait(2)
@@ -1138,27 +1212,25 @@ if state == "CRAFT_WEAPONS" then
     end
 end
 
---  STATE: FARM_DS_MAS 
 if state == "FARM_DS_MAS" then
     local dh = checkMastery("Sword", "Dragonheart")
     local ds = checkMastery("Gun",   "Dragonstorm")
 
-    if dh >= 500 and ds >= 500 then
+    if ds >= 500 and dh >= 500 then
         writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
         task.wait(1)
-        rejoin("DH+DS 500 → RESET_BUYDRACO")
+        rejoin("DH+DS đã 500 → RESET_BUYDRACO")
     elseif ds >= 500 then
         writeState("FARM_DH_MAS", { dh_mastery = dh, ds_mastery = ds })
         task.wait(1)
         rejoin("DS 500 → FARM_DH_MAS")
     else
- updateStatus(state, "DH: " .. dh .. "/500 DS: " .. ds .. "/500")
+        updateStatus(state, "DH: " .. dh .. "/500   DS: " .. ds .. "/500")
         startMonitoring(state)
         executeConfig("FARM_DS_MAS")
     end
 end
 
---  STATE: FARM_DH_MAS 
 if state == "FARM_DH_MAS" then
     local dh = checkMastery("Sword", "Dragonheart")
     local ds = checkMastery("Gun",   "Dragonstorm")
@@ -1166,19 +1238,18 @@ if state == "FARM_DH_MAS" then
     if dh >= 500 and ds >= 500 then
         writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds })
         task.wait(1)
-        rejoin("DH+DS 500 → RESET_BUYDRACO")
+        rejoin("DH+DS đã 500 → RESET_BUYDRACO")
     elseif dh >= 500 then
         writeState("FARM_DS_MAS", { dh_mastery = dh, ds_mastery = ds })
         task.wait(1)
         rejoin("DH 500 → FARM_DS_MAS")
     else
- updateStatus(state, "DH: " .. dh .. "/500 DS: " .. ds .. "/500")
+        updateStatus(state, "DH: " .. dh .. "/500   DS: " .. ds .. "/500")
         startMonitoring(state)
         executeConfig("FARM_DH_MAS")
     end
 end
 
---  STATE: RESET_BUYDRACO 
 if state == "RESET_BUYDRACO" then
     local dh   = checkMastery("Sword", "Dragonheart")
     local ds   = checkMastery("Gun",   "Dragonstorm")
@@ -1223,7 +1294,6 @@ if state == "RESET_BUYDRACO" then
     end
 end
 
---  STATE: FARM_V2V3 
 if state == "FARM_V2V3" then
     executeConfig("FARM_V2V3")
 end
