@@ -560,18 +560,14 @@ end
 
 local function IsChairOccupied(chair)
     if not chair then return false end
-    
     local control = nil
     if chair:IsA("Model") then
         control = chair:FindFirstChild("Control")
     elseif chair:IsA("Seat") or chair:IsA("VehicleSeat") then
         control = chair
     end
-    
     if not control then return false end
-    
     local occupant = control.Occupant
-    
     if occupant and occupant:IsA("Humanoid") then
         return true
     else
@@ -582,17 +578,13 @@ end
 local function GetAllTradeTables()
     local map = workspace:FindFirstChild("Map")
     if not map then return {} end
-    
     local turtle = map:FindFirstChild("Turtle")
     if not turtle then return {} end
-    
     local tables = {}
-    
     for _, obj in ipairs(turtle:GetChildren()) do
         if obj.Name:match("TradeTable") then
             local p1 = obj:FindFirstChild("P1")
             local p2 = obj:FindFirstChild("P2")
-            
             if p1 and p2 then
                 table.insert(tables, {
                     name = obj.Name,
@@ -603,22 +595,18 @@ local function GetAllTradeTables()
             end
         end
     end
-    
     table.sort(tables, function(a, b)
         local aNum = tonumber(a.name:match("%d+")) or 0
         local bNum = tonumber(b.name:match("%d+")) or 0
         return aNum < bNum
     end)
-    
     return tables
 end
 
 local function checkAndEnsureTurtleMap()
     local map = workspace:FindFirstChild("Map")
     if not map then return false end
-    
     local turtle = map:FindFirstChild("Turtle")
-    
     local hasTradeTable = false
     if turtle then
         for _, obj in ipairs(turtle:GetChildren()) do
@@ -628,10 +616,8 @@ local function checkAndEnsureTurtleMap()
             end
         end
     end
-    
     if not hasTradeTable then
         local spawnPos = CFrame.new(-12249.1963, 332.35965, -7370.30566, 0.321202546, -9.94646143e-10, -0.947010517, -3.1651573e-10, 1, -1.15765542e-09, 0.947010517, 6.71585565e-10, 0.321202546)
-        
         local foundTables = false
         local checkTask = task.spawn(function()
             while not foundTables do
@@ -642,9 +628,7 @@ local function checkAndEnsureTurtleMap()
                         for _, obj in ipairs(currentTurtle:GetChildren()) do
                             if obj.Name:match("TradeTable") then
                                 foundTables = true
-                                if Main.CurrentTween then
-                                    Main.CurrentTween:Cancel()
-                                end
+                                if Main.CurrentTween then Main.CurrentTween:Cancel() end
                                 Main.IsMoving = false
                                 Main.CurrentTween = nil
                                 getgenv().DracoNoClip = false
@@ -654,95 +638,64 @@ local function checkAndEnsureTurtleMap()
                         end
                     end
                 end
-
                 if not Main.IsMoving then break end
                 task.wait(0.5)
             end
         end)
-
         TP1(spawnPos)
         repeat task.wait(0.1) until not Main.IsMoving or foundTables
         task.wait(0.5)
-        
         local finalMap = workspace:FindFirstChild("Map")
         if finalMap then
             local finalTurtle = finalMap:FindFirstChild("Turtle")
             if finalTurtle then
                 for _, obj in ipairs(finalTurtle:GetChildren()) do
-                    if obj.Name:match("TradeTable") then
-                        return true
-                    end
+                    if obj.Name:match("TradeTable") then return true end
                 end
             end
         end
-        
         return false
     end
-    
     return true
 end
 
 function TeleportToTradeTable(tableIndex, useInstant)
-    if not checkAndEnsureTurtleMap() then
-        return false
-    end
-    
+    if not checkAndEnsureTurtleMap() then return false end
     local allTables = GetAllTradeTables()
-    if #allTables == 0 or tableIndex < 1 or tableIndex > #allTables then
-        return false
-    end
-    
+    if #allTables == 0 or tableIndex < 1 or tableIndex > #allTables then return false end
     local selectedTable = allTables[tableIndex]
     local p1 = selectedTable.p1
     local p2 = selectedTable.p2
-    
     local p1CFrame = p1:IsA("Model") and p1:GetPrimaryPartCFrame() or (p1:IsA("BasePart") and p1.CFrame)
     local p2CFrame = p2:IsA("Model") and p2:GetPrimaryPartCFrame() or (p2:IsA("BasePart") and p2.CFrame)
-    
     if not p1CFrame or not p2CFrame then return false end
-    
     local targetCFrame = p1CFrame
-    
     if useInstant or getgenv().InstantTP then
-        if IsChairOccupied(p1) then
-            targetCFrame = p2CFrame
-        end
-        
+        if IsChairOccupied(p1) then targetCFrame = p2CFrame end
         local char = lp.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = targetCFrame
         end
         return true
     end
-    
     local isCheckingP1 = true
-    
     local checkConnection
     checkConnection = game:GetService("RunService").Heartbeat:Connect(function()
         if not Main.IsMoving then
             checkConnection:Disconnect()
             return
         end
-        
         if isCheckingP1 and IsChairOccupied(p1) then
-            if Main.CurrentTween then
-                Main.CurrentTween:Cancel()
-            end
-            
+            if Main.CurrentTween then Main.CurrentTween:Cancel() end
             isCheckingP1 = false
             checkConnection:Disconnect()
             task.wait(0.1)
             TP1(p2CFrame)
         end
     end)
-    
     TP1(targetCFrame)
     repeat task.wait(0.1) until not Main.IsMoving
-    
-    if checkConnection and checkConnection.Connected then
-        checkConnection:Disconnect()
-    end
-    
+    if checkConnection and checkConnection.Connected then checkConnection:Disconnect() end
     return true
 end
 
@@ -765,16 +718,10 @@ local function sortFruitsByPrice(inventory)
     local fruits = {}
     for index, fruitData in pairs(inventory) do
         if typeof(fruitData) == "table" and fruitData.Price and fruitData.Name then
-            table.insert(fruits, {
-                name = fruitData.Name,
-                price = fruitData.Price,
-                data = fruitData
-            })
+            table.insert(fruits, {name = fruitData.Name, price = fruitData.Price, data = fruitData})
         end
     end
-    table.sort(fruits, function(a, b)
-        return a.price < b.price
-    end)
+    table.sort(fruits, function(a, b) return a.price < b.price end)
     return fruits
 end
 
@@ -834,9 +781,7 @@ local function getTradeValues()
 end
 
 local function acceptTrade()
-    local success = pcall(function()
-        TradeFunction:InvokeServer("accept")
-    end)
+    local success = pcall(function() TradeFunction:InvokeServer("accept") end)
     return success
 end
 
@@ -859,9 +804,7 @@ local function addLowestAvailableFruit(sortedFruits, startIndex)
 end
 
 local function removeFruitFromTrade(fruitName)
-    local success = pcall(function()
-        TradeFunction:InvokeServer("removeItem", fruitName)
-    end)
+    local success = pcall(function() TradeFunction:InvokeServer("removeItem", fruitName) end)
     return success
 end
 
@@ -870,9 +813,7 @@ local function countMyFruitsInTrade()
         local container = getTradeGUI().Container["1"].Frame
         local fruitCount = 0
         for _, child in pairs(container:GetChildren()) do
-            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
-                fruitCount = fruitCount + 1
-            end
+            if child:IsA("ImageButton") and string.find(child.Name, "%-") then fruitCount = fruitCount + 1 end
         end
         return fruitCount
     end)
@@ -904,19 +845,15 @@ end
 local function autoTrade()
     local inventory = getTradeInventory()
     if not inventory then return false end
-    
     local sortedFruits = sortFruitsByPrice(inventory)
     local currentIndex, addedFruit = addLowestAvailableFruit(sortedFruits, 1)
     if not currentIndex then return false end
-    
     local opponentAdded = false
     repeat
         task.wait(0.25)
         opponentAdded = checkOpponentAddedFruit()
     until opponentAdded
-    
     task.wait(0.5)
-    
     while true do
         local valueDiff = getValueDifference()
         if valueDiff <= 40 then
@@ -967,9 +904,7 @@ local function UpdateBelt3Status(text)
 end
 
 local function HideBelt3Status()
-    if Belt3StatusLabel then
-        Belt3StatusLabel.Visible = false
-    end
+    if Belt3StatusLabel then Belt3StatusLabel.Visible = false end
 end
 
 local function FullyBelt3Loop()
@@ -977,11 +912,9 @@ local function FullyBelt3Loop()
     UpdateBelt3Status("Đang tp đến bàn " .. tableIndex)
     TeleportToTradeTable(tableIndex)
     task.wait(1)
-    
     UpdateBelt3Status("Đợi 2 người ngồi...")
     repeat task.wait(0.5) until checkBothChairsOccupied(tableIndex) or not getgenv().FullyBelt3Running
     if not getgenv().FullyBelt3Running then HideBelt3Status() return end
-    
     UpdateBelt3Status("Auto trading...")
     local tradeSuccess = autoTrade()
     if not tradeSuccess then
@@ -991,22 +924,15 @@ local function FullyBelt3Loop()
         HideBelt3Status()
         return
     end
-    
     waitForTradeCountdown()
     UpdateBelt3Status("Claim Belt 3...")
     ClaimDojoQuest()
     task.wait(2)
-    
     UpdateBelt3Status("Hoàn thành!")
     task.wait(2)
     getgenv().FullyBelt3Running = false
     HideBelt3Status()
-    
-    StarterGui:SetCore("SendNotification", {
-        Title = "Belt 3 Auto",
-        Text = "Đã hoàn thành!",
-        Duration = 3
-    })
+    StarterGui:SetCore("SendNotification", {Title = "Belt 3 Auto", Text = "Đã hoàn thành!", Duration = 3})
 end
 
 -- ===== BẮT ĐẦU UI =====
@@ -1125,11 +1051,9 @@ local function createTab(name, text, order)
     tab.AutoButtonColor = false
     tab.LayoutOrder = order
     tab.Parent = tabContainer
-    
     local tabCorner = Instance.new("UICorner")
     tabCorner.CornerRadius = UDim.new(0, 6)
     tabCorner.Parent = tab
-    
     return tab
 end
 
@@ -1145,37 +1069,22 @@ local function createButton(text)
     button.Font = Enum.Font.GothamMedium
     button.AutoButtonColor = false
     button.Parent = contentFrame
-    
     local buttonCorner = Instance.new("UICorner")
     buttonCorner.CornerRadius = UDim.new(0, 8)
     buttonCorner.Parent = button
-    
     local buttonStroke = Instance.new("UIStroke")
     buttonStroke.Color = COLORS.border
     buttonStroke.Thickness = 1
     buttonStroke.Transparency = 0.6
     buttonStroke.Parent = button
-    
     button.MouseEnter:Connect(function()
-        ts:Create(button, TweenInfo.new(0.15), {
-            BackgroundColor3 = COLORS.accent,
-            BackgroundTransparency = 0.2
-        }):Play()
-        ts:Create(buttonStroke, TweenInfo.new(0.15), {
-            Transparency = 0.3
-        }):Play()
+        ts:Create(button, TweenInfo.new(0.15), {BackgroundColor3 = COLORS.accent, BackgroundTransparency = 0.2}):Play()
+        ts:Create(buttonStroke, TweenInfo.new(0.15), {Transparency = 0.3}):Play()
     end)
-    
     button.MouseLeave:Connect(function()
-        ts:Create(button, TweenInfo.new(0.15), {
-            BackgroundColor3 = COLORS.bgSecondary,
-            BackgroundTransparency = 0.3
-        }):Play()
-        ts:Create(buttonStroke, TweenInfo.new(0.15), {
-            Transparency = 0.6
-        }):Play()
+        ts:Create(button, TweenInfo.new(0.15), {BackgroundColor3 = COLORS.bgSecondary, BackgroundTransparency = 0.3}):Play()
+        ts:Create(buttonStroke, TweenInfo.new(0.15), {Transparency = 0.6}):Play()
     end)
-    
     return button
 end
 
@@ -1194,17 +1103,14 @@ local function createInfoLabel(text)
     label.TextSize = 10
     label.Font = Enum.Font.GothamMedium
     label.Parent = contentFrame
-    
     local labelCorner = Instance.new("UICorner")
     labelCorner.CornerRadius = UDim.new(0, 6)
     labelCorner.Parent = label
-    
     local labelStroke = Instance.new("UIStroke")
     labelStroke.Color = COLORS.border
     labelStroke.Thickness = 1
     labelStroke.Transparency = 0.7
     labelStroke.Parent = label
-    
     return label
 end
 
@@ -1276,29 +1182,21 @@ local currentTab = "info"
 
 local function switchTab(tabName)
     currentTab = tabName
-    
     for _, content in ipairs({infoContent, craftContent, dracoContent, chairContent}) do
-        for _, item in ipairs(content) do 
-            item.Visible = false 
-        end
+        for _, item in ipairs(content) do item.Visible = false end
     end
-    
     infoTab.BackgroundColor3 = COLORS.bgSecondary
     infoTab.BackgroundTransparency = 0.4
     infoTab.TextColor3 = COLORS.textDim
-    
     craftTab.BackgroundColor3 = COLORS.bgSecondary
     craftTab.BackgroundTransparency = 0.4
     craftTab.TextColor3 = COLORS.textDim
-    
     dracoTab.BackgroundColor3 = COLORS.bgSecondary
     dracoTab.BackgroundTransparency = 0.4
     dracoTab.TextColor3 = COLORS.textDim
-    
     chairTab.BackgroundColor3 = COLORS.bgSecondary
     chairTab.BackgroundTransparency = 0.4
     chairTab.TextColor3 = COLORS.textDim
-    
     if tabName == "info" then
         infoTab.BackgroundColor3 = COLORS.accent
         infoTab.BackgroundTransparency = 0.2
@@ -1350,14 +1248,12 @@ dracoContent[4].MouseButton1Click:Connect(function() meleesword() end)
 
 local function updateTableSelection(tableNum)
     getgenv().SelectedTable = tableNum
-    
     table1Btn.BackgroundColor3 = COLORS.bgSecondary
     table1Btn.BackgroundTransparency = 0.3
     table2Btn.BackgroundColor3 = COLORS.bgSecondary
     table2Btn.BackgroundTransparency = 0.3
     table3Btn.BackgroundColor3 = COLORS.bgSecondary
     table3Btn.BackgroundTransparency = 0.3
-
     if tableNum == 1 then
         table1Btn.BackgroundColor3 = COLORS.accent
         table1Btn.BackgroundTransparency = 0.2
@@ -1374,26 +1270,17 @@ local function updateTableSelection(tableNum)
 end
 
 table1Btn.MouseButton1Click:Connect(function()
-    if not getgenv().FullyBelt3Running then
-        updateTableSelection(1)
-    end
+    if not getgenv().FullyBelt3Running then updateTableSelection(1) end
 end)
-
 table2Btn.MouseButton1Click:Connect(function()
-    if not getgenv().FullyBelt3Running then
-        updateTableSelection(2)
-    end
+    if not getgenv().FullyBelt3Running then updateTableSelection(2) end
 end)
-
 table3Btn.MouseButton1Click:Connect(function()
-    if not getgenv().FullyBelt3Running then
-        updateTableSelection(3)
-    end
+    if not getgenv().FullyBelt3Running then updateTableSelection(3) end
 end)
 
 belt3StartBtn.MouseButton1Click:Connect(function()
     getgenv().FullyBelt3Running = not getgenv().FullyBelt3Running
-    
     if getgenv().FullyBelt3Running then
         belt3StartBtn.Text = "STOP AUTO"
         belt3StartBtn.BackgroundColor3 = COLORS.danger
@@ -1415,7 +1302,6 @@ end)
 
 instantTPBtn.MouseButton1Click:Connect(function()
     getgenv().InstantTP = not getgenv().InstantTP
-    
     if getgenv().InstantTP then
         instantTPBtn.Text = "Instant TP: ON"
         instantTPBtn.BackgroundColor3 = COLORS.accent
@@ -1506,10 +1392,56 @@ local function checkPortalStatusAndUpdate()
         status = true
     end
 
-    updatePortalStatusDisplay(status)
-    getgenv().CurrentPortalStatus = status
+    -- Cổng chỉ mở một chiều (đóng → mở), không bao giờ đóng lại
+    -- Chỉ xử lý khi chuyển từ chưa mở → đã mở
+    if status == true and getgenv().CurrentPortalStatus ~= true then
+        getgenv().CurrentPortalStatus = true
+        updatePortalStatusDisplay(true)
+
+        StarterGui:SetCore("SendNotification", {
+            Title = "🔥 CỔNG ĐÃ MỞ!",
+            Text = "Ai đó vừa mở cổng! Vào ngay!",
+            Duration = 5
+        })
+
+        -- Cổng đã mở → dừng toàn bộ watcher, không cần theo dõi nữa
+        cleanupPortalWatcher()
+    elseif status ~= true and getgenv().CurrentPortalStatus ~= true then
+        -- Vẫn chưa mở, chỉ refresh UI
+        updatePortalStatusDisplay(false)
+    end
+    -- Nếu CurrentPortalStatus đã là true → bỏ qua mọi check tiếp theo
+
     return status
 end
+
+-- ===== PORTAL STATUS POLL =====
+-- Poll InvokeServer("progress") mỗi 3 giây, tự dừng khi cổng mở
+local portalWatcherConnections = {}
+
+local function cleanupPortalWatcher()
+    for _, conn in ipairs(portalWatcherConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    portalWatcherConnections = {}
+end
+
+local function setupPortalWatcher()
+    cleanupPortalWatcher()
+
+    -- Cổng chỉ mở 1 chiều, không có gì để hook trực tiếp
+    -- → poll InvokeServer("progress") mỗi 3 giây, tự dừng khi phát hiện cổng mở
+    task.spawn(function()
+        while gui.Parent and getgenv().CurrentPortalStatus ~= true do
+            task.wait(3)
+            if getgenv().CurrentPortalStatus == true then break end
+            pcall(function()
+                checkPortalStatusAndUpdate()
+            end)
+        end
+    end)
+end
+-- ===== KẾT THÚC PORTAL REALTIME HOOK =====
 
 task.spawn(function()
     repeat task.wait(0.5) until game.Players.LocalPlayer.Team
@@ -1537,13 +1469,12 @@ task.spawn(function()
     end
 
     -- ===== HOOK DETECT ĐỔI RACE SANG DRACO =====
-    -- Lắng nghe sự kiện thay đổi race realtime, không cần đợi interval 30s
+    -- Lắng nghe sự kiện thay đổi race realtime
     local raceHookConnection
     pcall(function()
         local raceValue = game:GetService("Players").LocalPlayer.Data.Race
         raceHookConnection = raceValue.Changed:Connect(function(newRace)
             if newRace == "Draco" then
-                -- Vừa đổi sang Draco → báo và check cổng ngay
                 if title then
                     title.Text = "⏳ Đang kiểm tra cổng..."
                     title.TextColor3 = Color3.fromRGB(250, 204, 21)
@@ -1553,18 +1484,20 @@ task.spawn(function()
                     Text = "Đã đổi sang Draco! Đang kiểm tra cổng...",
                     Duration = 3
                 })
-                task.wait(1) -- chờ server sync data xong
+                task.wait(1)
                 checkPortalStatusAndUpdate()
+                -- Khởi động toàn bộ portal hook ngay khi đổi sang Draco
+                setupPortalWatcher()
             else
-                -- Đổi sang tộc khác → cập nhật UI ngay
                 if title then
                     title.Text = "❌ NOT DRACO"
                     title.TextColor3 = Color3.fromRGB(156, 163, 175)
                 end
+                -- Dọn dẹp hook khi không còn là Draco
+                cleanupPortalWatcher()
             end
         end)
     end)
-    -- ===== KẾT THÚC HOOK =====
 
     if not isDraco() then
         if title then
@@ -1573,12 +1506,13 @@ task.spawn(function()
         end
     else
         checkPortalStatusAndUpdate()
+        setupPortalWatcher()
     end
 
-    -- Dọn dẹp khi GUI bị destroy
     gui.AncestryChanged:Connect(function()
-        if not gui.Parent and raceHookConnection then
-            raceHookConnection:Disconnect()
+        if not gui.Parent then
+            if raceHookConnection then raceHookConnection:Disconnect() end
+            cleanupPortalWatcher()
         end
     end)
 end)
