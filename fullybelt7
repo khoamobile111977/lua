@@ -361,6 +361,14 @@ local function writeState(state, overrides)
         stat_reset       = (overrides and overrides.stat_reset ~= nil)
                             and overrides.stat_reset
                             or (existing.stat_reset == true),
+        -- Tether retry tracking
+        tether_retry     = (overrides and overrides.tether_retry ~= nil)
+                            and overrides.tether_retry
+                            or (existing.tether_retry or 0),
+        -- Bone target (tăng +5 mỗi khi tether thất bại 2 lần)
+        bone_target      = (overrides and overrides.bone_target ~= nil)
+                            and overrides.bone_target
+                            or (existing.bone_target or 5),
     }
     writefile(stateFile, HttpService:JSONEncode(data))
     updateStatus(state)
@@ -769,14 +777,17 @@ local function GetDai8Tether()
         task.wait(3)
     end
 
+    -- Refresh inventory cache để check belt mới nhất
+    invCacheTs = 0
+    _refreshCache()
+    task.wait(1)
+
     local hasBlack = hasDojoBelt("Black")
     if hasBlack then
  updateStatus("GET_DAI8_TETHER", "Đã có Black Belt! Hoàn tất.")
         return true
     else
- updateStatus("GET_DAI8_TETHER", " Chờ 60s để quest cooldown...")
-        task.wait(60)
-        TeleportService:Teleport(game.PlaceId, lp)
+ updateStatus("GET_DAI8_TETHER", "Chưa có Black Belt...")
         return false
     end
 end
@@ -906,7 +917,10 @@ local function startMonitoring(initState)
         if state == "FARM_DOJOTRAINER" then
             extraText = "Chờ Red Belt... (belt: " .. (hasDojoBelt("Red") and "GOT" or "waiting") .. ")"
         elseif state == "FARM_VOLCANO_DINOBONE" then
-            extraText = "Bones: " .. bones .. "/5"
+            local saved2     = readState()
+            local boneTarget = (saved2 and saved2.bone_target) or 5
+            extraText = "Bones: " .. bones .. "/" .. boneTarget
+                .. (boneTarget > 5 and " (retry +" .. (boneTarget - 5) .. ")" or "")
         elseif state == "FARM_VOLCANO_EGG" then
             extraText = "Eggs: " .. eggs .. "/4"
         elseif state == "FARM_SCALE" then
@@ -926,10 +940,12 @@ local function startMonitoring(initState)
             end
 
         elseif state == "FARM_VOLCANO_DINOBONE" then
-            if bones >= 5 then
+            local saved2     = readState()
+            local boneTarget = (saved2 and saved2.bone_target) or 5
+            if bones >= boneTarget then
                 writeState("GET_DAI8_TETHER")
                 task.wait(2)
-                rejoin("Đủ Bones → GET_DAI8_TETHER")
+                rejoin("Đủ " .. boneTarget .. " Bones → GET_DAI8_TETHER")
             end
 
         elseif state == "FARM_VOLCANO_EGG" then
@@ -1106,13 +1122,15 @@ if state == "FARM_DOJOTRAINER" then
 end
 
 if state == "FARM_VOLCANO_DINOBONE" then
+    local boneTarget = (savedData and savedData.bone_target) or 5
     local bones = getItemCount("Dinosaur Bones")
-    if bones >= 5 then
+    if bones >= boneTarget then
         writeState("GET_DAI8_TETHER")
         task.wait(1)
-        rejoin("Đủ Dinobone → GET_DAI8_TETHER")
+        rejoin("Đủ " .. boneTarget .. " Dinobone → GET_DAI8_TETHER")
     else
- updateStatus(state, "Bones: " .. bones .. "/5")
+        updateStatus(state, "Bones: " .. bones .. "/" .. boneTarget
+            .. (boneTarget > 5 and " (retry +" .. (boneTarget - 5) .. ")" or ""))
         startMonitoring(state)
         executeConfig("FARM_VOLCANO_DINOBONE")
     end
@@ -1124,11 +1142,40 @@ if state == "GET_DAI8_TETHER" then
         task.wait(1)
         rejoin("Đã có Black Belt → FARM_VOLCANO_EGG")
     else
+        local retry      = (savedData and savedData.tether_retry) or 0
+        local boneTarget = (savedData and savedData.bone_target)  or 5
+
+        updateStatus("GET_DAI8_TETHER",
+            "Lần thử " .. (retry + 1) .. " | Bone target: " .. boneTarget)
+        task.wait(2)
+
         local success = GetDai8Tether()
+
         if success then
-            writeState("FARM_VOLCANO_EGG", { has_black_belt = true })
+            -- Thành công → tiếp tục farm egg
+            writeState("FARM_VOLCANO_EGG", { has_black_belt = true, tether_retry = 0 })
             task.wait(2)
             rejoin("Xong Tether → FARM_VOLCANO_EGG")
+
+        elseif retry == 0 then
+            -- Lần 1 thất bại → chờ 60s quest cooldown rồi rejoin thử lại lần 2
+            updateStatus("GET_DAI8_TETHER",
+                "Lần 1 thất bại → Chờ 60s cooldown, rejoin thử lại...")
+            writeState("GET_DAI8_TETHER", { tether_retry = 1, bone_target = boneTarget })
+            task.wait(60)
+            TeleportService:Teleport(game.PlaceId, lp)
+
+        else
+            -- Lần 2 vẫn thất bại → quay lại farm bone, tăng target +5
+            local newTarget = boneTarget + 5
+            updateStatus("GET_DAI8_TETHER",
+                "Lần 2 thất bại → Farm thêm bone! Target: " .. newTarget)
+            writeState("FARM_VOLCANO_DINOBONE", {
+                tether_retry = 0,
+                bone_target  = newTarget
+            })
+            task.wait(3)
+            TeleportService:Teleport(game.PlaceId, lp)
         end
     end
 end
