@@ -1,3 +1,4 @@
+-- update fix memleak
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 task.wait(2)
@@ -252,18 +253,18 @@ local stateLabels = {
 
 local stateImages = {
     BUY_TALON             = "rbxassetid://102272645527842",
-    CHECK_PURPLE          = "rbxassetid://131486487072529",    
-    FARM_DOJOTRAINER      = "rbxassetid://115220711272647",  
-    FARM_VOLCANO_DINOBONE = "rbxassetid://89027020779329",   
-    GET_DAI8_TETHER       = "rbxassetid://126586224331826",  
-    FARM_VOLCANO_EGG      = "rbxassetid://124802143699510",   
-    FARM_SCALE            = "rbxassetid://95984531047163",  
-    FARM_EMBER            = "rbxassetid://138369941033247",   
-    CRAFT_WEAPONS         = "rbxassetid://79928864861207",  
-    FARM_DS_MAS           = "rbxassetid://79928864861207",   
-    FARM_DH_MAS           = "rbxassetid://123343725047424",  
-    RESET_BUYDRACO        = "rbxassetid://76443289198008",  
-    FARM_V2V3             = "rbxassetid://136851554418762",    
+    CHECK_PURPLE          = "rbxassetid://131486487072529",
+    FARM_DOJOTRAINER      = "rbxassetid://115220711272647",
+    FARM_VOLCANO_DINOBONE = "rbxassetid://89027020779329",
+    GET_DAI8_TETHER       = "rbxassetid://126586224331826",
+    FARM_VOLCANO_EGG      = "rbxassetid://124802143699510",
+    FARM_SCALE            = "rbxassetid://95984531047163",
+    FARM_EMBER            = "rbxassetid://138369941033247",
+    CRAFT_WEAPONS         = "rbxassetid://79928864861207",
+    FARM_DS_MAS           = "rbxassetid://79928864861207",
+    FARM_DH_MAS           = "rbxassetid://123343725047424",
+    RESET_BUYDRACO        = "rbxassetid://76443289198008",
+    FARM_V2V3             = "rbxassetid://136851554418762",
 }
 
 do
@@ -291,47 +292,87 @@ do
     end)
 end
 
-local _pulseConn
+-- ============================================================
+--  FIX MEMORY LEAK: thay _pulseConn (không có tác dụng) bằng
+--  _pulseActive (flag dừng loop) + _pulseThread (để task.cancel).
+--
+--  Vấn đề cũ:
+--    - Mỗi lần updateStatus() được gọi → spawn 1 "while true do" mới
+--    - _pulseConn chỉ gán nil chứ không disconnect/cancel gì
+--    - Loop cũ vẫn chạy ngầm → càng gọi nhiều càng nhiều zombie loop
+--    - Tween đang chạy dở cũng không bị cancel → lãng phí CPU
+--
+--  Fix:
+--    1. _pulseActive = false  → báo loop cũ tự dừng sau wait tiếp theo
+--    2. task.cancel(_pulseThread) → kill thread ngay lập tức, không chờ
+--    3. Cancel tween A/B đang chạy dở trước khi thoát loop
+--    4. Luôn kiểm tra _pulseActive sau mỗi task.wait() trong loop mới
+-- ============================================================
+local _pulseActive = false
+local _pulseThread = nil
+
 local function updateStatus(state, extraText)
     pcall(function()
-        local color = stateColors[state]  or Color3.fromRGB(139, 92, 246)
-        local label = stateLabels[state]  or tostring(state)
-        local img   = stateImages[state]  or ""
+        local color = stateColors[state] or Color3.fromRGB(139, 92, 246)
+        local label = stateLabels[state] or tostring(state)
+        local img   = stateImages[state] or ""
 
-        StateLabel.Text  = label
-        ExtraLabel.Text  = extraText and extraText:gsub("^%s+", "") or ""
+        StateLabel.Text = label
+        ExtraLabel.Text = extraText and extraText:gsub("^%s+", "") or ""
+        ItemImage.Image = img
+        ImgStroke.Color = color
 
-
-
-        ItemImage.Image  = img
-        ImgStroke.Color  = color
-
-        BorderStroke.Color        = color
-        BorderStroke.Transparency = 0.3
+        BorderStroke.Color         = color
+        BorderStroke.Transparency  = 0.3
         AccentBar.BackgroundColor3 = color
 
-        if _pulseConn then _pulseConn:Disconnect(); _pulseConn = nil end
-        local function doPulse()
-            TweenService:Create(AccentBar,
-                TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                { BackgroundTransparency = 0.55 }
-            ):Play()
-            task.wait(1.2)
-            TweenService:Create(AccentBar,
-                TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                { BackgroundTransparency = 0 }
-            ):Play()
-            task.wait(1.2)
+        -- Dừng loop pulse cũ trước khi spawn loop mới
+        _pulseActive = false
+        if _pulseThread then
+            pcall(function() task.cancel(_pulseThread) end)
+            _pulseThread = nil
         end
-        task.spawn(function()
-            while true do
-                local ok = pcall(doPulse)
+
+        -- Reset bar về trạng thái rõ ràng trước khi bắt đầu pulse mới
+        AccentBar.BackgroundTransparency = 0
+
+        _pulseActive = true
+        _pulseThread = task.spawn(function()
+            while _pulseActive do
+                local tweenA, tweenB
+                local ok = pcall(function()
+                    tweenA = TweenService:Create(AccentBar,
+                        TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        { BackgroundTransparency = 0.55 })
+                    tweenA:Play()
+                    task.wait(1.2)
+
+                    -- Kiểm tra ngay sau wait: nếu loop bị kill thì cancel tween và thoát
+                    if not _pulseActive then
+                        pcall(function() tweenA:Cancel() end)
+                        return
+                    end
+
+                    tweenB = TweenService:Create(AccentBar,
+                        TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        { BackgroundTransparency = 0 })
+                    tweenB:Play()
+                    task.wait(1.2)
+                end)
+
+                -- Nếu loop bị dừng hoặc có lỗi thì cancel tween đang chạy dở và thoát
+                if not _pulseActive then
+                    pcall(function() if tweenA then tweenA:Cancel() end end)
+                    pcall(function() if tweenB then tweenB:Cancel() end end)
+                    break
+                end
                 if not ok then break end
             end
         end)
     end)
     print("[DRACO] " .. tostring(state) .. (extraText and (" | " .. extraText:gsub("\n", " ")) or ""))
 end
+-- ============================================================
 
 
 local function readState()
@@ -361,11 +402,9 @@ local function writeState(state, overrides)
         stat_reset       = (overrides and overrides.stat_reset ~= nil)
                             and overrides.stat_reset
                             or (existing.stat_reset == true),
-        -- Tether retry tracking
         tether_retry     = (overrides and overrides.tether_retry ~= nil)
                             and overrides.tether_retry
                             or (existing.tether_retry or 0),
-        -- Bone target (tăng +5 mỗi khi tether thất bại 2 lần)
         bone_target      = (overrides and overrides.bone_target ~= nil)
                             and overrides.bone_target
                             or (existing.bone_target or 5),
@@ -381,9 +420,9 @@ local function safeInvoke(...)
     return result
 end
 
-local CACHE_TTL  = 8      
-local invCache   = {}     
-local invCacheTs = 0      
+local CACHE_TTL  = 8
+local invCache   = {}
+local invCacheTs = 0
 
 local function _refreshCache()
     local inv
@@ -449,15 +488,14 @@ local function checkMastery(weaponType, weaponName)
     return (e and e.mastery) or 0
 end
 
-local masteryWatcherActive = {} 
+local masteryWatcherActive = {}
 
 local function startWeaponMasteryWatcher(weaponType, weaponName, targetMastery, onReached, currentState)
     if masteryWatcherActive[weaponName] then return end
     masteryWatcherActive[weaponName] = true
 
     local triggered = false
-
-    local uiState = currentState or "FARM_DS_MAS"
+    local uiState   = currentState or "FARM_DS_MAS"
 
     local function handleMastery(mas)
         if triggered then return end
@@ -628,7 +666,7 @@ function TP1(targetPos)
         { CFrame = target }
     )
     tween.Completed:Connect(function()
-        Main.IsMoving = false
+        Main.IsMoving     = false
         Main.CurrentTween = nil
         getgenv().DracoNoClip = false
         disableNoClip()
@@ -662,7 +700,6 @@ local function tpToNPC(npcName)
     local hrp  = char:WaitForChild("HumanoidRootPart")
 
     repeat task.wait(0.5) until not Main.IsMoving
-
     repeat task.wait(0.5) until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 8
 
     return true
@@ -705,7 +742,7 @@ local function resetStatTo(t1, t2)
 end
 
 -- ============================================================
---  DRAGON TALON -
+--  DRAGON TALON
 -- ============================================================
 local function hasDragonTalonInGame()
     getgenv().Melee = "Dragon Talon"
@@ -753,7 +790,7 @@ end
 
 
 local function GetDai8Tether()
- updateStatus("GET_DAI8_TETHER", "TP đến Dojo Trainer...")
+    updateStatus("GET_DAI8_TETHER", "TP đến Dojo Trainer...")
     task.wait(2)
 
     if tpToNPC("Dojo Trainer") then
@@ -766,7 +803,7 @@ local function GetDai8Tether()
         task.wait(1)
     end
 
- updateStatus("GET_DAI8_TETHER", "TP đến Dragon Wizard...")
+    updateStatus("GET_DAI8_TETHER", "TP đến Dragon Wizard...")
     if tpToNPC("Dragon Wizard") then
         task.wait(2)
         pcall(function()
@@ -777,29 +814,28 @@ local function GetDai8Tether()
         task.wait(3)
     end
 
-    -- Refresh inventory cache để check belt mới nhất
     invCacheTs = 0
     _refreshCache()
     task.wait(1)
 
     local hasBlack = hasDojoBelt("Black")
     if hasBlack then
- updateStatus("GET_DAI8_TETHER", "Đã có Black Belt! Hoàn tất.")
+        updateStatus("GET_DAI8_TETHER", "Đã có Black Belt! Hoàn tất.")
         return true
     else
- updateStatus("GET_DAI8_TETHER", "Chưa có Black Belt...")
+        updateStatus("GET_DAI8_TETHER", "Chưa có Black Belt...")
         return false
     end
 end
 
 local function BuyDracoRace()
     for attempt = 1, 3 do
- updateStatus("RESET_BUYDRACO", "Đang bay tới Dragon Wizard... (lần " .. attempt .. "/3)")
+        updateStatus("RESET_BUYDRACO", "Đang bay tới Dragon Wizard... (lần " .. attempt .. "/3)")
 
         if not tpToNPC("Dragon Wizard") then
             task.wait(3)
         else
-            task.wait(2) 
+            task.wait(2)
 
             pcall(function()
                 rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest")
@@ -823,7 +859,7 @@ end
 
 
 local function rejoin(reason)
- updateStatus("FARM_V2V3", (reason or "Rejoin..."))
+    updateStatus("FARM_V2V3", (reason or "Rejoin..."))
     task.wait(3)
     TeleportService:Teleport(game.PlaceId, lp)
 end
@@ -841,7 +877,6 @@ local configURLs = {
 }
 
 local function executeConfig(configType)
-    -- Chuẩn bị weapon trước khi load config mastery
     if configType == "FARM_DS_MAS" then
         ensureInBackpack("Dragonheart")
         ensureInBackpack("Dragonstorm")
@@ -858,11 +893,10 @@ local function executeConfig(configType)
     end
 
     getgenv().Key = getgenv().Keybanana
- updateStatus(configType, " Đang load BananaHub...")
+    updateStatus(configType, " Đang load BananaHub...")
     task.wait(2)
     loadstring(game:HttpGet(url))()
 end
-
 
 
 local monitorActive = false
@@ -981,7 +1015,7 @@ local function startMonitoring(initState)
     end
 
     task.spawn(function()
-        task.wait(15) 
+        task.wait(15)
         while monitorActive do
             pcall(checkStateTransition)
             task.wait(5)
@@ -992,7 +1026,6 @@ end
 
 local function reverseCheck()
     updateStatus("CHECK_PURPLE", "Đang reverse check...")
-
     task.wait(5)
 
     local race      = getDracoRace()
@@ -1152,13 +1185,11 @@ if state == "GET_DAI8_TETHER" then
         local success = GetDai8Tether()
 
         if success then
-            -- Thành công → tiếp tục farm egg
             writeState("FARM_VOLCANO_EGG", { has_black_belt = true, tether_retry = 0 })
             task.wait(2)
             rejoin("Xong Tether → FARM_VOLCANO_EGG")
 
         elseif retry == 0 then
-            -- Lần 1 thất bại → chờ 60s quest cooldown rồi rejoin thử lại lần 2
             updateStatus("GET_DAI8_TETHER",
                 "Lần 1 thất bại → Chờ 60s cooldown, rejoin thử lại...")
             writeState("GET_DAI8_TETHER", { tether_retry = 1, bone_target = boneTarget })
@@ -1166,7 +1197,6 @@ if state == "GET_DAI8_TETHER" then
             TeleportService:Teleport(game.PlaceId, lp)
 
         else
-            -- Lần 2 vẫn thất bại → quay lại farm bone, tăng target +5
             local newTarget = boneTarget + 5
             updateStatus("GET_DAI8_TETHER",
                 "Lần 2 thất bại → Farm thêm bone! Target: " .. newTarget)
@@ -1310,13 +1340,13 @@ if state == "RESET_BUYDRACO" then
     elseif dh >= 500 and ds >= 500 then
         local alreadyReset = savedData and savedData.stat_reset == true
         if not alreadyReset then
- updateStatus(state, "Reset stat (1 lần duy nhất)...")
+            updateStatus(state, "Reset stat (1 lần duy nhất)...")
             resetStatTo("Melee", "Sword")
             task.wait(3)
             writeState("RESET_BUYDRACO", { dh_mastery = dh, ds_mastery = ds, stat_reset = true })
             task.wait(1)
         else
- updateStatus(state, "Stat đã reset. Đang mua Draco...")
+            updateStatus(state, "Stat đã reset. Đang mua Draco...")
         end
 
         local bought = BuyDracoRace()
@@ -1325,7 +1355,7 @@ if state == "RESET_BUYDRACO" then
             task.wait(2)
             rejoin("Mua Draco xong → FARM_V2V3")
         else
- updateStatus(state, "Mua Draco thất bại, rejoin thử lại...")
+            updateStatus(state, "Mua Draco thất bại, rejoin thử lại...")
             task.wait(3)
             rejoin("Retry mua Draco (stat đã reset, không tốn frag)")
         end
