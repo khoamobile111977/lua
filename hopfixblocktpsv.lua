@@ -58,9 +58,6 @@ spawn(function()
     end
 end)
 
--- ============================================================
--- Hàm teleport dùng ServerBrowser remote của game (bypass Roblox token)
--- ============================================================
 local ServerBrowser = game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser")
 
 local function teleportToServer(jobId)
