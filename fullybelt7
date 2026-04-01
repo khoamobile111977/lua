@@ -861,7 +861,11 @@ end
 local function rejoin(reason)
     updateStatus("FARM_V2V3", (reason or "Rejoin..."))
     task.wait(3)
-    TeleportService:Teleport(game.PlaceId, lp)
+    local args = {
+        "teleport",
+        game.JobId
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser"):InvokeServer(unpack(args))
 end
 
 
