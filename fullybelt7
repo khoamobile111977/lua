@@ -707,7 +707,8 @@ end
 
 local function craftItem(itemName)
     pcall(function()
-        rs.Modules.Net:FindFirstChild("RF/Craft"):InvokeServer("Craft", itemName, {})
+        rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/Craft")
+          :InvokeServer("Craft", itemName, 1, {})
     end)
 end
 
@@ -726,9 +727,22 @@ local function ensureInBackpack(weaponName)
 end
 
 local function craftDragonWeapons()
-    if not checkInventory("Dragonheart") then craftItem("Dragonheart"); task.wait(2) end
+    if not checkInventory("Dragonheart") then
+        pcall(function()
+            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/Craft")
+              :InvokeServer("Craft", "Dragonheart", 1, {})
+        end)
+        task.wait(2)
+    end
     loadWeapon("Dragonheart")
-    if not checkInventory("Dragonstorm") then craftItem("Dragonstorm"); task.wait(2) end
+
+    if not checkInventory("Dragonstorm") then
+        pcall(function()
+            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/Craft")
+              :InvokeServer("Craft", "Dragonstorm", 1, {})
+        end)
+        task.wait(2)
+    end
     loadWeapon("Dragonstorm")
     task.wait(1)
 end
