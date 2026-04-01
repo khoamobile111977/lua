@@ -1,6 +1,5 @@
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer 
 
-local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
@@ -55,13 +54,12 @@ local function getServerList()
 end
 
 local function hopToRandomServer()
-    
     local servers = getServerList()
     
     if #servers == 0 then
         warn("Không tìm thấy server khác!")
         wait(5)
-        return hopToRandomServer() 
+        return hopToRandomServer()
     end
     
     local availableServers = {}
@@ -72,18 +70,20 @@ local function hopToRandomServer()
     end
     
     local serverList = #availableServers > 0 and availableServers or servers
-    
     local randomServer = serverList[math.random(1, #serverList)]
     
-    
     local success, errorMsg = pcall(function()
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.id, LocalPlayer)
+        local args = {
+            "teleport",
+            randomServer.id
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser"):InvokeServer(unpack(args))
     end)
     
     if not success then
         warn("Hop server thất bại: " .. tostring(errorMsg))
         wait(3)
-        return hopToRandomServer() 
+        return hopToRandomServer()
     end
 end
 
