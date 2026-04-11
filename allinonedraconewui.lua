@@ -52,9 +52,11 @@ end
 
 enableDracoNoClip()
 
+-- ===== TỌA ĐỘ NPC THỦ CÔNG =====
+-- Gán tọa độ cho từng NPC tại đây, dùng Vector3.new(x, y, z)
 local NPC_COORDS = {
-    ["Dojo Trainer"]  = Vector3.new(5868.45312, 1204.505, 870.820007, 0.0570278764, 0, 0.998372555, 0, 1, 0, -0.998372555, 0, 0.0570278764),  
-    ["Dragon Wizard"] = Vector3.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902),  
+    ["Dojo Trainer"]  = Vector3.new(5868.45312, 1204.505, 870.820007, 0.0570278764, 0, 0.998372555, 0, 1, 0, -0.998372555, 0, 0.0570278764), 
+    ["Dragon Wizard"] = Vector3.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902), 
 }
 local NPC_REACH = 12  -- khoảng cách (studs) coi là "đã đến nơi"
 -- ===== KẾT THÚC TỌA ĐỘ NPC =====
@@ -332,7 +334,7 @@ function DropAllFruits()
 end
 
 function ClaimDojoQuest()
-    if tpToNPC("Dojo Trainer") then
+    if tpToDojoTrainer() then
         pcall(function()
             rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
         end)
@@ -448,9 +450,26 @@ function randomfruit()
     rs.Remotes.CommF_:InvokeServer("Cousin", "Buy")
 end
 
+-- Tween thẳng đến Dojo Trainer bằng tọa độ trong NPC_COORDS
+local function tpToDojoTrainer()
+    local coord = NPC_COORDS["Dojo Trainer"]
+    if not coord then
+        warn("[tpToDojoTrainer] Chưa gán tọa độ Dojo Trainer!")
+        return false
+    end
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    TP1(CFrame.new(coord))
+    local timeout = tick() + 15
+    repeat task.wait(0.1) until
+        (hrp.Position - coord).Magnitude <= NPC_REACH
+        or tick() > timeout
+    return (hrp.Position - coord).Magnitude <= NPC_REACH
+end
+
 function FullyDai5Loop()
     while getgenv().FullyDai5Running do
-        if tpToNPC("Dojo Trainer") and getgenv().FullyDai5Running then
+        if tpToDojoTrainer() and getgenv().FullyDai5Running then
             pcall(function()
                 rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
             end)
@@ -504,7 +523,7 @@ function GetDragonWizard()
 end
 
 function BuyDraco()
-    TP1(CFrame.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902))
+    TP1(CFrame.new(5814.42724609375, 1208.3267822265625, 884.5785522460938))
     local char = lp.Character or lp.CharacterAdded:Wait()
     repeat wait() until (char.HumanoidRootPart.Position - Vector3.new(5814.42724609375, 1208.3267822265625, 884.5785522460938)).Magnitude <= 3
     rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dragon Wizard", Command = "DragonRace"})
