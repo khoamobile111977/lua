@@ -52,15 +52,6 @@ end
 
 enableDracoNoClip()
 
--- ===== TỌA ĐỘ NPC THỦ CÔNG =====
--- Gán tọa độ cho từng NPC tại đây, dùng Vector3.new(x, y, z)
-local NPC_COORDS = {
-    ["Dojo Trainer"]  = Vector3.new(5868.45312, 1204.505, 870.820007, 0.0570278764, 0, 0.998372555, 0, 1, 0, -0.998372555, 0, 0.0570278764), 
-    ["Dragon Wizard"] = Vector3.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902), 
-}
-local NPC_REACH = 12  -- khoảng cách (studs) coi là "đã đến nơi"
--- ===== KẾT THÚC TỌA ĐỘ NPC =====
-
 local w = game.PlaceId
 local distbyp = (w == 2753915549 and 1500) or (w == 4442272183 and 3500) or (w == 7449423635 and 6000)
 local gQ = (w == 2753915549 and {
@@ -232,37 +223,29 @@ local function findNPC(npcName)
     return nil
 end
 
-local function tpToNPC(npcName)
-    local char = lp.Character or lp.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
+local NPC_FIXED_POSITIONS = {
+    ["Dragon Wizard"] = CFrame.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902),
+    ["Dojo Trainer"]  = CFrame.new(5868.45312, 1204.505,   870.820007,  0.0570278764, 0, 0.998372555, 0, 1, 0, -0.998372555, 0, 0.0570278764),
+}
 
-    -- Ưu tiên 1: tìm NPC trực tiếp trong workspace (cũ)
+local function tpToNPC(npcName)
+    local fixedPos = NPC_FIXED_POSITIONS[npcName]
+    if fixedPos then
+        TP1(fixedPos)
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait(0.1) until (hrp.Position - fixedPos.Position).Magnitude <= 8
+        return true
+    end
+    -- Fallback: tìm NPC trong workspace như cũ
     local npc = findNPC(npcName)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         TP1(CFrame.new(npc.HumanoidRootPart.Position))
-        local timeout = tick() + 12
-        repeat task.wait(0.1) until
-            (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= NPC_REACH
-            or tick() > timeout
-        return (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= NPC_REACH
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait() until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5
+        return true
     end
-
-    -- Ưu tiên 2: dùng tọa độ thủ công trong NPC_COORDS
-    local coord = NPC_COORDS[npcName]
-    if coord then
-        TP1(CFrame.new(coord))
-        local timeout = tick() + 12
-        repeat task.wait(0.1) until
-            (hrp.Position - coord).Magnitude <= NPC_REACH
-            or tick() > timeout
-        local arrived = (hrp.Position - coord).Magnitude <= NPC_REACH
-        if not arrived then
-            warn("[tpToNPC] Timeout khi di chuyển đến: " .. tostring(npcName))
-        end
-        return arrived
-    end
-
-    warn("[tpToNPC] Không tìm thấy NPC và không có tọa độ cho: " .. tostring(npcName))
     return false
 end
 
@@ -334,13 +317,16 @@ function DropAllFruits()
 end
 
 function ClaimDojoQuest()
-    if tpToDojoTrainer() then
-        pcall(function()
-            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
-        end)
-        return true
-    end
-    return false
+    local dojoPos = NPC_FIXED_POSITIONS["Dojo Trainer"]
+    TP1(dojoPos)
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    repeat task.wait(0.1) until (hrp.Position - dojoPos.Position).Magnitude <= 8
+    task.wait(0.5)
+    pcall(function()
+        rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
+    end)
+    return true
 end
 
 function GetPathFruit()
@@ -450,54 +436,39 @@ function randomfruit()
     rs.Remotes.CommF_:InvokeServer("Cousin", "Buy")
 end
 
--- Tween thẳng đến Dojo Trainer bằng tọa độ trong NPC_COORDS
-local function tpToDojoTrainer()
-    local coord = NPC_COORDS["Dojo Trainer"]
-    if not coord then
-        warn("[tpToDojoTrainer] Chưa gán tọa độ Dojo Trainer!")
-        return false
-    end
-    local char = lp.Character or lp.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    TP1(CFrame.new(coord))
-    -- Chờ tween bắt đầu rồi chờ nó xong hẳn
-    task.wait(0.2)
-    local timeout = tick() + 20
-    repeat task.wait(0.1) until
-        not Main.IsMoving
-        or tick() > timeout
-    -- Kiểm tra đã đến nơi chưa
-    return (hrp.Position - coord).Magnitude <= NPC_REACH
-end
-
 function FullyDai5Loop()
     while getgenv().FullyDai5Running do
-        if tpToDojoTrainer() and getgenv().FullyDai5Running then
-            pcall(function()
-                rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
-            end)
-            
-            pcall(function() randomfruit() end)
-            task.wait(10)
-            
-            if not getgenv().FullyDai5Running then break end
-            DropAllFruits()
-            task.wait(2)
-            
-            if not getgenv().FullyDai5Running then break end
-            
-            local result = TweenFruit()
-            if result == "switch_mode" and getgenv().FullyDai5Running then
-                TweenFruitIncludeDropped()
-            end
-            
-            if not getgenv().FullyDai5Running then break end
-            if getgenv().FullyDai5Running then task.wait(2) end
-        else
-            task.wait(5)
+        -- Tween đến Dojo Trainer bằng tọa độ cố định
+        local dojoPos = NPC_FIXED_POSITIONS["Dojo Trainer"]
+        TP1(dojoPos)
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        repeat task.wait(0.1) until (hrp.Position - dojoPos.Position).Magnitude <= 8 or not getgenv().FullyDai5Running
+        if not getgenv().FullyDai5Running then break end
+
+        task.wait(0.5)
+        pcall(function()
+            rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
+        end)
+
+        pcall(function() randomfruit() end)
+        task.wait(10)
+
+        if not getgenv().FullyDai5Running then break end
+        DropAllFruits()
+        task.wait(2)
+
+        if not getgenv().FullyDai5Running then break end
+
+        local result = TweenFruit()
+        if result == "switch_mode" and getgenv().FullyDai5Running then
+            TweenFruitIncludeDropped()
         end
+
+        if not getgenv().FullyDai5Running then break end
+        if getgenv().FullyDai5Running then task.wait(2) end
     end
-    
+
     if FullyDai5Toggle then
         FullyDai5Toggle.Text = "Fully Đai 5"
         FullyDai5Toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
@@ -512,17 +483,25 @@ function ToggleFullyDai5()
 end
 
 function GetDragonWizard()
-    if tpToNPC("Dojo Trainer") then
-        task.wait(2)
+    local dojoPos = NPC_FIXED_POSITIONS["Dojo Trainer"]
+    TP1(dojoPos)
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    repeat task.wait(0.1) until (hrp.Position - dojoPos.Position).Magnitude <= 8
+    task.wait(0.5)
+    pcall(function()
         rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dojo Trainer", Command = "ClaimQuest"})
-        task.wait(1)
-    end
-    
-    if tpToNPC("Dragon Wizard") then
-        task.wait(0.1)
+    end)
+    task.wait(1)
+
+    local wizardPos = NPC_FIXED_POSITIONS["Dragon Wizard"]
+    TP1(wizardPos)
+    repeat task.wait(0.1) until (hrp.Position - wizardPos.Position).Magnitude <= 8
+    task.wait(0.1)
+    pcall(function()
         rs:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dragon Wizard", Command = "LearnTether"})
-        StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã học Tether!", Duration = 2})
-    end
+    end)
+    StarterGui:SetCore("SendNotification", {Title = "Success", Text = "Đã học Tether!", Duration = 2})
 end
 
 function BuyDraco()
