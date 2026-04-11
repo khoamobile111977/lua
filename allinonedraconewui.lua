@@ -52,6 +52,13 @@ end
 
 enableDracoNoClip()
 
+local NPC_COORDS = {
+    ["Dojo Trainer"]  = Vector3.new(5868.45312, 1204.505, 870.820007, 0.0570278764, 0, 0.998372555, 0, 1, 0, -0.998372555, 0, 0.0570278764),  
+    ["Dragon Wizard"] = Vector3.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902),  
+}
+local NPC_REACH = 12  -- khoảng cách (studs) coi là "đã đến nơi"
+-- ===== KẾT THÚC TỌA ĐỘ NPC =====
+
 local w = game.PlaceId
 local distbyp = (w == 2753915549 and 1500) or (w == 4442272183 and 3500) or (w == 7449423635 and 6000)
 local gQ = (w == 2753915549 and {
@@ -224,14 +231,36 @@ local function findNPC(npcName)
 end
 
 local function tpToNPC(npcName)
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    -- Ưu tiên 1: tìm NPC trực tiếp trong workspace (cũ)
     local npc = findNPC(npcName)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         TP1(CFrame.new(npc.HumanoidRootPart.Position))
-        local char = lp.Character or lp.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        repeat task.wait() until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5
-        return true
+        local timeout = tick() + 12
+        repeat task.wait(0.1) until
+            (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= NPC_REACH
+            or tick() > timeout
+        return (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= NPC_REACH
     end
+
+    -- Ưu tiên 2: dùng tọa độ thủ công trong NPC_COORDS
+    local coord = NPC_COORDS[npcName]
+    if coord then
+        TP1(CFrame.new(coord))
+        local timeout = tick() + 12
+        repeat task.wait(0.1) until
+            (hrp.Position - coord).Magnitude <= NPC_REACH
+            or tick() > timeout
+        local arrived = (hrp.Position - coord).Magnitude <= NPC_REACH
+        if not arrived then
+            warn("[tpToNPC] Timeout khi di chuyển đến: " .. tostring(npcName))
+        end
+        return arrived
+    end
+
+    warn("[tpToNPC] Không tìm thấy NPC và không có tọa độ cho: " .. tostring(npcName))
     return false
 end
 
@@ -475,7 +504,7 @@ function GetDragonWizard()
 end
 
 function BuyDraco()
-    TP1(CFrame.new(5814.42724609375, 1208.3267822265625, 884.5785522460938))
+    TP1(CFrame.new(5771.85303, 1205.74695, 804.247009, -0.746293902, 0, -0.665617168, 0, 1, 0, 0.665617168, 0, -0.746293902))
     local char = lp.Character or lp.CharacterAdded:Wait()
     repeat wait() until (char.HumanoidRootPart.Position - Vector3.new(5814.42724609375, 1208.3267822265625, 884.5785522460938)).Magnitude <= 3
     rs.Modules.Net:FindFirstChild("RF/InteractDragonQuest"):InvokeServer({NPC = "Dragon Wizard", Command = "DragonRace"})
