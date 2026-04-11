@@ -460,10 +460,13 @@ local function tpToDojoTrainer()
     local char = lp.Character or lp.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     TP1(CFrame.new(coord))
-    local timeout = tick() + 15
+    -- Chờ tween bắt đầu rồi chờ nó xong hẳn
+    task.wait(0.2)
+    local timeout = tick() + 20
     repeat task.wait(0.1) until
-        (hrp.Position - coord).Magnitude <= NPC_REACH
+        not Main.IsMoving
         or tick() > timeout
+    -- Kiểm tra đã đến nơi chưa
     return (hrp.Position - coord).Magnitude <= NPC_REACH
 end
 
