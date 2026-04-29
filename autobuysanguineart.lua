@@ -123,19 +123,14 @@ local function tpToNPC(npcName)
     return true
 end
 
--- ===================== CHECK SANGUINE IN BACKPACK =====================
 local function checkSanguineInBackpack()
-    -- Chờ tối đa 10 giây để backpack load
     local maxWait = 10
     local waited = 0
-
-    -- Kiểm tra ngay
     local inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
     local char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
     local inCharacter = char and char:FindFirstChild("Sanguine Art")
     if inBackpack or inCharacter then return true end
 
-    -- Chờ thêm nếu chưa có
     while waited < maxWait do
         task.wait(1)
         waited = waited + 1
@@ -143,7 +138,6 @@ local function checkSanguineInBackpack()
         inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
         char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
         inCharacter = char and char:FindFirstChild("Sanguine Art")
-
         if inBackpack or inCharacter then return true end
     end
 
@@ -229,7 +223,6 @@ bar.BorderSizePixel = 0
 bar.Parent = panel
 Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
 
--- Pulse bar
 task.spawn(function()
     while true do
         TweenService:Create(bar, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.6}):Play()
@@ -239,7 +232,6 @@ task.spawn(function()
     end
 end)
 
--- Dragging
 local dragging, dragStart, startPos = false, nil, nil
 header.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -280,11 +272,9 @@ local function setBought(bought)
     end
 end
 
--- ===================== BUY + RETRY =====================
 local MAX_RETRY = 3
 
 local function trySanguinePurchase()
-    -- Tween đến Shafi
     setStatus("🔄 Tween đến Shafi...", Color3.fromRGB(255, 200, 80))
     if not tpToNPC("Shafi") then
         setStatus("❌ Không tìm thấy NPC Shafi!", Color3.fromRGB(255, 80, 80))
@@ -307,12 +297,10 @@ local function buySanguineWithRetry()
 
         local sent = trySanguinePurchase()
         if not sent then
-            -- NPC không tìm thấy, dừng luôn
             setRetry("NPC không tìm thấy — dừng!")
             return false
         end
 
-        -- Kiểm tra backpack sau khi mua
         setStatus("🔍 Kiểm tra Backpack...", Color3.fromRGB(180, 180, 255))
         local found = checkSanguineInBackpack()
 
@@ -335,7 +323,6 @@ local function buySanguineWithRetry()
         end
     end
 
-    -- Hết retry
     setRetry("Đã thử " .. MAX_RETRY .. " lần — dừng hẳn!")
     setStatus("❌ Không thể mua sau " .. MAX_RETRY .. " lần thử!", Color3.fromRGB(255, 60, 60))
     game.StarterGui:SetCore("SendNotification", {
@@ -346,7 +333,6 @@ local function buySanguineWithRetry()
     return false
 end
 
--- ===================== CHECK NGUYÊN LIỆU =====================
 local function checkMaterials()
     local result
     pcall(function()
@@ -355,7 +341,6 @@ local function checkMaterials()
     return result
 end
 
--- ===================== JOIN SEA 3 =====================
 local SEA3_PLACE_IDS = {[7449423635] = true, [100117331123089] = true}
 
 local function isInSea3()
@@ -376,12 +361,10 @@ local function joinSea3()
     setStatus("✈️ Đã gửi lệnh join Sea 3...", Color3.fromRGB(80, 200, 255))
 end
 
--- ===================== MAIN =====================
 setBought(false)
 setStatus("⏳ Đang kiểm tra nguyên liệu...", Color3.fromRGB(200, 200, 255))
 
 task.spawn(function()
-    -- Bước 1: Chờ nguyên liệu đủ
     while true do
         local result = checkMaterials()
         if result == 0 or result == nil then
@@ -397,7 +380,6 @@ task.spawn(function()
 
     task.wait(1)
 
-    -- Bước 2: Kiểm tra Place ID
     if isInSea3() then
         setStatus("🌊 Đã ở Sea 3! Chuẩn bị mua...", Color3.fromRGB(80, 200, 255))
         task.wait(2)
@@ -420,6 +402,5 @@ task.spawn(function()
         task.wait(3)
     end
 
-    -- Bước 3: Mua với retry
     buySanguineWithRetry()
 end)
