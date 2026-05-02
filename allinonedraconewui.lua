@@ -1,14 +1,15 @@
+getgenv().Trade = true
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
 
+if getgenv().Trade then getgenv().Team = "Marines" end
 if not lp.Team then
-    local teamToJoin = (getgenv().Trade and "Marines") or getgenv().Team or "Pirates"
     task.spawn(function()
         while not lp.Team do
             pcall(function()
-                game.ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("SetTeam", teamToJoin)
+                rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("SetTeam", getgenv().Team or "Pirates")
             end)
             task.wait(1)
         end
@@ -250,7 +251,6 @@ local function tpToNPC(npcName)
         repeat task.wait(0.1) until (hrp.Position - fixedPos.Position).Magnitude <= 8
         return true
     end
-    -- Fallback: tìm NPC trong workspace như cũ
     local npc = findNPC(npcName)
     if npc and npc:FindFirstChild("HumanoidRootPart") then
         TP1(CFrame.new(npc.HumanoidRootPart.Position))
@@ -451,7 +451,6 @@ end
 
 function FullyDai5Loop()
     while getgenv().FullyDai5Running do
-        -- Tween đến Dojo Trainer bằng tọa độ cố định
         local dojoPos = NPC_FIXED_POSITIONS["Dojo Trainer"]
         TP1(dojoPos)
         local char = lp.Character or lp.CharacterAdded:Wait()
@@ -598,8 +597,6 @@ function TeleportToChair(tableIndex, chairIndex)
     local chairPos = chairIndex == 1 and table.chair1 or table.chair2
     TP1(chairPos)
 end
-
--- ===== BELT 3 AUTO TRADE FUNCTIONS =====
 
 local function IsChairOccupied(chair)
     if not chair then return false end
@@ -759,18 +756,26 @@ end
 
 local function sortFruitsByPrice(inventory)
     local fruits = {}
-    for index, fruitData in pairs(inventory) do
-        if typeof(fruitData) == "table" and fruitData.Price and fruitData.Name then
-            table.insert(fruits, {name = fruitData.Name, price = fruitData.Price, data = fruitData})
+    local itemList = (type(inventory.Items) == "table") and inventory.Items or inventory
+    for _, fruitData in pairs(itemList) do
+        if typeof(fruitData) == "table"
+            and fruitData.Price
+            and fruitData.ItemId
+            and fruitData.Type == "PhysicalFruit" then
+            table.insert(fruits, {
+                itemId = fruitData.ItemId,
+                price  = fruitData.Price,
+                amount = fruitData.Amount or 1,
+            })
         end
     end
     table.sort(fruits, function(a, b) return a.price < b.price end)
     return fruits
 end
 
-local function addFruitToTrade(fruitName)
+local function addFruitToTrade(itemId)
     local success, result = pcall(function()
-        return TradeFunction:InvokeServer("addItem", fruitName)
+        return TradeFunction:InvokeServer("addItem", itemId, 1)
     end)
     return success, result
 end
@@ -786,11 +791,27 @@ local function checkMyFruitAdded(fruitName)
     return false
 end
 
+local function countTradeSlot()
+    local success, count = pcall(function()
+        local container = getTradeGUI().Container["1"].Frame
+        local n = 0
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("ImageButton") then n = n + 1 end
+        end
+        return n
+    end)
+    return success and count or 0
+end
+
 local function checkOpponentAddedFruit()
     local success, result = pcall(function()
         local container = getTradeGUI().Container["2"].Frame
         for _, child in pairs(container:GetChildren()) do
-            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
+            if child:IsA("ImageButton")
+                and child.Name ~= "Template"
+                and child.Name ~= "EmptyTemplate"
+                and child.Name ~= "AddButton"
+                and tonumber(child.Name) ~= nil then
                 return true, child.Name
             end
         end
@@ -832,49 +853,55 @@ local function addLowestAvailableFruit(sortedFruits, startIndex)
     startIndex = startIndex or 1
     for i = startIndex, #sortedFruits do
         local fruit = sortedFruits[i]
-        local success, result = addFruitToTrade(fruit.name)
-        if not success then continue end
-        task.wait(0.25)
-        local added = false
-        for attempt = 1, 5 do
-            added = checkMyFruitAdded(fruit.name)
-            if added then break end
-            task.wait(0.25)
+        local ok, result = pcall(function()
+            return TradeFunction:InvokeServer("addItem", fruit.itemId, 1)
+        end)
+        if not ok then
+            task.wait(0.2)
+        else
+            task.wait(0.3)
+            local added = false
+            for attempt = 1, 5 do
+                pcall(function()
+                    local slot = getTradeGUI().Container["1"].Frame
+                    if slot:FindFirstChild(tostring(fruit.itemId)) then
+                        added = true
+                    end
+                end)
+                if added then break end
+                task.wait(0.25)
+            end
+            if not added and result == true then added = true end
+            if added then return i, fruit end
         end
-        if added then return i, fruit end
     end
     return nil, nil
 end
 
-local function removeFruitFromTrade(fruitName)
-    local success = pcall(function() TradeFunction:InvokeServer("removeItem", fruitName) end)
+local function removeFruitFromTrade(itemId)
+    local success = pcall(function() TradeFunction:InvokeServer("removeItem", itemId, 1) end)
     return success
 end
 
 local function countMyFruitsInTrade()
     local success, count = pcall(function()
         local container = getTradeGUI().Container["1"].Frame
-        local fruitCount = 0
+        local n = 0
         for _, child in pairs(container:GetChildren()) do
-            if child:IsA("ImageButton") and string.find(child.Name, "%-") then fruitCount = fruitCount + 1 end
+            if child:IsA("ImageButton")
+                and child.Name ~= "Template"
+                and child.Name ~= "EmptyTemplate"
+                and child.Name ~= "AddButton" then
+                n = n + 1
+            end
         end
-        return fruitCount
+        return n
     end)
     return success and count or 0
 end
 
 local function getMyFruitsInTrade()
-    local success, fruits = pcall(function()
-        local container = getTradeGUI().Container["1"].Frame
-        local fruitList = {}
-        for _, child in pairs(container:GetChildren()) do
-            if child:IsA("ImageButton") and string.find(child.Name, "%-") then
-                table.insert(fruitList, child.Name)
-            end
-        end
-        return fruitList
-    end)
-    return success and fruits or {}
+    return {}
 end
 
 local function waitForTradeCountdown()
@@ -888,15 +915,109 @@ end
 local function autoTrade()
     local inventory = getTradeInventory()
     if not inventory then return false end
+
     local sortedFruits = sortFruitsByPrice(inventory)
-    local currentIndex, addedFruit = addLowestAvailableFruit(sortedFruits, 1)
+    if #sortedFruits == 0 then return false end
+
+    if getgenv().LockFruit and type(getgenv().LockFruit) == "table" and #getgenv().LockFruit > 0 then
+        local lockPrices = {}
+        for _, p in ipairs(getgenv().LockFruit) do lockPrices[p] = true end
+        local priority, normal = {}, {}
+        for _, f in ipairs(sortedFruits) do
+            if lockPrices[f.price] then
+                table.insert(priority, f)
+            else
+                table.insert(normal, f)
+            end
+        end
+        if #priority > 0 then
+            sortedFruits = {}
+            for _, f in ipairs(priority) do table.insert(sortedFruits, f) end
+            for _, f in ipairs(normal) do table.insert(sortedFruits, f) end
+        end
+    end
+
+    local addedItemIds = {} -- track itemId đã add để remove đúng
+
+    -- Thử add fruit đầu tiên; nếu server từ chối (đối phương có rồi) thì retry
+    local currentIndex, addedFruit
+    local addRetry = 0
+    repeat
+        addRetry = addRetry + 1
+        if addRetry > 1 then
+            task.wait(0.5)
+            -- Refresh inventory để lấy lại danh sách mới nhất
+            local newInv = getTradeInventory()
+            if newInv then
+                local newFruits = sortFruitsByPrice(newInv)
+                if #newFruits > 0 then sortedFruits = newFruits end
+            end
+        end
+        currentIndex, addedFruit = addLowestAvailableFruit(sortedFruits, 1)
+    until currentIndex or addRetry >= 10 or not getgenv().FullyBelt3Running
+
     if not currentIndex then return false end
+    table.insert(addedItemIds, addedFruit.itemId)
+
+    -- Chờ đối phương add fruit; đồng thời scan qua từng fruit kế tiếp nếu chưa add được
     local opponentAdded = false
+    local scanIndex = currentIndex
     repeat
         task.wait(0.25)
+
+        -- Kiểm tra slot của mình qua GUI (không dùng itemId cụ thể, tránh stuck trên 1 fruit)
+        local mySlotOk = false
+        pcall(function()
+            local slot = getTradeGUI().Container["1"].Frame
+            for _, child in pairs(slot:GetChildren()) do
+                if child:IsA("ImageButton")
+                    and child.Name ~= "Template"
+                    and child.Name ~= "EmptyTemplate"
+                    and child.Name ~= "AddButton" then
+                    mySlotOk = true
+                    break
+                end
+            end
+        end)
+
+        if not mySlotOk then
+            -- Chưa add được → thử fruit tiếp theo (không quay lại fruit cũ đã bị reject)
+            scanIndex = scanIndex + 1
+            if scanIndex > #sortedFruits then
+                local newInv = getTradeInventory()
+                if newInv then
+                    local newFruits = sortFruitsByPrice(newInv)
+                    if #newFruits > 0 then sortedFruits = newFruits end
+                end
+                scanIndex = 1
+            end
+            local fruit = sortedFruits[scanIndex]
+            if fruit then
+                local ok, result = pcall(function()
+                    return TradeFunction:InvokeServer("addItem", fruit.itemId, 1)
+                end)
+                if ok then
+                    task.wait(0.3)
+                    local added = false
+                    pcall(function()
+                        local slot = getTradeGUI().Container["1"].Frame
+                        if slot:FindFirstChild(tostring(fruit.itemId)) then added = true end
+                    end)
+                    if not added and result == true then added = true end
+                    if added then
+                        addedItemIds = {fruit.itemId}
+                        addedFruit = fruit
+                        currentIndex = scanIndex
+                    end
+                end
+            end
+        end
+
         opponentAdded = checkOpponentAddedFruit()
-    until opponentAdded
+    until opponentAdded or not getgenv().FullyBelt3Running
+    if not getgenv().FullyBelt3Running then return false end
     task.wait(0.5)
+
     while true do
         local valueDiff = getValueDifference()
         if valueDiff <= 40 then
@@ -906,19 +1027,36 @@ local function autoTrade()
         else
             local myValue, opponentValue = getTradeValues()
             if myValue < opponentValue then
-                local myFruitCount = countMyFruitsInTrade()
-                if myFruitCount >= 4 then
-                    local myFruits = getMyFruitsInTrade()
-                    if #myFruits > 0 then
-                        local fruitToRemove = myFruits[1]
-                        local removeSuccess = removeFruitFromTrade(fruitToRemove)
-                        if removeSuccess then task.wait(0.5) end
-                    end
+                if #addedItemIds >= 4 then
+                    local idToRemove = table.remove(addedItemIds, 1)
+                    local removeSuccess = removeFruitFromTrade(idToRemove)
+                    if removeSuccess then task.wait(0.5) end
                 end
                 currentIndex = currentIndex + 1
-                local newIndex, newFruit = addLowestAvailableFruit(sortedFruits, currentIndex)
+                -- Nếu hết list → wrap lại từ đầu với inventory mới
+                if currentIndex > #sortedFruits then
+                    local newInv = getTradeInventory()
+                    if newInv then
+                        local newFruits = sortFruitsByPrice(newInv)
+                        if #newFruits > 0 then sortedFruits = newFruits end
+                    end
+                    currentIndex = 1
+                end
+                -- Retry add nếu bị từ chối
+                local addRetry2 = 0
+                local newIndex, newFruit
+                repeat
+                    addRetry2 = addRetry2 + 1
+                    if addRetry2 > 1 then task.wait(0.5) end
+                    newIndex, newFruit = addLowestAvailableFruit(sortedFruits, currentIndex)
+                    if not newIndex and currentIndex > 1 then
+                        currentIndex = 1
+                        newIndex, newFruit = addLowestAvailableFruit(sortedFruits, 1)
+                    end
+                until newIndex or addRetry2 >= 10 or not getgenv().FullyBelt3Running
                 if not newIndex then return false end
                 currentIndex = newIndex
+                table.insert(addedItemIds, newFruit.itemId)
             else
                 task.wait(0.25)
             end
@@ -950,16 +1088,108 @@ local function HideBelt3Status()
     if Belt3StatusLabel then Belt3StatusLabel.Visible = false end
 end
 
+local function isLocalPlayerSeated()
+    local ok, result = pcall(function()
+        local hum = lp.Character and lp.Character:FindFirstChild("Humanoid")
+        return hum and hum.SeatPart ~= nil
+    end)
+    return ok and result
+end
+
 local function FullyBelt3Loop()
     local tableIndex = getgenv().SelectedTable
-    UpdateBelt3Status("Đang tp đến bàn " .. tableIndex)
-    TeleportToTradeTable(tableIndex)
-    task.wait(1)
+
+    -- TP đến bàn và verify ngồi được (tối đa 3 lần thử, bao gồm đổi bàn)
+    local seated = false
+    for attempt = 1, 3 do
+        if not getgenv().FullyBelt3Running then HideBelt3Status() return end
+        UpdateBelt3Status("Đang tp đến bàn " .. tableIndex)
+        TeleportToTradeTable(tableIndex)
+
+        -- Đợi tối đa 4s để SeatPart được assign
+        for _ = 1, 8 do
+            task.wait(0.5)
+            if isLocalPlayerSeated() then seated = true break end
+        end
+        if seated then break end
+
+        -- Chưa ngồi được → tìm bàn/ghế khác
+        UpdateBelt3Status("⚠️ Ghế bị chiếm, tìm bàn khác...")
+        task.wait(0.3)
+        local allTables = GetAllTradeTables()
+        local found = false
+        for i, tbl in ipairs(allTables) do
+            if not (IsChairOccupied(tbl.p1) and IsChairOccupied(tbl.p2)) then
+                tableIndex = i
+                getgenv().SelectedTable = i
+                found = true
+                break
+            end
+        end
+        if not found then
+            -- Fallback: TradeTables tĩnh
+            for i, tbl in ipairs(TradeTables) do
+                local c1Taken, c2Taken = false, false
+                for _, player in ipairs(game.Players:GetPlayers()) do
+                    if player ~= lp and player.Character then
+                        local pHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                        if pHRP then
+                            if (pHRP.Position - tbl.chair1.Position).Magnitude < 4 then c1Taken = true end
+                            if (pHRP.Position - tbl.chair2.Position).Magnitude < 4 then c2Taken = true end
+                        end
+                    end
+                end
+                if not (c1Taken and c2Taken) then
+                    tableIndex = i
+                    getgenv().SelectedTable = i
+                    found = true
+                    break
+                end
+            end
+        end
+        if not found then
+            UpdateBelt3Status("⚠️ Tất cả bàn đều đầy!")
+            task.wait(2)
+            getgenv().FullyBelt3Running = false
+            HideBelt3Status()
+            return
+        end
+    end
+
+    if not seated then
+        UpdateBelt3Status("⚠️ Không ngồi được sau 3 lần thử!")
+        task.wait(2)
+        getgenv().FullyBelt3Running = false
+        HideBelt3Status()
+        return
+    end
+
     UpdateBelt3Status("Đợi 2 người ngồi...")
     repeat task.wait(0.5) until checkBothChairsOccupied(tableIndex) or not getgenv().FullyBelt3Running
     if not getgenv().FullyBelt3Running then HideBelt3Status() return end
+
+    -- Đợi trade GUI visible (server cần thời gian khởi tạo trade session)
+    UpdateBelt3Status("Đợi trade mở...")
+    local guiWait = 0
+    repeat
+        task.wait(0.3)
+        guiWait = guiWait + 0.3
+    until (pcall(function() return getTradeGUI().Visible end) and (function()
+        local ok, vis = pcall(function() return getTradeGUI().Visible end)
+        return ok and vis
+    end)()) or guiWait >= 10 or not getgenv().FullyBelt3Running
+    if not getgenv().FullyBelt3Running then HideBelt3Status() return end
+    task.wait(0.3) -- buffer nhỏ sau khi GUI hiện
+
+    -- Retry getTradeInventory tối đa 5 lần đề phòng trả rỗng
     UpdateBelt3Status("Auto trading...")
-    local tradeSuccess = autoTrade()
+    local tradeSuccess = false
+    for retry = 1, 5 do
+        tradeSuccess = autoTrade()
+        if tradeSuccess then break end
+        if not getgenv().FullyBelt3Running then HideBelt3Status() return end
+        task.wait(1)
+    end
     if not tradeSuccess then
         UpdateBelt3Status("Trade thất bại!")
         task.wait(2)
@@ -1576,99 +1806,78 @@ StarterGui:SetCore("SendNotification", {
     Duration = 3
 })
 
--- ===== AUTO TRADE TABLE KHI VÀO SERVER (getgenv().Trade) =====
--- Khi getgenv().Trade = true, tự động TP đến trade table còn ghế trống
--- Dùng Instant TP mặc định, đổi ghế nếu bị chiếm, đổi bàn nếu đủ 2 người
-
--- Tìm bàn trade còn ghế trống, trả về index bàn (dynamic hoặc static)
--- Dynamic: dùng GetAllTradeTables() + IsChairOccupied()
--- Fallback: kiểm tra khoảng cách player với TradeTables tĩnh
-local function FindFreeTradeTableIndex()
-    -- ── Thử dynamic path trước ──
-    local hasDynamic = false
-    pcall(function()
-        local m = workspace:FindFirstChild("Map")
-        assert(m)
-        local t = m:FindFirstChild("Turtle")
-        assert(t)
-        for _, obj in ipairs(t:GetChildren()) do
-            if obj.Name:match("TradeTable") then hasDynamic = true return end
-        end
-    end)
-
-    if hasDynamic then
-        pcall(function() checkAndEnsureTurtleMap() end)
-        local allTables = GetAllTradeTables()
-        for i, tbl in ipairs(allTables) do
-            if not (IsChairOccupied(tbl.p1) and IsChairOccupied(tbl.p2)) then
-                return i -- còn ít nhất 1 ghế trống
-            end
-        end
-        return nil -- tất cả đầy
-    end
-
-    -- ── Fallback: TradeTables tĩnh ──
-    for i, tbl in ipairs(TradeTables) do
-        local chair1Taken, chair2Taken = false, false
-        local c1Pos = tbl.chair1.Position
-        local c2Pos = tbl.chair2.Position
-        for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= lp and player.Character then
-                local pHRP = player.Character:FindFirstChild("HumanoidRootPart")
-                if pHRP then
-                    if (pHRP.Position - c1Pos).Magnitude < 4 then chair1Taken = true end
-                    if (pHRP.Position - c2Pos).Magnitude < 4 then chair2Taken = true end
-                end
-            end
-        end
-        if not (chair1Taken and chair2Taken) then
-            return i
-        end
-    end
-    return nil
-end
-
-local function AutoGoToTradeTableOnJoin()
-    -- Đợi character load hoàn toàn
-    local char = lp.Character or lp.CharacterAdded:Wait()
-    repeat task.wait(0.3) until char:FindFirstChild("HumanoidRootPart")
-        and char:FindFirstChild("Humanoid")
-        and char:FindFirstChild("Humanoid").Health > 0
-    task.wait(2) -- Đợi map load xong
-
-    UpdateBelt3Status("🔍 Auto Trade: Đang tìm bàn...")
-
-    local tableIdx = FindFreeTradeTableIndex()
-    if not tableIdx then
-        UpdateBelt3Status("⚠️ Tất cả bàn trade đều đầy!")
-        StarterGui:SetCore("SendNotification", {
-            Title = "Auto Trade",
-            Text = "Không tìm được bàn trống!",
-            Duration = 5
-        })
-        return
-    end
-
-    -- Set bàn được chọn rồi kích hoạt START AUTO y hệt bấm nút
-    updateTableSelection(tableIdx)
-    getgenv().FullyBelt3Running = true
-    belt3StartBtn.Text = "STOP AUTO"
-    belt3StartBtn.BackgroundColor3 = COLORS.danger
-    table1Btn.Active = false
-    table2Btn.Active = false
-    table3Btn.Active = false
-    UpdateBelt3Status("Đang khởi động...")
-    FullyBelt3Loop()
-end
-
--- Kích hoạt Auto Trade khi join server nếu getgenv().Trade = true
+-- ===== AUTO TRADE KHI getgenv().Trade = true =====
 if getgenv().Trade then
-    getgenv().InstantTP = true
-    if instantTPBtn then
-        instantTPBtn.Text = "Instant TP: ON"
-        instantTPBtn.BackgroundColor3 = COLORS.accent
-        instantTPBtn.BackgroundTransparency = 0.2
-    end
-    switchTab("chair")
-    task.spawn(AutoGoToTradeTableOnJoin)
+    task.spawn(function()
+        -- Đợi character và map load xong
+        local char = lp.Character or lp.CharacterAdded:Wait()
+        repeat task.wait(0.3) until
+            char:FindFirstChild("HumanoidRootPart") and
+            char:FindFirstChild("Humanoid") and
+            char:FindFirstChild("Humanoid").Health > 0
+        task.wait(2)
+
+        getgenv().InstantTP = true
+        if instantTPBtn then
+            instantTPBtn.Text = "Instant TP: ON"
+            instantTPBtn.BackgroundColor3 = COLORS.accent
+            instantTPBtn.BackgroundTransparency = 0.2
+        end
+        switchTab("chair")
+
+        UpdateBelt3Status("🔍 Đang tìm bàn trade...")
+
+        local function findFreeTableIndex()
+            local hasDynamic = false
+            pcall(function()
+                local t = workspace:FindFirstChild("Map"):FindFirstChild("Turtle")
+                for _, obj in ipairs(t:GetChildren()) do
+                    if obj.Name:match("TradeTable") then hasDynamic = true return end
+                end
+            end)
+            if hasDynamic then
+                pcall(function() checkAndEnsureTurtleMap() end)
+                local allTables = GetAllTradeTables()
+                for i, tbl in ipairs(allTables) do
+                    if not (IsChairOccupied(tbl.p1) and IsChairOccupied(tbl.p2)) then
+                        return i
+                    end
+                end
+                return nil
+            end
+            for i, tbl in ipairs(TradeTables) do
+                local c1Taken, c2Taken = false, false
+                for _, player in ipairs(game.Players:GetPlayers()) do
+                    if player ~= lp and player.Character then
+                        local pHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                        if pHRP then
+                            if (pHRP.Position - tbl.chair1.Position).Magnitude < 4 then c1Taken = true end
+                            if (pHRP.Position - tbl.chair2.Position).Magnitude < 4 then c2Taken = true end
+                        end
+                    end
+                end
+                if not (c1Taken and c2Taken) then return i end
+            end
+            return nil
+        end
+
+        local tableIdx = findFreeTableIndex()
+        if not tableIdx then
+            UpdateBelt3Status("⚠️ Tất cả bàn đều đầy!")
+            StarterGui:SetCore("SendNotification", {
+                Title = "Auto Trade", Text = "Không tìm được bàn trống!", Duration = 5
+            })
+            return
+        end
+
+        updateTableSelection(tableIdx)
+        getgenv().FullyBelt3Running = true
+        belt3StartBtn.Text = "STOP AUTO"
+        belt3StartBtn.BackgroundColor3 = COLORS.danger
+        table1Btn.Active = false
+        table2Btn.Active = false
+        table3Btn.Active = false
+        UpdateBelt3Status("Đang khởi động...")
+        FullyBelt3Loop()
+    end)
 end
