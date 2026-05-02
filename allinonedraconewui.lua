@@ -2,6 +2,19 @@ repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
+
+if not lp.Team then
+    local teamToJoin = (getgenv().Trade and "Marines") or getgenv().Team or "Pirates"
+    task.spawn(function()
+        while not lp.Team do
+            pcall(function()
+                game.ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("SetTeam", teamToJoin)
+            end)
+            task.wait(1)
+        end
+    end)
+end
+repeat wait() until lp.Team
 local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
@@ -1562,3 +1575,100 @@ StarterGui:SetCore("SendNotification", {
     Text = "Press ALT to toggle UI", 
     Duration = 3
 })
+
+-- ===== AUTO TRADE TABLE KHI VÀO SERVER (getgenv().Trade) =====
+-- Khi getgenv().Trade = true, tự động TP đến trade table còn ghế trống
+-- Dùng Instant TP mặc định, đổi ghế nếu bị chiếm, đổi bàn nếu đủ 2 người
+
+-- Tìm bàn trade còn ghế trống, trả về index bàn (dynamic hoặc static)
+-- Dynamic: dùng GetAllTradeTables() + IsChairOccupied()
+-- Fallback: kiểm tra khoảng cách player với TradeTables tĩnh
+local function FindFreeTradeTableIndex()
+    -- ── Thử dynamic path trước ──
+    local hasDynamic = false
+    pcall(function()
+        local m = workspace:FindFirstChild("Map")
+        assert(m)
+        local t = m:FindFirstChild("Turtle")
+        assert(t)
+        for _, obj in ipairs(t:GetChildren()) do
+            if obj.Name:match("TradeTable") then hasDynamic = true return end
+        end
+    end)
+
+    if hasDynamic then
+        pcall(function() checkAndEnsureTurtleMap() end)
+        local allTables = GetAllTradeTables()
+        for i, tbl in ipairs(allTables) do
+            if not (IsChairOccupied(tbl.p1) and IsChairOccupied(tbl.p2)) then
+                return i -- còn ít nhất 1 ghế trống
+            end
+        end
+        return nil -- tất cả đầy
+    end
+
+    -- ── Fallback: TradeTables tĩnh ──
+    for i, tbl in ipairs(TradeTables) do
+        local chair1Taken, chair2Taken = false, false
+        local c1Pos = tbl.chair1.Position
+        local c2Pos = tbl.chair2.Position
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= lp and player.Character then
+                local pHRP = player.Character:FindFirstChild("HumanoidRootPart")
+                if pHRP then
+                    if (pHRP.Position - c1Pos).Magnitude < 4 then chair1Taken = true end
+                    if (pHRP.Position - c2Pos).Magnitude < 4 then chair2Taken = true end
+                end
+            end
+        end
+        if not (chair1Taken and chair2Taken) then
+            return i
+        end
+    end
+    return nil
+end
+
+local function AutoGoToTradeTableOnJoin()
+    -- Đợi character load hoàn toàn
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    repeat task.wait(0.3) until char:FindFirstChild("HumanoidRootPart")
+        and char:FindFirstChild("Humanoid")
+        and char:FindFirstChild("Humanoid").Health > 0
+    task.wait(2) -- Đợi map load xong
+
+    UpdateBelt3Status("🔍 Auto Trade: Đang tìm bàn...")
+
+    local tableIdx = FindFreeTradeTableIndex()
+    if not tableIdx then
+        UpdateBelt3Status("⚠️ Tất cả bàn trade đều đầy!")
+        StarterGui:SetCore("SendNotification", {
+            Title = "Auto Trade",
+            Text = "Không tìm được bàn trống!",
+            Duration = 5
+        })
+        return
+    end
+
+    -- Set bàn được chọn rồi kích hoạt START AUTO y hệt bấm nút
+    updateTableSelection(tableIdx)
+    getgenv().FullyBelt3Running = true
+    belt3StartBtn.Text = "STOP AUTO"
+    belt3StartBtn.BackgroundColor3 = COLORS.danger
+    table1Btn.Active = false
+    table2Btn.Active = false
+    table3Btn.Active = false
+    UpdateBelt3Status("Đang khởi động...")
+    FullyBelt3Loop()
+end
+
+-- Kích hoạt Auto Trade khi join server nếu getgenv().Trade = true
+if getgenv().Trade then
+    getgenv().InstantTP = true
+    if instantTPBtn then
+        instantTPBtn.Text = "Instant TP: ON"
+        instantTPBtn.BackgroundColor3 = COLORS.accent
+        instantTPBtn.BackgroundTransparency = 0.2
+    end
+    switchTab("chair")
+    task.spawn(AutoGoToTradeTableOnJoin)
+end
