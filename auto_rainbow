@@ -1,0 +1,613 @@
+
+
+repeat wait() until game:IsLoaded()
+repeat wait() until game.Players and game.Players.LocalPlayer
+getgenv().Team = "Marines"
+if not game.Players.LocalPlayer.Team then
+    game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates")
+end
+repeat wait() until game.Players.LocalPlayer.Team
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local CommF_ = Remotes:WaitForChild("CommF_")
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+local RegisterAttack = Net:WaitForChild("RE/RegisterAttack")
+local RegisterHit = Net:WaitForChild("RE/RegisterHit")
+
+local vu = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    wait(1)
+    vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end)
+
+local m = require(ReplicatedStorage.Modules.CombatUtil)
+function m.IsGunReloading() return false end
+function m:CanAttack() return true end
+
+local SUCCESS_FLAGS, COMBAT_REMOTE_THREAD = pcall(function()
+    return require(Modules.Flags).COMBAT_REMOTE_THREAD or false
+end)
+local SUCCESS_HIT, HIT_FUNCTION = pcall(function()
+    return (getmenv or getsenv)(Net)._G.SendHitsToServer
+end)
+
+function SendAttack(Cooldown, Args)
+    RegisterAttack:FireServer(Cooldown)
+    if SUCCESS_FLAGS and COMBAT_REMOTE_THREAD and SUCCESS_HIT and HIT_FUNCTION then
+        HIT_FUNCTION(Args[1], Args[2])
+    else
+        RegisterHit:FireServer(Args[1], Args[2])
+    end
+end
+
+getgenv().NoClip = true
+RunService.Stepped:Connect(function()
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("Head") or not char:FindFirstChild("HumanoidRootPart") then return end
+        if getgenv().NoClip then
+            if not char.Head:FindFirstChild("BodyClip") then
+                local bv = Instance.new("BodyVelocity")
+                bv.Name = "BodyClip"
+                bv.Velocity = Vector3.new(0, 0, 0)
+                bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                bv.P = 15000
+                bv.Parent = char.Head
+            end
+            for _, v in ipairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+        end
+    end)
+end)
+
+local StatusUI = {}
+StatusUI.Status = "Initializing..."
+StatusUI.BossName = "N/A"
+StatusUI.QuestCount = 0
+StatusUI.IsActive = true
+
+function StatusUI:Create()
+    pcall(function()
+        if LocalPlayer.PlayerGui:FindFirstChild("RainbowHakiUI") then
+            LocalPlayer.PlayerGui.RainbowHakiUI:Destroy()
+        end
+    end)
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "RainbowHakiUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = LocalPlayer.PlayerGui
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 320, 0, 90)
+    mainFrame.Position = UDim2.new(0.5, -160, 0, 12)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    mainFrame.BackgroundTransparency = 0.15
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(120, 80, 255)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.3
+    stroke.Parent = mainFrame
+
+    local accentBar = Instance.new("Frame")
+    accentBar.Name = "AccentBar"
+    accentBar.Size = UDim2.new(1, 0, 0, 3)
+    accentBar.Position = UDim2.new(0, 0, 0, 0)
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = mainFrame
+
+    local accentCorner = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(0, 10)
+    accentCorner.Parent = accentBar
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 80)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 160, 50)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(50, 255, 130)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(50, 130, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 80, 255))
+    })
+    gradient.Parent = accentBar
+    self._gradient = gradient
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -16, 0, 20)
+    title.Position = UDim2.new(0, 8, 0, 8)
+    title.BackgroundTransparency = 1
+    title.Text = "Rainbow Haki Farm"
+    title.TextColor3 = Color3.fromRGB(230, 230, 255)
+    title.TextSize = 13
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = mainFrame
+
+    local badge = Instance.new("TextLabel")
+    badge.Name = "Badge"
+    badge.Size = UDim2.new(0, 50, 0, 18)
+    badge.Position = UDim2.new(1, -58, 0, 9)
+    badge.BackgroundColor3 = Color3.fromRGB(120, 80, 255)
+    badge.BackgroundTransparency = 0.3
+    badge.Text = "#0"
+    badge.TextColor3 = Color3.fromRGB(255, 255, 255)
+    badge.TextSize = 11
+    badge.Font = Enum.Font.GothamBold
+    badge.Parent = mainFrame
+
+    local badgeCorner = Instance.new("UICorner")
+    badgeCorner.CornerRadius = UDim.new(0, 6)
+    badgeCorner.Parent = badge
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -16, 0, 16)
+    statusLabel.Position = UDim2.new(0, 8, 0, 32)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Status: Initializing..."
+    statusLabel.TextColor3 = Color3.fromRGB(160, 170, 200)
+    statusLabel.TextSize = 11
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    statusLabel.Parent = mainFrame
+
+    local bossLabel = Instance.new("TextLabel")
+    bossLabel.Name = "BossLabel"
+    bossLabel.Size = UDim2.new(1, -16, 0, 16)
+    bossLabel.Position = UDim2.new(0, 8, 0, 50)
+    bossLabel.BackgroundTransparency = 1
+    bossLabel.Text = "Boss: N/A"
+    bossLabel.TextColor3 = Color3.fromRGB(160, 170, 200)
+    bossLabel.TextSize = 11
+    bossLabel.Font = Enum.Font.Gotham
+    bossLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bossLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    bossLabel.Parent = mainFrame
+
+    local dot = Instance.new("Frame")
+    dot.Name = "PulseDot"
+    dot.Size = UDim2.new(0, 8, 0, 8)
+    dot.Position = UDim2.new(0, 8, 0, 72)
+    dot.BackgroundColor3 = Color3.fromRGB(80, 255, 120)
+    dot.BorderSizePixel = 0
+    dot.Parent = mainFrame
+
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = dot
+
+    local activeLabel = Instance.new("TextLabel")
+    activeLabel.Name = "ActiveLabel"
+    activeLabel.Size = UDim2.new(0, 100, 0, 12)
+    activeLabel.Position = UDim2.new(0, 20, 0, 70)
+    activeLabel.BackgroundTransparency = 1
+    activeLabel.Text = "Active"
+    activeLabel.TextColor3 = Color3.fromRGB(80, 255, 120)
+    activeLabel.TextSize = 10
+    activeLabel.Font = Enum.Font.GothamBold
+    activeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    activeLabel.Parent = mainFrame
+
+    self._gui = screenGui
+    self._mainFrame = mainFrame
+    self._statusLabel = statusLabel
+    self._bossLabel = bossLabel
+    self._badge = badge
+    self._dot = dot
+
+    spawn(function()
+        local offset = 0
+        while self._gui and self._gui.Parent do
+            offset = (offset + 0.005) % 1
+            pcall(function()
+                self._gradient.Offset = Vector2.new(offset, 0)
+            end)
+            pcall(function()
+                local alpha = (math.sin(tick() * 3) + 1) / 2
+                self._dot.BackgroundTransparency = alpha * 0.6
+            end)
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+function StatusUI:Update(status, bossName, questCount)
+    if status then self.Status = status end
+    if bossName then self.BossName = bossName end
+    if questCount then self.QuestCount = questCount end
+    pcall(function()
+        if self._statusLabel then
+            self._statusLabel.Text = "Status: " .. self.Status
+        end
+        if self._bossLabel then
+            self._bossLabel.Text = "Boss: " .. self.BossName
+        end
+        if self._badge then
+            self._badge.Text = "#" .. tostring(self.QuestCount)
+        end
+    end)
+end
+
+
+local CurrentTween = nil
+local IsMoving = false
+local MeleeEquipped = false
+local AttackDebounce = 0
+
+local function GetCharacter()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return nil end
+    return char, hrp, hum
+end
+
+local function TweenTo(targetCFrame, speed)
+    speed = speed or 300
+    local char, hrp = GetCharacter()
+    if not char or not hrp then return false end
+
+    if CurrentTween then
+        pcall(function() CurrentTween:Cancel() end)
+        CurrentTween = nil
+    end
+
+    local dist = (hrp.Position - targetCFrame.Position).Magnitude
+    if dist < 10 then
+        hrp.CFrame = targetCFrame
+        return true
+    end
+
+    local tweenTime = math.max(0.3, dist / speed)
+    local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear)
+    IsMoving = true
+    CurrentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    CurrentTween.Completed:Connect(function()
+        IsMoving = false
+        CurrentTween = nil
+    end)
+    CurrentTween:Play()
+    return true
+end
+
+local function StopTween()
+    if CurrentTween then
+        pcall(function() CurrentTween:Cancel() end)
+        CurrentTween = nil
+        IsMoving = false
+    end
+end
+
+local function EquipMelee()
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local currentTool = char:FindFirstChildOfClass("Tool")
+        if currentTool and currentTool.ToolTip == "Melee" then
+            MeleeEquipped = true
+            return
+        end
+        for _, v in pairs(LocalPlayer.Backpack:GetChildren()) do
+            if v:IsA("Tool") and v.ToolTip == "Melee" then
+                char:FindFirstChildOfClass("Humanoid"):EquipTool(v)
+                MeleeEquipped = true
+                return
+            end
+        end
+    end)
+end
+
+local function FastAttackBoss(bossModel)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local weapon = char:FindFirstChildOfClass("Tool")
+    if not weapon or weapon.ToolTip ~= "Melee" then return end
+
+    local currentTime = tick()
+    if currentTime - AttackDebounce < 0.1 then return end
+    AttackDebounce = currentTime
+
+    if not bossModel or not bossModel:FindFirstChild("HumanoidRootPart") then return end
+    if not bossModel:FindFirstChild("Humanoid") or bossModel.Humanoid.Health <= 0 then return end
+
+    local dist = (char.HumanoidRootPart.Position - bossModel.HumanoidRootPart.Position).Magnitude
+    if dist > 60 then return end
+
+    local hitPart = bossModel:FindFirstChild("Head") or bossModel.HumanoidRootPart
+    local hitTargets = {{bossModel, hitPart}}
+
+    pcall(function()
+        SendAttack(0.1, {hitPart, hitTargets})
+    end)
+end
+
+local function AcceptQuest()
+    local args = {"HornedMan", "Bet"}
+    local result = CommF_:InvokeServer(unpack(args))
+    return result
+end
+
+local function GetQuestBossName()
+    local success, bossName = pcall(function()
+        local gui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+        if not gui then return nil end
+        local guide = gui:FindFirstChild("Guide")
+        if not guide then return nil end
+        local leftFrame = guide:FindFirstChild("LeftFrame")
+        if not leftFrame then return nil end
+        local iconFrame = leftFrame:FindFirstChild("IconFrame")
+        if not iconFrame then return nil end
+        local viewport = iconFrame:FindFirstChild("ViewportFrame")
+        if not viewport then return nil end
+        for _, child in pairs(viewport:GetChildren()) do
+            if child:IsA("Model") or child:IsA("BasePart") then
+                return child.Name
+            end
+        end
+        return nil
+    end)
+    if success then return bossName end
+    return nil
+end
+
+local function HasActiveQuest()
+    local success, result = pcall(function()
+        local gui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+        if not gui then return false end
+        local guide = gui:FindFirstChild("Guide")
+        if not guide then return false end
+        return guide.Visible
+    end)
+    return success and result
+end
+
+local function FindBoss(bossName)
+    if not bossName then return nil end
+
+    local enemies = Workspace:FindFirstChild("Enemies")
+    if enemies then
+        local boss = enemies:FindFirstChild(bossName)
+        if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 and boss:FindFirstChild("HumanoidRootPart") then
+            return boss, "Enemies"
+        end
+    end
+
+    local worldOrigin = Workspace:FindFirstChild("_WorldOrigin")
+    if worldOrigin then
+        local enemySpawns = worldOrigin:FindFirstChild("EnemySpawns")
+        if enemySpawns then
+            for _, spawn in pairs(enemySpawns:GetChildren()) do
+                local spawnBossName = spawn.Name:match("^(.-)%s*%[")
+                if spawnBossName and spawnBossName:match("^%s*(.-)%s*$") == bossName then
+                    return spawn, "EnemySpawns"
+                end
+            end
+        end
+    end
+
+    return nil, nil
+end
+
+local function WaitForBossSpawn(bossName, spawnPart)
+    StatusUI:Update("Waiting for " .. bossName .. " to spawn...")
+
+    local timeout = 60
+    local startTime = tick()
+
+    while tick() - startTime < timeout do
+        local enemies = Workspace:FindFirstChild("Enemies")
+        if enemies then
+            local boss = enemies:FindFirstChild(bossName)
+            if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 and boss:FindFirstChild("HumanoidRootPart") then
+                return boss
+            end
+        end
+        task.wait(0.5)
+    end
+    return nil
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    MeleeEquipped = false
+    StopTween()
+    task.wait(3)
+end)
+
+task.wait(3)
+StatusUI:Create()
+StatusUI:Update("Starting...", "N/A", 0)
+
+local questCount = 0
+
+local function MainLoop()
+    while true do
+        local char, hrp, hum = GetCharacter()
+        if not char then
+            StatusUI:Update("Waiting for character...")
+            task.wait(2)
+            continue
+        end
+
+        StatusUI:Update("Accepting quest...", "N/A")
+        AcceptQuest()
+        task.wait(5)
+
+        local bossName = GetQuestBossName()
+        if not bossName then
+            StatusUI:Update("No quest available - Rainbow Haki complete!", "Done ✓")
+            task.wait(5)
+            AcceptQuest()
+            task.wait(5)
+            bossName = GetQuestBossName()
+            if not bossName then
+                StatusUI:Update("🎉 All quests completed!", "Done ✓")
+                break
+            end
+        end
+
+        questCount = questCount + 1
+        StatusUI:Update("Quest accepted!", bossName, questCount)
+        task.wait(1)
+
+        local bossDefeated = false
+
+        while not bossDefeated do
+            char, hrp, hum = GetCharacter()
+            if not char then
+                MeleeEquipped = false
+                StatusUI:Update("Respawning...")
+                task.wait(5)
+                continue
+            end
+
+            local bossEntity, sourceType = FindBoss(bossName)
+
+            if not bossEntity then
+                StatusUI:Update("Searching for " .. bossName .. "...")
+                task.wait(1)
+                continue
+            end
+
+            if sourceType == "EnemySpawns" then
+                StatusUI:Update("Tweening to " .. bossName .. " spawn...")
+                local spawnPos = bossEntity:IsA("Model")
+                    and (bossEntity.PrimaryPart and bossEntity.PrimaryPart.CFrame or bossEntity:GetChildren()[1].CFrame)
+                    or bossEntity.CFrame
+
+                TweenTo(CFrame.new(spawnPos.Position + Vector3.new(0, 50, 0)))
+
+                local bossFound = false
+                while IsMoving do
+                    local enemies = Workspace:FindFirstChild("Enemies")
+                    if enemies then
+                        local liveBoss = enemies:FindFirstChild(bossName)
+                        if liveBoss and liveBoss:FindFirstChild("Humanoid") and liveBoss.Humanoid.Health > 0 and liveBoss:FindFirstChild("HumanoidRootPart") then
+                            StopTween()
+                            bossEntity = liveBoss
+                            sourceType = "Enemies"
+                            bossFound = true
+                            break
+                        end
+                    end
+
+                    char, hrp, hum = GetCharacter()
+                    if not char then
+                        StopTween()
+                        break
+                    end
+                    task.wait(0.3)
+                end
+
+                if not bossFound and not char then continue end
+
+                if not bossFound then
+                    local boss = WaitForBossSpawn(bossName, bossEntity)
+                    if boss then
+                        bossEntity = boss
+                        sourceType = "Enemies"
+                    else
+                        continue
+                    end
+                end
+            end
+
+            if sourceType == "Enemies" and bossEntity and bossEntity:FindFirstChild("Humanoid") and bossEntity.Humanoid.Health > 0 then
+                StatusUI:Update("Fighting " .. bossName .. "!", bossName)
+
+                if not MeleeEquipped then
+                    EquipMelee()
+                end
+
+                while bossEntity and bossEntity.Parent and bossEntity:FindFirstChild("Humanoid") and bossEntity.Humanoid.Health > 0 do
+                    char, hrp, hum = GetCharacter()
+                    if not char then
+                        MeleeEquipped = false
+                        break
+                    end
+
+                    if not char:FindFirstChildOfClass("Tool") or (char:FindFirstChildOfClass("Tool") and char:FindFirstChildOfClass("Tool").ToolTip ~= "Melee") then
+                        EquipMelee()
+                    end
+
+                    local bossHRP = bossEntity:FindFirstChild("HumanoidRootPart")
+                    if bossHRP then
+                        local targetCFrame = bossHRP.CFrame * CFrame.new(0, 50, 0)
+                        local dist = (hrp.Position - bossHRP.Position).Magnitude
+                        if dist > 70 then
+                            TweenTo(targetCFrame)
+                        else
+                            StopTween()
+                            hrp.CFrame = targetCFrame
+                        end
+                    end
+
+
+                    FastAttackBoss(bossEntity)
+
+                    pcall(function()
+                        local hp = math.floor(bossEntity.Humanoid.Health)
+                        local maxHp = math.floor(bossEntity.Humanoid.MaxHealth)
+                        StatusUI:Update("⚔️ " .. bossName .. " [" .. hp .. "/" .. maxHp .. "]")
+                    end)
+
+                    task.wait(0.1)
+                end
+
+                if not bossEntity or not bossEntity.Parent or (bossEntity:FindFirstChild("Humanoid") and bossEntity.Humanoid.Health <= 0) then
+                    bossDefeated = true
+                    StopTween()
+                    StatusUI:Update("✅ " .. bossName .. " defeated!", bossName)
+                end
+            end
+        end
+
+        StatusUI:Update("Waiting for next quest...")
+        task.wait(5)
+    end
+end
+
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local weapon = char:FindFirstChildOfClass("Tool")
+            if not weapon or weapon.ToolTip ~= "Melee" then return end
+
+            for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                    local dist = (char.HumanoidRootPart.Position - enemy.HumanoidRootPart.Position).Magnitude
+                    if dist <= 60 then
+                        local hitPart = enemy:FindFirstChild("Head") or enemy.HumanoidRootPart
+                        SendAttack(0.1, {hitPart, {{enemy, hitPart}}})
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+StatusUI:Update("Script loaded!")
+task.wait(1)
+spawn(MainLoop)
