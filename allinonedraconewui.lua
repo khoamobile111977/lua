@@ -1,4 +1,4 @@
-getgenv().Trade = true
+
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 local lp = game.Players.LocalPlayer
