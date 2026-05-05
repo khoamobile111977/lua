@@ -1,21 +1,21 @@
-
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
 
-if getgenv().Trade then getgenv().Team = "Marines" end
-if not lp.Team then
-    task.spawn(function()
-        while not lp.Team do
-            pcall(function()
-                rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("SetTeam", getgenv().Team or "Pirates")
-            end)
-            task.wait(1)
-        end
-    end)
+if getgenv().Trade then
+    if not lp.Team then
+        task.spawn(function()
+            while not lp.Team do
+                pcall(function()
+                    rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("SetTeam", "Marines")
+                end)
+                task.wait(1)
+            end
+        end)
+    end
+    repeat wait() until lp.Team
 end
-repeat wait() until lp.Team
 local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
