@@ -578,6 +578,18 @@ local function MainLoop()
             while not bossDefeated do
                 if checkInventory("Yama") then State.phase = "completed"; SaveState(); UI:Update("🎉 Yama obtained!"); return end
 
+                -- Check if quest is still active
+                if GetQuestBossName() ~= bossName then
+                    task.wait(1)
+                    if GetQuestBossName() ~= bossName then
+                        StopTween()
+                        UI:Update("❌ Quest lost, hopping...")
+                        task.wait(1)
+                        HopServer()
+                        while true do task.wait(1) end
+                    end
+                end
+
                 c, h = GetChar()
                 if not c then MeleeEquipped = false; UI:Update("Respawning..."); task.wait(5); continue end
 
@@ -596,6 +608,17 @@ local function MainLoop()
                         local found = false
                         local waitStart = tick()
                         while tick() - waitStart < 60 do
+                            -- Check if quest is still active while tweening/waiting
+                            if GetQuestBossName() ~= bossName then
+                                task.wait(1)
+                                if GetQuestBossName() ~= bossName then
+                                    StopTween()
+                                    UI:Update("❌ Quest lost during tween, hopping...")
+                                    task.wait(1)
+                                    HopServer()
+                                    while true do task.wait(1) end
+                                end
+                            end
                             boss = FindBossInEnemies(bossName)
                             if boss then StopTween(); found = true; break end
                             c = GetChar()
