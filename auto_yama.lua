@@ -2,6 +2,7 @@ repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
 task.wait(3)
 getgenv().Team = "Marines"
+getgenv().TweenSpeed = 275 -- Chỉnh tốc độ tween ở đây (mặc định là 300)
 if not game.Players.LocalPlayer.Team then
     game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team)
 end
@@ -114,7 +115,7 @@ local function StopTween()
 end
 
 local function TweenTo(cf, spd)
-    spd = spd or 300
+    spd = spd or getgenv().TweenSpeed or 300
     local c, h = GetChar()
     if not c or not h then return false end
     StopTween()
@@ -774,4 +775,3 @@ UI:Create()
 UI:Update("Script loaded!", "N/A", State.progress, State.phase)
 task.wait(1)
 spawn(MainLoop)
---change
