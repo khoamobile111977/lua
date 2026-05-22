@@ -10,95 +10,99 @@ local RunService = game:GetService("RunService")
 local lp = Players.LocalPlayer
 local rs = ReplicatedStorage
 
--- ===================== NOCLIP + TWEEN TP =====================
-getgenv().Main = getgenv().Main or {}
-Main.CurrentTween = nil
-Main.IsMoving = false
-getgenv().DracoNoClip = getgenv().DracoNoClip or false
-local DracoNoClipConnection
+-- ===================== NOCLIP + SMOOTH TWEEN TP =====================
+local TWEEN_SPEED    = 300  -- studs/giây
+local COLLECT_RADIUS = 15   -- khoảng cách coi là "đã tới nơi"
 
-local function enableDracoNoClip()
-    if DracoNoClipConnection then return end
-    DracoNoClipConnection = RunService.Stepped:Connect(function()
-        pcall(function()
-            if not getgenv().DracoNoClip then return end
-            if not (lp.Character and lp.Character:FindFirstChild("Head") and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
-            if not lp.Character.Head:FindFirstChild("DracoBodyClip") then
-                local bv = Instance.new("BodyVelocity")
-                bv.Name = "DracoBodyClip"
-                bv.Velocity = Vector3.new(0, 0, 0)
-                bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                bv.P = 15000
-                bv.Parent = lp.Character.Head
-            end
-            for _, v in ipairs(lp.Character:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
-            end
-        end)
-    end)
+local IsMoving      = false
+local moveConnection = nil
+local moveTarget    = nil
+
+local function getCharacterParts()
+    local char = lp.Character
+    if not char then return nil, nil, nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return nil, nil, nil end
+    return char, hrp, hum
 end
 
-local function disableDracoNoClip()
-    if lp.Character and lp.Character:FindFirstChild("Head") then
-        local clip = lp.Character.Head:FindFirstChild("DracoBodyClip")
-        if clip then clip:Destroy() end
-        for _, v in ipairs(lp.Character:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-                v.CanCollide = true
-            end
-        end
+local function noclipCharacter()
+    local char = lp.Character
+    if not char then return end
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:IsA("BasePart") then v.CanCollide = false end
     end
 end
 
-enableDracoNoClip()
+RunService.Stepped:Connect(noclipCharacter)
+RunService.Heartbeat:Connect(noclipCharacter)
 
-local function calcpos(a, b)
-    if not a then return math.huge end
-    b = b or (lp.Character and lp.Character.PrimaryPart and lp.Character.PrimaryPart.CFrame) or CFrame.new(0, 0, 0)
-    return (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
+local function cancelTween()
+    if moveConnection then moveConnection:Disconnect(); moveConnection = nil end
+    moveTarget = nil
+    IsMoving   = false
 end
 
-local function TP1(Pos)
-    local char = lp.Character
-    if not char then return false end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum or hum.Health <= 0 then return false end
+local function tweenToPosition(targetPos)
+    local _, hrp, hum = getCharacterParts()
+    if not hrp or not hum then return false end
+    cancelTween()
 
-    getgenv().DracoNoClip = true
-    local DistanceToPos = calcpos(hrp.CFrame, Pos)
-
-    if DistanceToPos <= 100 then
-        if Main.CurrentTween then Main.CurrentTween:Cancel(); Main.CurrentTween = nil end
-        Main.IsMoving = false
-        task.wait(0.1)
-        hrp.CFrame = Pos
-        task.wait(0.1)
-        getgenv().DracoNoClip = false
-        disableDracoNoClip()
+    local dist = (hrp.Position - targetPos).Magnitude
+    if dist <= COLLECT_RADIUS then
+        hrp.CFrame = CFrame.new(targetPos)
         return true
     end
 
-    if Main.CurrentTween then Main.CurrentTween:Cancel() end
-    Main.IsMoving = true
+    IsMoving   = true
+    moveTarget = targetPos
 
-    local tween = TweenService:Create(
-        hrp,
-        TweenInfo.new(math.max(0.3, DistanceToPos / 300), Enum.EasingStyle.Linear),
-        {CFrame = Pos}
-    )
-    tween.Completed:Connect(function()
-        Main.IsMoving = false
-        Main.CurrentTween = nil
-        getgenv().DracoNoClip = false
-        disableDracoNoClip()
+    moveConnection = RunService.Heartbeat:Connect(function(dt)
+        local _, hrpNow, humNow = getCharacterParts()
+        if not hrpNow or not humNow then cancelTween() return end
+        noclipCharacter()
+
+        local currentPos = hrpNow.Position
+        local diff       = moveTarget - currentPos
+        local remaining  = diff.Magnitude
+
+        if remaining <= 3 then
+            hrpNow.CFrame                   = CFrame.new(moveTarget)
+            hrpNow.AssemblyLinearVelocity   = Vector3.zero
+            hrpNow.AssemblyAngularVelocity  = Vector3.zero
+            cancelTween()
+            return
+        end
+
+        local moveAmount = math.min(TWEEN_SPEED * dt, remaining)
+        hrpNow.CFrame                  = CFrame.new(currentPos + diff.Unit * moveAmount)
+        hrpNow.AssemblyLinearVelocity  = Vector3.zero
+        hrpNow.AssemblyAngularVelocity = Vector3.zero
+        noclipCharacter()
     end)
-    Main.CurrentTween = tween
-    hrp.CFrame = CFrame.new(hrp.Position.X, Pos.Y, hrp.Position.Z)
-    tween:Play()
+
     return true
 end
 
+local function waitTweenDone(targetPos, timeout)
+    timeout = timeout or 60
+    local start = tick()
+    while IsMoving and (tick() - start) < timeout do
+        task.wait(0.15)
+    end
+end
+
+-- Wrapper tương thích với phần còn lại của script (thay TP1 cũ)
+local function TP1(Pos)
+    local _, hrp, hum = getCharacterParts()
+    if not hrp or not hum then return false end
+    tweenToPosition(Pos.Position or Vector3.new(Pos.X, Pos.Y, Pos.Z))
+    waitTweenDone(Pos.Position or Vector3.new(Pos.X, Pos.Y, Pos.Z))
+    return true
+end
+
+-- ===================== NPC FINDER + TP =====================
 local function findNPC(npcName)
     for _, container in ipairs({workspace:FindFirstChild("NPCs"), rs:FindFirstChild("NPCs")}) do
         if container then
@@ -115,32 +119,37 @@ end
 local function tpToNPC(npcName)
     local npc = findNPC(npcName)
     if not (npc and npc:FindFirstChild("HumanoidRootPart")) then return false end
-    TP1(CFrame.new(npc.HumanoidRootPart.Position))
-    local char = lp.Character or lp.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    repeat task.wait(0.3) until not Main.IsMoving
-    repeat task.wait(0.3) until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 8
-    return true
+
+    local targetPos = npc.HumanoidRootPart.Position
+    tweenToPosition(targetPos)
+    waitTweenDone(targetPos)
+
+    -- Xác nhận đã đến gần
+    local _, hrp = getCharacterParts()
+    if hrp and (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 8 then
+        return true
+    end
+    return false
 end
 
+-- ===================== BACKPACK CHECK =====================
 local function checkSanguineInBackpack()
     local maxWait = 10
-    local waited = 0
-    local inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
-    local char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-    local inCharacter = char and char:FindFirstChild("Sanguine Art")
-    if inBackpack or inCharacter then return true end
+    local waited  = 0
 
+    local function has()
+        local inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
+        local char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+        local inCharacter = char and char:FindFirstChild("Sanguine Art")
+        return inBackpack or inCharacter
+    end
+
+    if has() then return true end
     while waited < maxWait do
         task.wait(1)
         waited = waited + 1
-
-        inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
-        char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-        inCharacter = char and char:FindFirstChild("Sanguine Art")
-        if inBackpack or inCharacter then return true end
+        if has() then return true end
     end
-
     return false
 end
 
@@ -232,6 +241,7 @@ task.spawn(function()
     end
 end)
 
+-- Drag panel
 local dragging, dragStart, startPos = false, nil, nil
 header.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -248,6 +258,7 @@ header.InputChanged:Connect(function(inp)
     end
 end)
 
+-- ===================== UI HELPERS =====================
 local function setStatus(text, color)
     statusLabel.Text = text
     statusLabel.TextColor3 = color or Color3.fromRGB(220, 200, 210)
@@ -272,6 +283,7 @@ local function setBought(bought)
     end
 end
 
+-- ===================== MAIN LOGIC =====================
 local MAX_RETRY = 3
 
 local function trySanguinePurchase()
@@ -310,7 +322,7 @@ local function buySanguineWithRetry()
             setBought(true)
             game.StarterGui:SetCore("SendNotification", {
                 Title = "Sanguine Art",
-                Text = "Đã mua & xác nhận trong Backpack!",
+                Text  = "Đã mua & xác nhận trong Backpack!",
                 Duration = 5
             })
             return true
@@ -327,7 +339,7 @@ local function buySanguineWithRetry()
     setStatus("❌ Không thể mua sau " .. MAX_RETRY .. " lần thử!", Color3.fromRGB(255, 60, 60))
     game.StarterGui:SetCore("SendNotification", {
         Title = "❌ Sanguine Art",
-        Text = "Không thể mua sau " .. MAX_RETRY .. " lần. Dừng script!",
+        Text  = "Không thể mua sau " .. MAX_RETRY .. " lần. Dừng script!",
         Duration = 8
     })
     return false
@@ -342,10 +354,7 @@ local function checkMaterials()
 end
 
 local SEA3_PLACE_IDS = {[7449423635] = true, [100117331123089] = true}
-
-local function isInSea3()
-    return SEA3_PLACE_IDS[game.PlaceId] == true
-end
+local function isInSea3() return SEA3_PLACE_IDS[game.PlaceId] == true end
 
 local function joinSea3()
     setStatus("🌊 Đang chuyển sang Sea 3...", Color3.fromRGB(255, 100, 200))
@@ -361,10 +370,12 @@ local function joinSea3()
     setStatus("✈️ Đã gửi lệnh join Sea 3...", Color3.fromRGB(80, 200, 255))
 end
 
+-- ===================== ENTRY POINT =====================
 setBought(false)
 setStatus("⏳ Đang kiểm tra nguyên liệu...", Color3.fromRGB(200, 200, 255))
 
 task.spawn(function()
+    -- Chờ đủ nguyên liệu
     while true do
         local result = checkMaterials()
         if result == 0 or result == nil then
@@ -380,6 +391,7 @@ task.spawn(function()
 
     task.wait(1)
 
+    -- Đảm bảo ở Sea 3
     if isInSea3() then
         setStatus("🌊 Đã ở Sea 3! Chuẩn bị mua...", Color3.fromRGB(80, 200, 255))
         task.wait(2)
