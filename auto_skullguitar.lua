@@ -491,6 +491,24 @@ end
 local cfg = loadCfg()
 task.spawn(function()
 
+    -- Ensure player is on a team
+    if not lp.Team then
+        setLog("Joining team (" .. (getgenv().Team or "Marines") .. ")...")
+        repeat
+            pcall(function()
+                RS.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Marines")
+            end)
+            task.wait(1)
+        until lp.Team
+    end
+
+    -- Ensure character is spawned
+    if not (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")) then
+        setLog("Waiting for character spawn...")
+        repeat task.wait(0.5) until lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    end
+    task.wait(1)
+
     -- RESTAT (once per account)
     if not cfg.restatDone then
         setRow("restat","RUNNING",C_WARN)
