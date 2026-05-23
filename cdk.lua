@@ -335,7 +335,7 @@ local function ensureInBackpack(weaponName)
 end
 
 local function executeConfig(configType)
-    getgenv().Key = "261a29dc3b0a9a3f3a54ac0c"
+    getgenv().Key = getgenv().Keybanana
 
     if configType == "FARM_YAMA" then
         updateStatusUI("FARM_YAMA", "Load Yama vào backpack...")
