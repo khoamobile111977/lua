@@ -418,38 +418,70 @@ local function loadWeapon(name)
 end
 
 -- ─────────────────────────────────────────
+-- SERVER BROWSER / TELEPORT
+-- ─────────────────────────────────────────
+local ServerBrowser = RS:WaitForChild("__ServerBrowser")
+local function teleportToServer(jobId)
+    local success, err = pcall(function()
+        ServerBrowser:InvokeServer("teleport", jobId)
+    end)
+    if not success then
+        warn("Teleport failed:", err)
+        return false
+    end
+    return true
+end
+
+-- ─────────────────────────────────────────
 -- ENSURE SKULL GUITAR (loop until found)
 -- ─────────────────────────────────────────
 local function ensureSkullGuitar()
+    setLog("Scanning inventory for Skull Guitar...")
+    if checkInventory("Skull Guitar") then
+        flashRow("sg")
+        setRow("sg", "FOUND", C_OK)
+        setLog("Skull Guitar acquired.")
+        return true
+    end
+
+    setRow("sg", "FARMING", C_WARN)
+    setLed(C_WARN)
+    setLog("Running acquisition config...")
+
+    if getgenv().Keybanana and getgenv().Keybanana ~= "" then
+        getgenv().Key = getgenv().Keybanana
+    end
+
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/getsoulguitar"
+        ))()
+    end)
+
+    if ok then
+        setLog("Config executed. Monitoring...")
+    else
+        setLog("Config err: " .. tostring(err):sub(1,46))
+    end
+
+    -- Monitor inventory without executing the config script repeatedly (avoids lag)
     while true do
-        setLog("Scanning inventory for Skull Guitar...")
+        task.wait(5)
         if checkInventory("Skull Guitar") then
             flashRow("sg")
             setRow("sg", "FOUND", C_OK)
-            setLog("Skull Guitar acquired.")
-            return true
+            setLog("Skull Guitar acquired! Rejoining to change state...")
+            
+            while true do
+                local success = teleportToServer(game.JobId)
+                if success then
+                    setLog("Teleporting to rejoin...")
+                else
+                    setLog("Rejoin failed. Retrying in 10s...")
+                end
+                task.wait(10)
+            end
         end
-
-        setRow("sg", "FARMING", C_WARN)
-        setLed(C_WARN)
-        setLog("Running acquisition config...")
-
-        if getgenv().Keybanana and getgenv().Keybanana ~= "" then
-            getgenv().Key = getgenv().Keybanana
-        end
-
-        local ok, err = pcall(function()
-            loadstring(game:HttpGet(
-                "https://raw.githubusercontent.com/khoamobile111977/config/refs/heads/main/getsoulguitar"
-            ))()
-        end)
-
-        if ok then
-            setLog("Config executed. Verifying...")
-        else
-            setLog("Config err: " .. tostring(err):sub(1,46))
-        end
-        task.wait(6)
     end
 end
 
