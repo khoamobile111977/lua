@@ -440,9 +440,10 @@ end
 
 local function HopServer()
     SaveState()
-    UI:Update("ðŸ” Finding server...", nil, nil, "hop")
+    UI:Update("🔍 Finding server...", nil, nil, "hop")
+    local TeleportService = game:GetService("TeleportService")
 
-    while true do
+    local function getServersFromAPI()
         local servers = {}
         local cursor = ""
         local ok = false
@@ -468,16 +469,84 @@ local function HopServer()
         until cursor == "" or #servers >= 10
 
         if ok and #servers > 0 then
-            local pick = servers[math.random(1, #servers)]
-            UI:Update("ðŸš€ Joining server...", nil, nil, "hop")
-            task.wait(1)
-            pcall(function() ServerBrowser:InvokeServer("teleport", pick.id) end)
-            task.wait(10)
-            return
+            return servers
+        end
+        return nil
+    end
+
+    local function getServersFromBrowser()
+        local collectedServers = {}
+        for page = 1, 100 do
+            local success, data = pcall(function()
+                return ServerBrowser:InvokeServer(page)
+            end)
+
+            if success and type(data) == "table" then
+                for jobId, info in pairs(data) do
+                    if jobId ~= game.JobId and type(info) == "table" then
+                        table.insert(collectedServers, {
+                            id = jobId,
+                            playing = info.Count or 0
+                        })
+                    end
+                end
+                if #collectedServers >= 30 then
+                    break
+                end
+            end
+            task.wait(0.05)
         end
 
-        UI:Update("â³ API limited, retry 30s...", nil, nil, "hop")
-        task.wait(30)
+        if #collectedServers > 0 then
+            table.sort(collectedServers, function(a, b)
+                return a.playing < b.playing
+            end)
+
+            local top10 = {}
+            for i = 1, math.min(10, #collectedServers) do
+                table.insert(top10, collectedServers[i])
+            end
+            return top10
+        end
+        return nil
+    end
+
+    local teleportFailed = false
+    local connection = TeleportService.TeleportInitFailed:Connect(function()
+        teleportFailed = true
+    end)
+
+    while true do
+        local servers = getServersFromAPI()
+        
+        if not servers then
+            UI:Update("⚠️ API Limited, using Fallback...", nil, nil, "hop")
+            servers = getServersFromBrowser()
+        end
+
+        if servers and #servers > 0 then
+            local pick = servers[math.random(1, #servers)]
+            UI:Update("🚀 Joining server...", nil, nil, "hop")
+            
+            teleportFailed = false
+            pcall(function() ServerBrowser:InvokeServer("teleport", pick.id) end)
+            
+            local waitTime = 0
+            while waitTime < 15 do
+                if teleportFailed then break end
+                task.wait(1)
+                waitTime = waitTime + 1
+            end
+            
+            if teleportFailed then
+                UI:Update("❌ Join failed, retrying...", nil, nil, "hop")
+            else
+                UI:Update("⏳ Still in game, finding new server...", nil, nil, "hop")
+            end
+        else
+            UI:Update("❌ No servers found, wait 10s...", nil, nil, "hop")
+            task.wait(10)
+        end
     end
 end
 
