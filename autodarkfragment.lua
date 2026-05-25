@@ -32,7 +32,7 @@ local MAX_DISTANCE = 20000
 local COLLECT_WAIT_TIME = 0.4
 local RESCAN_DELAY = 3
 local MAX_CHEST_BEFORE_HOP = 70
-local HTTP_SERVER_URL = "http://127.0.0.1:9876"
+local WS_SERVER_URL = "ws://127.0.0.1:9876"
 local CHEST_NAMES = {["Chest1"]=true,["Chest2"]=true,["Chest3"]=true,["Chest4"]=true,["Chest5"]=true}
 
 local chestCount = 0
@@ -46,8 +46,6 @@ local queueIndex = 0
 local killCount = 0
 local MeleeEquipped = false
 local AttackDebounce = 0
-
-
 
 local m = require(ReplicatedStorage.Modules.CombatUtil)
 function m.IsGunReloading() return false end
@@ -228,6 +226,41 @@ local function batchScanChests()
     return found
 end
 
+local function IsAlive(model)
+    if not model or not model.Parent then return false end
+    local hum = model:FindFirstChildOfClass("Humanoid") or model:FindFirstChild("Humanoid")
+    local hrp = model:FindFirstChild("HumanoidRootPart")
+    return hum ~= nil and hrp ~= nil and hum.Health > 0
+end
+
+local function FindDarkbeard()
+    local enemies = workspace:FindFirstChild("Enemies")
+    if enemies then
+        local db = enemies:FindFirstChild("Darkbeard")
+        if db and IsAlive(db) then return db end
+    end
+    
+    local dbW = workspace:FindFirstChild("Darkbeard")
+    if dbW and IsAlive(dbW) then return dbW end
+    
+    local rsDb = ReplicatedStorage:FindFirstChild("Darkbeard")
+    if rsDb then return rsDb end
+    
+    return nil
+end
+
+local cachedBossFound = false
+task.spawn(function()
+    while getgenv().DarkFragRunning do
+        cachedBossFound = (FindDarkbeard() ~= nil) or hasFistOfDarkness()
+        task.wait(1.5)
+    end
+end)
+
+local function checkBossInServer()
+    return cachedBossFound
+end
+
 local function tweenAndCollect(chestData)
     local _,hrp,hum = getCharacterParts()
     if not hrp or not hum then return false end
@@ -237,6 +270,10 @@ local function tweenAndCollect(chestData)
     currentTarget = chestData
     tweenToPosition(targetPos)
     while getgenv().DarkFragRunning do
+        if checkBossInServer() then
+            cancelTween()
+            return "boss_found"
+        end
         local char,hrp2,hum2 = getCharacterParts()
         if not char or not hrp2 or not hum2 then cancelTween() return false end
         local chestExists = targetInstance and targetInstance.Parent ~= nil
@@ -264,122 +301,192 @@ local function tweenAndCollect(chestData)
     end
     return false
 end
+
+-- UI Initialization earlier for updates
+if CoreGui:FindFirstChild("DarkFragUI") then CoreGui:FindFirstChild("DarkFragUI"):Destroy() end
+local SG = Instance.new("ScreenGui") SG.Name = "DarkFragUI" SG.ResetOnSpawn = false SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling SG.Parent = CoreGui
+local MF = Instance.new("Frame") MF.Size = UDim2.new(0,240,0,130) MF.Position = UDim2.new(0,15,0.5,-65) MF.BackgroundColor3 = Color3.fromRGB(15,15,25) MF.BackgroundTransparency = 0.15 MF.BorderSizePixel = 0 MF.Parent = SG
+Instance.new("UICorner",MF).CornerRadius = UDim.new(0,10)
+local ms = Instance.new("UIStroke",MF) ms.Color = Color3.fromRGB(180,50,255) ms.Thickness = 1.5 ms.Transparency = 0.3
+local TB = Instance.new("Frame") TB.Size = UDim2.new(1,0,0,28) TB.BackgroundColor3 = Color3.fromRGB(25,25,45) TB.BackgroundTransparency = 0.3 TB.BorderSizePixel = 0 TB.Parent = MF
+Instance.new("UICorner",TB).CornerRadius = UDim.new(0,10)
+local TL = Instance.new("TextLabel") TL.Size = UDim2.new(1,-10,1,0) TL.Position = UDim2.new(0,10,0,0) TL.BackgroundTransparency = 1 TL.Text = "🌑 Dark Fragment Farm" TL.TextColor3 = Color3.fromRGB(180,80,255) TL.TextSize = 13 TL.Font = Enum.Font.GothamBold TL.TextXAlignment = Enum.TextXAlignment.Left TL.Parent = TB
+local CF = Instance.new("Frame") CF.Size = UDim2.new(1,-20,1,-36) CF.Position = UDim2.new(0,10,0,32) CF.BackgroundTransparency = 1 CF.Parent = MF
+local SL = Instance.new("TextLabel") SL.Size = UDim2.new(1,0,0,16) SL.Position = UDim2.new(0,0,0,0) SL.BackgroundTransparency = 1 SL.Text = "Status: Starting..." SL.TextColor3 = Color3.fromRGB(100,255,150) SL.TextSize = 11 SL.Font = Enum.Font.GothamSemibold SL.TextXAlignment = Enum.TextXAlignment.Left SL.Parent = CF
+local CL = Instance.new("TextLabel") CL.Size = UDim2.new(1,0,0,16) CL.Position = UDim2.new(0,0,0,18) CL.BackgroundTransparency = 1 CL.Text = "Chests: 0 | Kills: 0" CL.TextColor3 = Color3.fromRGB(255,215,80) CL.TextSize = 11 CL.Font = Enum.Font.GothamSemibold CL.TextXAlignment = Enum.TextXAlignment.Left CL.Parent = CF
+local FL = Instance.new("TextLabel") FL.Size = UDim2.new(1,0,0,16) FL.Position = UDim2.new(0,0,0,36) FL.BackgroundTransparency = 1 FL.Text = "Fragments: 0/"..getgenv().Lock FL.TextColor3 = Color3.fromRGB(200,100,255) FL.TextSize = 11 FL.Font = Enum.Font.GothamSemibold FL.TextXAlignment = Enum.TextXAlignment.Left FL.Parent = CF
+local PL = Instance.new("TextLabel") PL.Size = UDim2.new(1,0,0,16) PL.Position = UDim2.new(0,0,0,54) PL.BackgroundTransparency = 1 PL.Text = "Phase: Init" PL.TextColor3 = Color3.fromRGB(150,130,255) PL.TextSize = 11 PL.Font = Enum.Font.Gotham PL.TextXAlignment = Enum.TextXAlignment.Left PL.Parent = CF
+local DL = Instance.new("TextLabel") DL.Size = UDim2.new(1,0,0,16) DL.Position = UDim2.new(0,0,0,72) DL.BackgroundTransparency = 1 DL.Text = "Target: --" DL.TextColor3 = Color3.fromRGB(160,160,180) DL.TextSize = 10 DL.Font = Enum.Font.Gotham DL.TextXAlignment = Enum.TextXAlignment.Left DL.Parent = CF
+
+local dragging,dragStart,startPos
+TB.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = MF.Position
+    end
+end)
+TB.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MF.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+    end
+end)
+
+local function updateUI(status,phase,extra)
+    pcall(function()
+        if status then SL.Text = "Status: "..status end
+        CL.Text = "Chests: "..chestCount.." | Kills: "..killCount
+        local fragCount = getItemCount("Dark Fragment")
+        FL.Text = "Fragments: "..fragCount.."/"..getgenv().Lock
+        if phase then PL.Text = "Phase: "..phase end
+        if extra then DL.Text = extra end
+    end)
+end
+
 local function teleportToServer(jobId)
     local success = pcall(function() ServerBrowser:InvokeServer("teleport", jobId) end)
     return success
 end
 
-local function hopServer()
-    local cursor = ""
-    local suitableServers = {}
-    local attempts = 0
-    -- sortOrder=Asc → page đầu tiên đã chứa server ít người nhất
-    -- Chỉ cần 1-2 page là đủ, không cần spam API nhiều lần
-    local maxAttempts = 2
-
-    repeat
-        attempts = attempts + 1
-        if not getgenv().DarkFragRunning then return false end
-
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet(
-                "https://games.roblox.com/v1/games/" .. game.PlaceId
-                .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. cursor
-            ))
-        end)
-
-        if success and result and type(result) == "table" and result.data and type(result.data) == "table" then
-            for _, server in pairs(result.data) do
-                -- Lọc: server >= 1 và <= 9 người, không phải server hiện tại
-                if type(server) == "table" and server.playing and server.id
-                   and server.playing >= 1 and server.playing <= 9
-                   and server.id ~= game.JobId then
-                    table.insert(suitableServers, server)
+-- WEBSOCKET LOGIC
+local ws = nil
+local function connectWS()
+    pcall(function()
+        if ws then ws:Close() end
+        ws = WebSocket.connect(WS_SERVER_URL)
+        ws.OnMessage:Connect(function(msg)
+            local success, data = pcall(function() return HttpService:JSONDecode(msg) end)
+            if success and data and data.type == "signal" and data.jobId and data.jobId ~= game.JobId then
+                if data.playerCount and data.playerCount < 12 then
+                    updateUI("Join signal! JobId: "..string.sub(data.jobId,1,6), "JOINING")
+                    teleportToServer(data.jobId)
+                else
+                    warn("[WS] Server full ("..tostring(data.playerCount).."/12), skipping signal.")
                 end
             end
-            cursor = result.nextPageCursor or ""
-            -- Đủ 10 server rồi thì dừng luôn, không fetch thêm
-            if #suitableServers >= 10 then cursor = "" end
-        else
-            warn("[HopServer] API error, waiting 3s...")
+        end)
+        ws.OnClose:Connect(function()
             task.wait(3)
-            break
-        end
-    until cursor == "" or attempts >= maxAttempts or not getgenv().DarkFragRunning
-
-    if not getgenv().DarkFragRunning then return false end
-
-    if #suitableServers == 0 then
-        warn("[HopServer] No suitable servers found (<=9 players), waiting 30s...")
-        task.wait(30)
-        return false
-    end
-
-    -- sortOrder=Asc đã trả về ít người trước, sort tăng dần để join ít người nhất
-    table.sort(suitableServers, function(a, b) return a.playing < b.playing end)
-
-    warn("[HopServer] Found " .. #suitableServers .. " servers, joining least populated (players: " .. suitableServers[1].playing .. ")")
-    teleportToServer(suitableServers[1].id)
-    task.wait(10)
-
-    -- Nếu teleport fail, thử server tiếp theo
-    local tried = 1
-    while getgenv().DarkFragRunning and tried < math.min(5, #suitableServers) do
-        tried = tried + 1
-        warn("[HopServer] Trying fallback server #" .. tried .. " (players: " .. suitableServers[tried].playing .. ")")
-        teleportToServer(suitableServers[tried].id)
-        task.wait(10)
-    end
-
-    warn("[HopServer] All hop attempts exhausted")
-    return false
+            if getgenv().DarkFragRunning then connectWS() end
+        end)
+    end)
 end
+task.spawn(connectWS)
 
-local function postJobIdToServer(action)
+local function sendSignal(action)
     pcall(function()
-        request({
-            Url = HTTP_SERVER_URL .. "/darkbeard",
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode({jobId = game.JobId, action = action, player = Player.Name})
-        })
+        if ws then
+            local data = {
+                type = "signal",
+                action = action,
+                jobId = game.JobId,
+                playerCount = #Players:GetPlayers(),
+                player = Player.Name
+            }
+            ws:Send(HttpService:JSONEncode(data))
+        end
     end)
 end
 
-local function getDarkbeardServers()
+-- SERVER HOPPING LOGIC
+local function getServersFromAPI()
     local servers = {}
-    pcall(function()
-        local resp = request({
-            Url = HTTP_SERVER_URL .. "/darkbeard",
-            Method = "GET",
-            Headers = {["Content-Type"] = "application/json"}
-        })
-        if resp and resp.Body then
-            servers = HttpService:JSONDecode(resp.Body)
+    local cursor = ""
+    local maxAttempts = 2
+    local attempts = 0
+    repeat
+        attempts = attempts + 1
+        local s, r = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(
+                "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. cursor
+            ))
+        end)
+        if s and r and type(r) == "table" and r.data then
+            for _, sv in pairs(r.data) do
+                if type(sv) == "table" and sv.playing and sv.id and sv.playing >= 1 and sv.playing <= 9 and sv.id ~= game.JobId then
+                    table.insert(servers, sv)
+                    if #servers >= 10 then break end
+                end
+            end
+            cursor = r.nextPageCursor or ""
+        else
+            cursor = ""
         end
-    end)
-    return servers
+    until cursor == "" or #servers >= 10 or attempts >= maxAttempts
+    if #servers > 0 then return servers end
+    return nil
 end
 
-local function IsAlive(model)
-    if not model or not model.Parent then return false end
-    local hum = model:FindFirstChildOfClass("Humanoid") or model:FindFirstChild("Humanoid")
-    local hrp = model:FindFirstChild("HumanoidRootPart")
-    return hum ~= nil and hrp ~= nil and hum.Health > 0
-end
-
-local function FindDarkbeard()
-    local enemies = workspace:FindFirstChild("Enemies")
-    if enemies then
-        local db = enemies:FindFirstChild("Darkbeard")
-        if IsAlive(db) then return db end
+local function getServersFromBrowser()
+    local collectedServers = {}
+    for page = 1, 100 do
+        local success, data = pcall(function()
+            return ServerBrowser:InvokeServer(page)
+        end)
+        if success and type(data) == "table" then
+            for jobId, info in pairs(data) do
+                if jobId ~= game.JobId and type(info) == "table" then
+                    table.insert(collectedServers, { id = jobId, playing = info.Count or 0 })
+                end
+            end
+            if #collectedServers >= 30 then break end
+        end
+        task.wait(0.05)
     end
-    local dbW = workspace:FindFirstChild("Darkbeard")
-    if IsAlive(dbW) then return dbW end
-    for _,obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "Darkbeard" and obj:IsA("Model") and IsAlive(obj) then return obj end
+    if #collectedServers > 0 then
+        local filtered = {}
+        for _, sv in ipairs(collectedServers) do
+            if sv.playing >= 1 and sv.playing <= 9 then table.insert(filtered, sv) end
+        end
+        table.sort(filtered, function(a, b) return a.playing < b.playing end)
+        local top10 = {}
+        for i = 1, math.min(10, #filtered) do table.insert(top10, filtered[i]) end
+        return top10
     end
     return nil
+end
+
+local function hopServer()
+    updateUI("🔍 Finding server...", "HOPPING")
+    local TeleportService = game:GetService("TeleportService")
+    local teleportFailed = false
+    local connection = TeleportService.TeleportInitFailed:Connect(function()
+        teleportFailed = true
+    end)
+
+    while getgenv().DarkFragRunning do
+        local servers = getServersFromAPI()
+        if not servers or #servers == 0 then
+            updateUI("⚠️ API Limited, using Fallback...", "HOPPING")
+            servers = getServersFromBrowser()
+        end
+
+        if servers and #servers > 0 then
+            local pick = servers[math.random(1, #servers)]
+            updateUI("🚀 Joining server...", "HOPPING")
+            teleportFailed = false
+            pcall(function() ServerBrowser:InvokeServer("teleport", pick.id) end)
+            
+            local waitTime = 0
+            while waitTime < 15 and getgenv().DarkFragRunning do
+                if teleportFailed then break end
+                task.wait(1)
+                waitTime = waitTime + 1
+            end
+            
+            if teleportFailed then
+                updateUI("❌ Join failed, retrying...", "HOPPING")
+            else
+                updateUI("⏳ Still in game, finding new server...", "HOPPING")
+            end
+        else
+            updateUI("❌ No servers found, wait 10s...", "HOPPING")
+            task.wait(10)
+        end
+    end
+    if connection then connection:Disconnect() end
 end
 
 local function EquipMelee()
@@ -441,7 +548,7 @@ local function tweenToSummoner()
 end
 
 local function farmDarkbeard()
-    postJobIdToServer("add")
+    sendSignal("darkbeard_found")
     spawn(function()
         while getgenv().DarkFragRunning do
             pcall(function()
@@ -473,97 +580,42 @@ local function farmDarkbeard()
         end
         if not MeleeEquipped then EquipMelee() task.wait(0.5) end
         local db = FindDarkbeard()
-        if not db then
-            postJobIdToServer("remove")
-            return false
-        end
-        while IsAlive(db) and getgenv().DarkFragRunning do
+        if not db then return false end
+        while db and db.Parent and (db.Parent == ReplicatedStorage or IsAlive(db)) and getgenv().DarkFragRunning do
             c,hrp,hum = getCharacterParts()
             if not c then MeleeEquipped = false task.wait(5) break end
             local cur = c:FindFirstChildOfClass("Tool")
             if not cur or cur.ToolTip ~= "Melee" then EquipMelee() task.wait(0.2) end
+            
             local bHRP = db:FindFirstChild("HumanoidRootPart")
             if bHRP then
                 local dist = (hrp.Position - bHRP.Position).Magnitude
                 local target = bHRP.CFrame * CFrame.new(0, 55, 0)
                 if dist > 70 then
-                    tweenToPosition(target.Position)
+                    if not moveTarget or (moveTarget - target.Position).Magnitude > 20 then
+                        tweenToPosition(target.Position)
+                    end
                 else
                     cancelTween()
                     hrp.CFrame = target
                 end
             end
-            AttackBoss(db)
+            
+            if db.Parent ~= ReplicatedStorage then
+                AttackBoss(db)
+            end
+            
             task.wait(0.08)
         end
-        if not IsAlive(db) then
+        if not db or not db.Parent or (db.Parent ~= ReplicatedStorage and not IsAlive(db)) then
             killCount = killCount + 1
             cancelTween()
             task.wait(5)
         end
         local db2 = FindDarkbeard()
-        if not db2 then
-            postJobIdToServer("remove")
-            return true
-        end
-    end
-    postJobIdToServer("remove")
-    return false
-end
-local function tryJoinDarkbeardServer()
-    local servers = getDarkbeardServers()
-    if type(servers) == "table" then
-        for _,s in ipairs(servers) do
-            if s.jobId and s.jobId ~= game.JobId then
-                teleportToServer(s.jobId)
-                task.wait(10)
-                return true
-            end
-        end
+        if not db2 then return true end
     end
     return false
-end
-
-if CoreGui:FindFirstChild("DarkFragUI") then CoreGui:FindFirstChild("DarkFragUI"):Destroy() end
-local SG = Instance.new("ScreenGui") SG.Name = "DarkFragUI" SG.ResetOnSpawn = false SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling SG.Parent = CoreGui
-local MF = Instance.new("Frame") MF.Size = UDim2.new(0,240,0,130) MF.Position = UDim2.new(0,15,0.5,-65) MF.BackgroundColor3 = Color3.fromRGB(15,15,25) MF.BackgroundTransparency = 0.15 MF.BorderSizePixel = 0 MF.Parent = SG
-Instance.new("UICorner",MF).CornerRadius = UDim.new(0,10)
-local ms = Instance.new("UIStroke",MF) ms.Color = Color3.fromRGB(180,50,255) ms.Thickness = 1.5 ms.Transparency = 0.3
-local TB = Instance.new("Frame") TB.Size = UDim2.new(1,0,0,28) TB.BackgroundColor3 = Color3.fromRGB(25,25,45) TB.BackgroundTransparency = 0.3 TB.BorderSizePixel = 0 TB.Parent = MF
-Instance.new("UICorner",TB).CornerRadius = UDim.new(0,10)
-local TL = Instance.new("TextLabel") TL.Size = UDim2.new(1,-10,1,0) TL.Position = UDim2.new(0,10,0,0) TL.BackgroundTransparency = 1 TL.Text = "ðŸŒ‘ Dark Fragment Farm" TL.TextColor3 = Color3.fromRGB(180,80,255) TL.TextSize = 13 TL.Font = Enum.Font.GothamBold TL.TextXAlignment = Enum.TextXAlignment.Left TL.Parent = TB
-local CF = Instance.new("Frame") CF.Size = UDim2.new(1,-20,1,-36) CF.Position = UDim2.new(0,10,0,32) CF.BackgroundTransparency = 1 CF.Parent = MF
-local SL = Instance.new("TextLabel") SL.Size = UDim2.new(1,0,0,16) SL.Position = UDim2.new(0,0,0,0) SL.BackgroundTransparency = 1 SL.Text = "Status: Starting..." SL.TextColor3 = Color3.fromRGB(100,255,150) SL.TextSize = 11 SL.Font = Enum.Font.GothamSemibold SL.TextXAlignment = Enum.TextXAlignment.Left SL.Parent = CF
-local CL = Instance.new("TextLabel") CL.Size = UDim2.new(1,0,0,16) CL.Position = UDim2.new(0,0,0,18) CL.BackgroundTransparency = 1 CL.Text = "Chests: 0 | Kills: 0" CL.TextColor3 = Color3.fromRGB(255,215,80) CL.TextSize = 11 CL.Font = Enum.Font.GothamSemibold CL.TextXAlignment = Enum.TextXAlignment.Left CL.Parent = CF
-local FL = Instance.new("TextLabel") FL.Size = UDim2.new(1,0,0,16) FL.Position = UDim2.new(0,0,0,36) FL.BackgroundTransparency = 1 FL.Text = "Fragments: 0/"..getgenv().Lock FL.TextColor3 = Color3.fromRGB(200,100,255) FL.TextSize = 11 FL.Font = Enum.Font.GothamSemibold FL.TextXAlignment = Enum.TextXAlignment.Left FL.Parent = CF
-local PL = Instance.new("TextLabel") PL.Size = UDim2.new(1,0,0,16) PL.Position = UDim2.new(0,0,0,54) PL.BackgroundTransparency = 1 PL.Text = "Phase: Init" PL.TextColor3 = Color3.fromRGB(150,130,255) PL.TextSize = 11 PL.Font = Enum.Font.Gotham PL.TextXAlignment = Enum.TextXAlignment.Left PL.Parent = CF
-local DL = Instance.new("TextLabel") DL.Size = UDim2.new(1,0,0,16) DL.Position = UDim2.new(0,0,0,72) DL.BackgroundTransparency = 1 DL.Text = "Target: --" DL.TextColor3 = Color3.fromRGB(160,160,180) DL.TextSize = 10 DL.Font = Enum.Font.Gotham DL.TextXAlignment = Enum.TextXAlignment.Left DL.Parent = CF
-
-local dragging,dragStart,startPos
-TB.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MF.Position
-    end
-end)
-TB.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
-end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MF.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
-    end
-end)
-
-local function updateUI(status,phase,extra)
-    pcall(function()
-        if status then SL.Text = "Status: "..status end
-        CL.Text = "Chests: "..chestCount.." | Kills: "..killCount
-        local fragCount = getItemCount("Dark Fragment")
-        FL.Text = "Fragments: "..fragCount.."/"..getgenv().Lock
-        if phase then PL.Text = "Phase: "..phase end
-        if extra then DL.Text = extra end
-    end)
 end
 
 local vu = game:GetService("VirtualUser")
@@ -599,6 +651,7 @@ task.spawn(function()
             updateUI("DONE! "..fragCount.." fragments","COMPLETE")
             getgenv().DarkFragRunning = false
             cancelTween()
+            if ws then pcall(function() ws:Close() end) end
             return
         end
 
@@ -614,11 +667,6 @@ task.spawn(function()
             continue
         end
 
-        if tryJoinDarkbeardServer() then
-            task.wait(10)
-            continue
-        end
-
         Phase = "CHESTING"
         chestCount = 0
         updateUI("Auto Chest...","CHESTING")
@@ -628,15 +676,19 @@ task.spawn(function()
             if fragNow >= getgenv().Lock then
                 updateUI("DONE!","COMPLETE")
                 getgenv().DarkFragRunning = false
+                if ws then pcall(function() ws:Close() end) end
                 return
             end
 
-            if hasFistOfDarkness() then
+            if checkBossInServer() then
                 Phase = "SUMMONING"
-                updateUI("Fist of Darkness found!","SUMMONING","Tweening to Summoner...")
-                cancelTween()
-                tweenToSummoner()
-                task.wait(5)
+                if hasFistOfDarkness() then
+                    sendSignal("fist_found")
+                    updateUI("Fist of Darkness found!","SUMMONING","Tweening to Summoner...")
+                    cancelTween()
+                    tweenToSummoner()
+                    task.wait(5)
+                end
                 Phase = "FARMING"
                 updateUI("Farming Darkbeard...","FARMING")
                 farmDarkbeard()
@@ -663,10 +715,15 @@ task.spawn(function()
                 continue
             end
 
+            local bossFoundInLoop = false
             for idx=1,#chestQueue do
                 if not getgenv().DarkFragRunning then break end
                 if chestCount >= MAX_CHEST_BEFORE_HOP then break end
-                if hasFistOfDarkness() then break end
+                if checkBossInServer() then
+                    bossFoundInLoop = true
+                    break
+                end
+                
                 queueIndex = idx
                 local chest = chestQueue[idx]
                 local _,hrp2 = getCharacterParts()
@@ -696,13 +753,37 @@ task.spawn(function()
                 if not chest.instance or not chest.instance.Parent then continue end
                 if not hasTouch(chest.instance) then continue end
                 updateUI("Tweening","CHESTING","Target: "..chest.name.." #"..queueIndex)
-                tweenAndCollect(chest)
+                
+                local result = tweenAndCollect(chest)
+                if result == "boss_found" then
+                    bossFoundInLoop = true
+                    break
+                end
                 updateUI("Collected","CHESTING","Chests: "..chestCount)
             end
+            
+            if bossFoundInLoop then
+                Phase = "SUMMONING"
+                if hasFistOfDarkness() then
+                    sendSignal("fist_found")
+                    updateUI("Fist of Darkness found!","SUMMONING","Tweening to Summoner...")
+                    cancelTween()
+                    tweenToSummoner()
+                    task.wait(5)
+                end
+                Phase = "FARMING"
+                updateUI("Farming Darkbeard...","FARMING")
+                farmDarkbeard()
+                updateUI("Darkbeard killed, hopping...","HOPPING")
+                task.wait(3)
+                hopServer()
+                break
+            end
+            
             task.wait(1)
         end
 
-        if getgenv().DarkFragRunning and chestCount >= MAX_CHEST_BEFORE_HOP and not hasFistOfDarkness() then
+        if getgenv().DarkFragRunning and chestCount >= MAX_CHEST_BEFORE_HOP and not checkBossInServer() then
             Phase = "HOPPING"
             updateUI("70 chests, no Fist. Hopping...","HOPPING")
             hopServer()
