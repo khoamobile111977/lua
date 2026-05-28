@@ -3,13 +3,13 @@ repeat wait() until game.Players and game.Players.LocalPlayer
 repeat wait() until game.Players.LocalPlayer.Team
 task.wait(5)
 
-local Players          = game:GetService("Players")
+local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService     = game:GetService("TweenService")
-local RunService       = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local lp               = Players.LocalPlayer
-local rs               = ReplicatedStorage
+local TweenService      = game:GetService("TweenService")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local lp                = Players.LocalPlayer
+local rs                = ReplicatedStorage
 
 -- ╔══════════════════════════════════════════╗
 -- ║        NOCLIP + SMOOTH TWEEN TP          ║
@@ -95,14 +95,6 @@ local function waitTweenDone(targetPos, timeout)
     end
 end
 
-local function TP1(Pos)
-    local _, hrp, hum = getCharacterParts()
-    if not hrp or not hum then return false end
-    tweenToPosition(Pos.Position or Vector3.new(Pos.X, Pos.Y, Pos.Z))
-    waitTweenDone(Pos.Position or Vector3.new(Pos.X, Pos.Y, Pos.Z))
-    return true
-end
-
 -- ╔══════════════════════════════════════════╗
 -- ║            NPC FINDER + TP               ║
 -- ╚══════════════════════════════════════════╝
@@ -140,59 +132,70 @@ local function checkSanguineInBackpack()
     local waited  = 0
 
     local function has()
-        local inBackpack = lp.Backpack:FindFirstChild("Sanguine Art")
-        local char = workspace:FindFirstChild("Characters") and workspace.Characters:FindFirstChild(lp.Name) or lp.Character
+        local inBackpack  = lp.Backpack:FindFirstChild("Sanguine Art")
+        local char        = (workspace:FindFirstChild("Characters") and
+                             workspace.Characters:FindFirstChild(lp.Name)) or lp.Character
         local inCharacter = char and char:FindFirstChild("Sanguine Art")
         return inBackpack or inCharacter
     end
 
     if has() then return true end
     while waited < maxWait do
-        task.wait(1)
-        waited = waited + 1
+        task.wait(1); waited = waited + 1
         if has() then return true end
     end
     return false
 end
 
+-- ╔══════════════════════════════════════════╗
+-- ║            SERVER REJOIN                 ║
+-- ╚══════════════════════════════════════════╝
+local ServerBrowser = rs:WaitForChild("__ServerBrowser")
+
+local function teleportToServer(jobId)
+    local ok, err = pcall(function()
+        ServerBrowser:InvokeServer("teleport", jobId)
+    end)
+    if not ok then warn("[Sanguine] Teleport failed:", err) end
+    return ok
+end
+
+-- Rejoin chính server hiện tại (dùng khi Shafi không tìm thấy)
+local function rejoinCurrentServer()
+    local jobId = game.JobId
+    if jobId == "" then
+        warn("[Sanguine] JobId rỗng — không thể rejoin!")
+        return false
+    end
+    return teleportToServer(jobId)
+end
+
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║                     MODERN GLASS UI                             ║
 -- ╚══════════════════════════════════════════════════════════════════╝
-
--- Xoá GUI cũ nếu có
 if game.CoreGui:FindFirstChild("SanguineUI") then
     game.CoreGui.SanguineUI:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name             = "SanguineUI"
-screenGui.ResetOnSpawn     = false
-screenGui.IgnoreGuiInset   = true
-screenGui.ZIndexBehavior   = Enum.ZIndexBehavior.Sibling
-screenGui.Parent           = game.CoreGui
+screenGui.Name           = "SanguineUI"
+screenGui.ResetOnSpawn   = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent         = game.CoreGui
 
--- ── Main Panel (glass card) ──────────────────────────────────────
+-- ── Main Panel ──────────────────────────────────────────────────
 local panel = Instance.new("Frame")
-panel.Name                  = "Panel"
-panel.Size                  = UDim2.new(0, 320, 0, 160)
-panel.Position              = UDim2.new(0.5, -160, 1, -176)
-panel.BackgroundColor3      = Color3.fromRGB(6, 4, 14)
+panel.Name                   = "Panel"
+panel.Size                   = UDim2.new(0, 320, 0, 168)
+panel.Position               = UDim2.new(0.5, -160, 1, -184)
+panel.BackgroundColor3       = Color3.fromRGB(6, 4, 14)
 panel.BackgroundTransparency = 0.28
-panel.BorderSizePixel       = 0
-panel.ClipsDescendants      = true
-panel.Parent                = screenGui
+panel.BorderSizePixel        = 0
+panel.ClipsDescendants       = true
+panel.Parent                 = screenGui
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
 
--- Noise overlay (grain texture giả bằng nhiều chấm nhỏ mờ)
-local grain = Instance.new("Frame")
-grain.Size                   = UDim2.new(1, 0, 1, 0)
-grain.BackgroundColor3       = Color3.fromRGB(255, 255, 255)
-grain.BackgroundTransparency = 0.97
-grain.BorderSizePixel        = 0
-grain.ZIndex                 = 0
-grain.Parent                 = panel
-
--- Glow viền
 local outerGlow = Instance.new("Frame")
 outerGlow.Size                   = UDim2.new(1, 6, 1, 6)
 outerGlow.Position               = UDim2.new(0, -3, 0, -3)
@@ -203,14 +206,12 @@ outerGlow.ZIndex                 = 0
 outerGlow.Parent                 = panel
 Instance.new("UICorner", outerGlow).CornerRadius = UDim.new(0, 17)
 
--- UIStroke viền trong
 local stroke = Instance.new("UIStroke", panel)
-stroke.Color        = Color3.fromRGB(200, 45, 70)
-stroke.Thickness    = 1.2
-stroke.Transparency = 0.35
+stroke.Color           = Color3.fromRGB(200, 45, 70)
+stroke.Thickness       = 1.2
+stroke.Transparency    = 0.35
 stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- Shimmer bar trên cùng
 local shimmer = Instance.new("Frame")
 shimmer.Size                   = UDim2.new(0.35, 0, 0, 1)
 shimmer.Position               = UDim2.new(0.1, 0, 0, 0)
@@ -220,19 +221,19 @@ shimmer.BorderSizePixel        = 0
 shimmer.Parent                 = panel
 Instance.new("UICorner", shimmer).CornerRadius = UDim.new(1, 0)
 
--- ── Header row ──────────────────────────────────────────────────
+-- ── Header ──────────────────────────────────────────────────────
 local headerRow = Instance.new("Frame")
 headerRow.Size                   = UDim2.new(1, 0, 0, 36)
 headerRow.BackgroundTransparency = 1
 headerRow.BorderSizePixel        = 0
 headerRow.Parent                 = panel
 
-local dot = Instance.new("Frame")      -- live indicator dot
-dot.Size                   = UDim2.new(0, 7, 0, 7)
-dot.Position               = UDim2.new(0, 14, 0.5, -3)
-dot.BackgroundColor3       = Color3.fromRGB(220, 50, 70)
-dot.BorderSizePixel        = 0
-dot.Parent                 = headerRow
+local dot = Instance.new("Frame")
+dot.Size             = UDim2.new(0, 7, 0, 7)
+dot.Position         = UDim2.new(0, 14, 0.5, -3)
+dot.BackgroundColor3 = Color3.fromRGB(220, 50, 70)
+dot.BorderSizePixel  = 0
+dot.Parent           = headerRow
 Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
 local title = Instance.new("TextLabel")
@@ -246,7 +247,7 @@ title.TextColor3             = Color3.fromRGB(255, 255, 255)
 title.TextXAlignment         = Enum.TextXAlignment.Left
 title.Parent                 = headerRow
 
-local badge = Instance.new("TextLabel")   -- tag version/label nhỏ
+local badge = Instance.new("TextLabel")
 badge.Size                   = UDim2.new(0, 58, 0, 18)
 badge.Position               = UDim2.new(1, -70, 0.5, -9)
 badge.BackgroundColor3       = Color3.fromRGB(185, 30, 55)
@@ -268,7 +269,7 @@ divider.BackgroundTransparency = 0.65
 divider.BorderSizePixel        = 0
 divider.Parent                 = panel
 
--- ── Status area ─────────────────────────────────────────────────
+-- ── Status ──────────────────────────────────────────────────────
 local statusIcon = Instance.new("TextLabel")
 statusIcon.Size                   = UDim2.new(0, 20, 0, 20)
 statusIcon.Position               = UDim2.new(0, 12, 0, 44)
@@ -291,7 +292,7 @@ statusLabel.TextWrapped            = true
 statusLabel.TextXAlignment         = Enum.TextXAlignment.Left
 statusLabel.Parent                 = panel
 
--- ── Bottom row: result tag + retry tag ─────────────────────────
+-- ── Bottom tags ─────────────────────────────────────────────────
 local resultTag = Instance.new("TextLabel")
 resultTag.Size                   = UDim2.new(0, 148, 0, 22)
 resultTag.Position               = UDim2.new(0, 12, 0, 90)
@@ -305,10 +306,8 @@ resultTag.TextColor3             = Color3.fromRGB(180, 170, 190)
 resultTag.TextXAlignment         = Enum.TextXAlignment.Left
 resultTag.TextTruncate           = Enum.TextTruncate.AtEnd
 resultTag.Parent                 = panel
-local rtCorner = Instance.new("UICorner", resultTag)
-rtCorner.CornerRadius = UDim.new(0, 5)
-local rtPad = Instance.new("UIPadding", resultTag)
-rtPad.PaddingLeft = UDim.new(0, 7)
+Instance.new("UICorner", resultTag).CornerRadius = UDim.new(0, 5)
+local rtPad = Instance.new("UIPadding", resultTag); rtPad.PaddingLeft = UDim.new(0, 7)
 
 local retryTag = Instance.new("TextLabel")
 retryTag.Size                   = UDim2.new(0, 138, 0, 22)
@@ -323,12 +322,10 @@ retryTag.TextColor3             = Color3.fromRGB(255, 175, 80)
 retryTag.TextXAlignment         = Enum.TextXAlignment.Left
 retryTag.TextTruncate           = Enum.TextTruncate.AtEnd
 retryTag.Parent                 = panel
-local rrCorner = Instance.new("UICorner", retryTag)
-rrCorner.CornerRadius = UDim.new(0, 5)
-local rrPad = Instance.new("UIPadding", retryTag)
-rrPad.PaddingLeft = UDim.new(0, 7)
+Instance.new("UICorner", retryTag).CornerRadius = UDim.new(0, 5)
+local rrPad = Instance.new("UIPadding", retryTag); rrPad.PaddingLeft = UDim.new(0, 7)
 
--- ── Progress bar ────────────────────────────────────────────────
+-- ── Progress / Countdown bar ─────────────────────────────────────
 local barBg = Instance.new("Frame")
 barBg.Size                   = UDim2.new(1, -24, 0, 3)
 barBg.Position               = UDim2.new(0, 12, 0, 122)
@@ -339,25 +336,43 @@ barBg.Parent                 = panel
 Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
 
 local barFill = Instance.new("Frame")
-barFill.Size                   = UDim2.new(0.5, 0, 1, 0)
-barFill.BackgroundColor3       = Color3.fromRGB(210, 45, 70)
-barFill.BorderSizePixel        = 0
-barFill.Parent                 = barBg
+barFill.Size             = UDim2.new(0.5, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(210, 45, 70)
+barFill.BorderSizePixel  = 0
+barFill.Parent           = barBg
 Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
 
--- ── Countdown bar (xuất hiện khi chờ 60s) ───────────────────────
+-- ── Countdown row ────────────────────────────────────────────────
+local cdRow = Instance.new("Frame")
+cdRow.Size                   = UDim2.new(1, -24, 0, 18)
+cdRow.Position               = UDim2.new(0, 12, 0, 130)
+cdRow.BackgroundTransparency = 1
+cdRow.BorderSizePixel        = 0
+cdRow.Parent                 = panel
+
+-- Icon cử động (ẩn khi không dùng)
+local moveIcon = Instance.new("TextLabel")
+moveIcon.Size                   = UDim2.new(0, 18, 1, 0)
+moveIcon.BackgroundTransparency = 1
+moveIcon.Text                   = "⚡"
+moveIcon.Font                   = Enum.Font.GothamBold
+moveIcon.TextSize               = 10
+moveIcon.TextColor3             = Color3.fromRGB(255, 190, 60)
+moveIcon.Visible                = false
+moveIcon.Parent                 = cdRow
+
 local cdLabel = Instance.new("TextLabel")
-cdLabel.Size                   = UDim2.new(1, -24, 0, 14)
-cdLabel.Position               = UDim2.new(0, 12, 0, 130)
+cdLabel.Size                   = UDim2.new(1, -20, 1, 0)
+cdLabel.Position               = UDim2.new(0, 20, 0, 0)
 cdLabel.BackgroundTransparency = 1
 cdLabel.Text                   = ""
 cdLabel.Font                   = Enum.Font.Gotham
 cdLabel.TextSize               = 9
 cdLabel.TextColor3             = Color3.fromRGB(160, 145, 170)
-cdLabel.TextXAlignment         = Enum.TextXAlignment.Right
-cdLabel.Parent                 = panel
+cdLabel.TextXAlignment         = Enum.TextXAlignment.Left
+cdLabel.Parent                 = cdRow
 
--- ── Heartbeat dot animation ─────────────────────────────────────
+-- ── Animations ───────────────────────────────────────────────────
 task.spawn(function()
     while true do
         TweenService:Create(dot, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {BackgroundTransparency = 0.85}):Play()
@@ -367,7 +382,6 @@ task.spawn(function()
     end
 end)
 
--- Bar pulse
 task.spawn(function()
     while true do
         TweenService:Create(barFill, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.55}):Play()
@@ -377,10 +391,9 @@ task.spawn(function()
     end
 end)
 
--- Shimmer sweep
 task.spawn(function()
     while true do
-        TweenService:Create(shimmer, TweenInfo.new(0, Enum.EasingStyle.Linear), {Position = UDim2.new(-0.4, 0, 0, 0), BackgroundTransparency = 0.5}):Play()
+        TweenService:Create(shimmer, TweenInfo.new(0), {Position = UDim2.new(-0.4, 0, 0, 0), BackgroundTransparency = 0.5}):Play()
         task.wait(0)
         TweenService:Create(shimmer, TweenInfo.new(2.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(1.1, 0, 0, 0), BackgroundTransparency = 1}):Play()
         task.wait(3.5)
@@ -391,9 +404,7 @@ end)
 local dragging, dragStart, startPos = false, nil, nil
 headerRow.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-        dragging  = true
-        dragStart = inp.Position
-        startPos  = panel.Position
+        dragging = true; dragStart = inp.Position; startPos = panel.Position
         inp.Changed:Connect(function()
             if inp.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
@@ -419,49 +430,179 @@ local STATE_COLOR = {
 
 local function setStatus(text, state)
     local col = STATE_COLOR[state] or STATE_COLOR.idle
-    statusLabel.Text      = text
+    statusLabel.Text       = text
     statusLabel.TextColor3 = col
     statusIcon.TextColor3  = col
     print("[Sanguine] " .. text)
 end
 
 local function setResult(text, state)
-    local col = STATE_COLOR[state] or STATE_COLOR.idle
     resultTag.Text       = "STATUS  ·  " .. text
-    resultTag.TextColor3 = col
+    resultTag.TextColor3 = STATE_COLOR[state] or STATE_COLOR.idle
 end
 
 local function setRetry(text)
     retryTag.Text = text ~= "" and ("RETRY  ·  " .. text) or ""
 end
 
-local function setBarState(success)
-    local col = success and Color3.fromRGB(60, 230, 120) or Color3.fromRGB(210, 45, 70)
-    TweenService:Create(barFill, TweenInfo.new(0.4), {BackgroundColor3 = col}):Play()
-    TweenService:Create(stroke,  TweenInfo.new(0.4), {Color = col}):Play()
+local function setBarState(ok)
+    local col = ok and Color3.fromRGB(60, 230, 120) or Color3.fromRGB(210, 45, 70)
+    TweenService:Create(barFill,   TweenInfo.new(0.4), {BackgroundColor3 = col}):Play()
+    TweenService:Create(stroke,    TweenInfo.new(0.4), {Color = col}):Play()
     TweenService:Create(outerGlow, TweenInfo.new(0.4), {BackgroundColor3 = col}):Play()
-    TweenService:Create(dot,     TweenInfo.new(0.4), {BackgroundColor3 = col}):Play()
+    TweenService:Create(dot,       TweenInfo.new(0.4), {BackgroundColor3 = col}):Play()
 end
 
 local function flashSuccess()
     setBarState(true)
-    TweenService:Create(panel, TweenInfo.new(0.2), {BackgroundTransparency = 0.1}):Play()
-    task.wait(0.3)
-    TweenService:Create(panel, TweenInfo.new(0.5), {BackgroundTransparency = 0.28}):Play()
+    TweenService:Create(panel, TweenInfo.new(0.2), {BackgroundTransparency = 0.08}):Play()
+    task.wait(0.35)
+    TweenService:Create(panel, TweenInfo.new(0.6), {BackgroundTransparency = 0.28}):Play()
+end
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║            IDLE MOVEMENT DETECTOR                               ║
+-- ║  Theo dõi HumanoidRootPart.Position mỗi 0.5s                   ║
+-- ║  Nếu di chuyển > MOVE_THRESHOLD → gọi onMoved()                ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+local MOVE_THRESHOLD     = 1.5   -- studs — ngưỡng coi là "đã cử động"
+local _moveWatchActive   = false
+local _moveWatchCallback = nil
+local _moveWatchConn     = nil
+local _lastWatchPos      = nil
+
+local function startMoveWatch(callback)
+    _moveWatchCallback = callback
+    _moveWatchActive   = true
+
+    local _, hrp = getCharacterParts()
+    _lastWatchPos = hrp and hrp.Position or Vector3.zero
+
+    if _moveWatchConn then _moveWatchConn:Disconnect() end
+
+    _moveWatchConn = RunService.Heartbeat:Connect(function()
+        if not _moveWatchActive then return end
+        local _, hrpNow = getCharacterParts()
+        if not hrpNow then return end
+
+        local dist = (hrpNow.Position - _lastWatchPos).Magnitude
+        if dist > MOVE_THRESHOLD then
+            _lastWatchPos = hrpNow.Position   -- cập nhật để không spam
+            if _moveWatchCallback then
+                _moveWatchCallback()
+            end
+        end
+    end)
+end
+
+local function stopMoveWatch()
+    _moveWatchActive = false
+    if _moveWatchConn then _moveWatchConn:Disconnect(); _moveWatchConn = nil end
+    _moveWatchCallback = nil
 end
 
 -- ╔══════════════════════════════════════════╗
 -- ║            MAIN LOGIC                    ║
 -- ╚══════════════════════════════════════════╝
-local MAX_RETRY = 3
+local MAX_RETRY    = 3
+local IDLE_SECONDS = 60
 
+local function checkMaterials()
+    local result
+    pcall(function()
+        result = rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("BuySanguineArt", true)
+    end)
+    return result
+end
+
+local SEA3_PLACE_IDS = {[7449423635] = true, [100117331123089] = true}
+local function isInSea3() return SEA3_PLACE_IDS[game.PlaceId] == true end
+
+local function joinSea3()
+    setStatus("Đang chuyển sang Sea 3...", "info")
+    if not lp.Team then
+        pcall(function()
+            rs.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates")
+        end)
+        repeat task.wait() until lp.Team
+    end
+    pcall(function()
+        rs.Remotes.CommF_:InvokeServer("TravelZou")
+    end)
+    setStatus("Đã gửi lệnh join Sea 3...", "info")
+    setResult("TRAVELING", "info")
+end
+
+-- ── Idle Countdown (reset khi nhân vật cử động) ──────────────────
+-- Trả về true nếu đếm đủ 60s mà không bị interrupt,
+-- trả về false nếu bị cử động reset (caller sẽ loop lại).
+local function waitIdleCountdown()
+    local timeLeft   = IDLE_SECONDS
+    local wasReset   = false
+
+    -- Khi phát hiện cử động → reset timer
+    startMoveWatch(function()
+        if timeLeft > 0 then
+            wasReset  = true
+            timeLeft  = IDLE_SECONDS   -- reset về 60
+            moveIcon.Visible = true
+            TweenService:Create(moveIcon, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+            task.delay(1.2, function()
+                TweenService:Create(moveIcon, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+                task.wait(0.4)
+                moveIcon.Visible = false
+            end)
+            setResult("RESET", "warn")
+            print("[Sanguine] Cử động phát hiện — reset countdown!")
+        end
+    end)
+
+    while timeLeft > 0 do
+        setStatus(
+            (wasReset and "Đã reset · " or "") ..
+            "Idle " .. timeLeft .. "s — giữ nguyên để mua...",
+            "warn"
+        )
+        cdLabel.Text = "auto-buy in  " .. timeLeft .. "s"
+        local pct = timeLeft / IDLE_SECONDS
+        TweenService:Create(barFill, TweenInfo.new(0.85, Enum.EasingStyle.Linear), {
+            Size = UDim2.new(pct, 0, 1, 0)
+        }):Play()
+        task.wait(1)
+        timeLeft = timeLeft - 1
+    end
+
+    stopMoveWatch()
+    cdLabel.Text     = ""
+    moveIcon.Visible = false
+    return true   -- đếm xong
+end
+
+-- ── Purchase + NPC-not-found rejoin ──────────────────────────────
 local function trySanguinePurchase()
-    setStatus("Đang tween đến NPC Shafi...", "warn")
+    setStatus("Tween đến NPC Shafi...", "warn")
     setResult("MOVING", "warn")
+
     if not tpToNPC("Shafi") then
-        setStatus("Không tìm thấy NPC Shafi!", "error")
-        setResult("NPC ERR", "error")
-        return false
+        -- Shafi không tìm thấy → rejoin cùng server
+        setStatus("Không thấy Shafi — rejoin server...", "error")
+        setResult("REJOINING", "error")
+
+        local jobId = game.JobId
+        if jobId ~= "" then
+            local ok = rejoinCurrentServer()
+            if ok then
+                setStatus("Đã gửi lệnh rejoin (JobId: " .. jobId:sub(1,8) .. "...)", "info")
+                setResult("REJOINING", "info")
+            else
+                setStatus("Rejoin thất bại!", "error")
+                setResult("REJOIN ERR", "error")
+            end
+        else
+            setStatus("JobId trống — không rejoin được!", "error")
+            setResult("NO JOB ID", "error")
+        end
+        return false   -- dừng attempt này
     end
 
     task.wait(2)
@@ -481,7 +622,8 @@ local function buySanguineWithRetry()
 
         local sent = trySanguinePurchase()
         if not sent then
-            setRetry("NPC not found — aborted")
+            -- NPC không thấy → rejoin đã được gọi bên trong → dừng vòng lặp
+            setRetry("NPC not found — rejoined")
             return false
         end
 
@@ -510,7 +652,7 @@ local function buySanguineWithRetry()
         end
     end
 
-    setRetry("Max retries reached")
+    setRetry("max retries")
     setStatus("Không thể mua sau " .. MAX_RETRY .. " lần!", "error")
     setResult("FAILED", "error")
     game.StarterGui:SetCore("SendNotification", {
@@ -521,82 +663,38 @@ local function buySanguineWithRetry()
     return false
 end
 
-local function checkMaterials()
-    local result
-    pcall(function()
-        result = rs:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer("BuySanguineArt", true)
-    end)
-    return result
-end
-
-local SEA3_PLACE_IDS = {[7449423635] = true, [100117331123089] = true}
-local function isInSea3() return SEA3_PLACE_IDS[game.PlaceId] == true end
-
-local function joinSea3()
-    setStatus("Đang chuyển sang Sea 3...", "info")
-    if not lp.Team then
-        pcall(function()
-            rs.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Pirates")
-        end)
-        repeat task.wait() until lp.Team
-    end
-    pcall(function()
-        rs.Remotes.CommF_:InvokeServer("TravelZou")
-    end)
-    setStatus("Đã gửi lệnh join Sea 3...", "info")
-    setResult("TRAVELING", "info")
-end
-
 -- ╔══════════════════════════════════════════════════════════════╗
 -- ║                     ENTRY POINT                             ║
 -- ║                                                             ║
 -- ║  result == 0  →  Đủ nguyên liệu → mua ngay                 ║
--- ║  result == 1  →  Thiếu 1 phần   → chờ idle 60s → mua       ║
--- ║  khác         →  tiếp tục poll mỗi 5s                       ║
+-- ║  result == 1  →  Idle 60s (reset nếu cử động) → mua        ║
+-- ║  khác         →  poll lại mỗi 5s                            ║
 -- ╚══════════════════════════════════════════════════════════════╝
 setResult("INIT", "idle")
 setStatus("Đang kiểm tra nguyên liệu...", "idle")
 
 task.spawn(function()
-    local shouldBuy  = false
-    local idleWait   = false
+    local shouldBuy = false
 
     -- ── Poll nguyên liệu ──────────────────────────────────────
     while not shouldBuy do
         local result = checkMaterials()
 
         if result == 0 then
-            -- Đủ nguyên liệu → mua ngay
             setStatus("Nguyên liệu đã đủ — chuẩn bị mua!", "success")
             setResult("READY", "success")
             shouldBuy = true
 
         elseif result == 1 then
-            -- Thiếu nhẹ → đứng im 60s rồi mua
-            if not idleWait then
-                idleWait = true
-                setResult("IDLE WAIT", "warn")
+            -- Bắt đầu idle countdown; nếu bị reset thì vòng while ngoài
+            -- sẽ gọi checkMaterials() lại và rơi vào nhánh này tiếp.
+            setResult("IDLE WAIT", "warn")
+            waitIdleCountdown()        -- block ở đây cho đến khi đủ 60s
 
-                local IDLE_SECONDS = 60
-                for i = IDLE_SECONDS, 1, -1 do
-                    setStatus(
-                        "result=1 · chờ idle " .. i .. "s rồi sẽ mua...",
-                        "warn"
-                    )
-                    cdLabel.Text = "auto-buy in  " .. i .. "s"
-                    -- Cập nhật bar fill width theo thời gian còn lại
-                    local pct = i / IDLE_SECONDS
-                    TweenService:Create(barFill, TweenInfo.new(0.9, Enum.EasingStyle.Linear), {
-                        Size = UDim2.new(pct, 0, 1, 0)
-                    }):Play()
-                    task.wait(1)
-                end
-
-                cdLabel.Text = ""
-                setStatus("Hết thời gian chờ — tiến hành mua!", "success")
-                setResult("READY", "success")
-                shouldBuy = true
-            end
+            -- Sau 60s idle xong → mua
+            setStatus("Idle hoàn tất — tiến hành mua!", "success")
+            setResult("READY", "success")
+            shouldBuy = true
 
         elseif result == nil then
             setStatus("Chờ kết nối remote...", "idle")
@@ -604,7 +702,6 @@ task.spawn(function()
             task.wait(5)
 
         else
-            -- Kết quả khác (string mô tả thiếu nguyên liệu, v.v.)
             local info = tostring(result)
             setStatus("Chờ nguyên liệu...\n" .. info:sub(1, 60), "warn")
             setResult("MISSING", "warn")
@@ -626,8 +723,7 @@ task.spawn(function()
 
         local waited = 0
         while not isInSea3() and waited < 60 do
-            task.wait(1)
-            waited = waited + 1
+            task.wait(1); waited = waited + 1
             setStatus("Chờ vào Sea 3... (" .. waited .. "s)", "idle")
         end
 
@@ -636,7 +732,6 @@ task.spawn(function()
             setResult("SEA 3 ERR", "error")
             return
         end
-
         task.wait(3)
     end
 
