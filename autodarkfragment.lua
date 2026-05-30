@@ -26,7 +26,7 @@ local ServerBrowser = ReplicatedStorage:WaitForChild("__ServerBrowser")
 getgenv().Lock = getgenv().Lock or 10
 getgenv().DarkFragRunning = true
 
-local TWEEN_SPEED = 300
+local TWEEN_SPEED = 275
 local COLLECT_RADIUS = 15
 local MAX_DISTANCE = 20000
 local COLLECT_WAIT_TIME = 0.4
