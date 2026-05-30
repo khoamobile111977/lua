@@ -912,6 +912,31 @@ local function waitForTradeCountdown()
     task.wait(3)
 end
 
+local function filterByLockPrice(fruits)
+    if not getgenv().LockFruit then return fruits end
+    local lockPrices = {}
+    if type(getgenv().LockFruit) == "number" then
+        lockPrices[getgenv().LockFruit] = true
+    elseif type(getgenv().LockFruit) == "table" then
+        for _, p in ipairs(getgenv().LockFruit) do lockPrices[p] = true end
+    end
+    local locked = {}
+    for _, f in ipairs(fruits) do
+        if lockPrices[f.price] then
+            table.insert(locked, f)
+        end
+    end
+    return #locked > 0 and locked or fruits
+end
+
+local function refreshSortedFruits()
+    local inv = getTradeInventory()
+    if not inv then return nil end
+    local fruits = sortFruitsByPrice(inv)
+    if #fruits == 0 then return nil end
+    return filterByLockPrice(fruits)
+end
+
 local function autoTrade()
     local inventory = getTradeInventory()
     if not inventory then return false end
@@ -919,23 +944,8 @@ local function autoTrade()
     local sortedFruits = sortFruitsByPrice(inventory)
     if #sortedFruits == 0 then return false end
 
-    if getgenv().LockFruit and type(getgenv().LockFruit) == "table" and #getgenv().LockFruit > 0 then
-        local lockPrices = {}
-        for _, p in ipairs(getgenv().LockFruit) do lockPrices[p] = true end
-        local priority, normal = {}, {}
-        for _, f in ipairs(sortedFruits) do
-            if lockPrices[f.price] then
-                table.insert(priority, f)
-            else
-                table.insert(normal, f)
-            end
-        end
-        if #priority > 0 then
-            sortedFruits = {}
-            for _, f in ipairs(priority) do table.insert(sortedFruits, f) end
-            for _, f in ipairs(normal) do table.insert(sortedFruits, f) end
-        end
-    end
+    -- Áp dụng bộ lọc LockFruit
+    sortedFruits = filterByLockPrice(sortedFruits)
 
     local addedItemIds = {} -- track itemId đã add để remove đúng
 
@@ -946,12 +956,9 @@ local function autoTrade()
         addRetry = addRetry + 1
         if addRetry > 1 then
             task.wait(0.5)
-            -- Refresh inventory để lấy lại danh sách mới nhất
-            local newInv = getTradeInventory()
-            if newInv then
-                local newFruits = sortFruitsByPrice(newInv)
-                if #newFruits > 0 then sortedFruits = newFruits end
-            end
+            -- Refresh inventory + lọc lại LockFruit
+            local newFruits = refreshSortedFruits()
+            if newFruits then sortedFruits = newFruits end
         end
         currentIndex, addedFruit = addLowestAvailableFruit(sortedFruits, 1)
     until currentIndex or addRetry >= 10 or not getgenv().FullyBelt3Running
@@ -984,11 +991,9 @@ local function autoTrade()
             -- Chưa add được → thử fruit tiếp theo (không quay lại fruit cũ đã bị reject)
             scanIndex = scanIndex + 1
             if scanIndex > #sortedFruits then
-                local newInv = getTradeInventory()
-                if newInv then
-                    local newFruits = sortFruitsByPrice(newInv)
-                    if #newFruits > 0 then sortedFruits = newFruits end
-                end
+                -- Refresh inventory + lọc lại LockFruit
+                local newFruits = refreshSortedFruits()
+                if newFruits then sortedFruits = newFruits end
                 scanIndex = 1
             end
             local fruit = sortedFruits[scanIndex]
@@ -1033,13 +1038,10 @@ local function autoTrade()
                     if removeSuccess then task.wait(0.5) end
                 end
                 currentIndex = currentIndex + 1
-                -- Nếu hết list → wrap lại từ đầu với inventory mới
+                -- Nếu hết list → wrap lại từ đầu với inventory mới + lọc LockFruit
                 if currentIndex > #sortedFruits then
-                    local newInv = getTradeInventory()
-                    if newInv then
-                        local newFruits = sortFruitsByPrice(newInv)
-                        if #newFruits > 0 then sortedFruits = newFruits end
-                    end
+                    local newFruits = refreshSortedFruits()
+                    if newFruits then sortedFruits = newFruits end
                     currentIndex = 1
                 end
                 -- Retry add nếu bị từ chối
