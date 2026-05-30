@@ -135,7 +135,7 @@ local function Tweento(cf, customSpeed)
     if not c then return end
     _tweenTick = tick()
     hm:SetStateEnabled(5, false)
-    if GetDist(cf, nil, true) <= 50 then
+    if GetDist(cf, nil, true) <= 15 then
         if _tweenObj then _tweenObj:Cancel() end
         c.PrimaryPart.CFrame = cf
         _ncPart.CFrame = cf
