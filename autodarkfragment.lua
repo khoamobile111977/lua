@@ -1,13 +1,13 @@
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
-task.wait(3)
+task.wait(5)
 if not game.Players.LocalPlayer.Team then
     game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
 end
 
 repeat task.wait()
 until game.Players.LocalPlayer.Team
-task.wait(3)
+task.wait(2)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
