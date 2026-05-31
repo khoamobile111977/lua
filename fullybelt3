@@ -47,8 +47,13 @@ _ncPart.Parent = workspace
 
 local _tweenObj, _tweenTick = nil, tick()
 
+local function isTweening()
+    return _tweenObj and _tweenObj.PlaybackState == Enum.PlaybackState.Playing
+end
+
 RunService.RenderStepped:Connect(function()
     pcall(function()
+        if not isTweening() then return end
         local c = lp.Character
         if not c or not c.PrimaryPart then return end
         if c.Head:FindFirstChild("BodyVelocity") then
@@ -65,7 +70,7 @@ RunService.Stepped:Connect(function()
     pcall(function()
         local c = lp.Character
         if not c then return end
-        if getgenv().NoClip then
+        if getgenv().NoClip and isTweening() then
             for _, v in ipairs(c:GetDescendants()) do
                 if v:IsA("BasePart") then v.CanCollide = false end
             end
@@ -84,18 +89,19 @@ end)
 spawn(function()
     while task.wait() do
         pcall(function()
-            if _tweenObj and _tweenObj.PlaybackState == Enum.PlaybackState.Playing then
+            if isTweening() then
                 local c = lp.Character
                 if not c then return end
                 for _, v in next, c:GetDescendants() do
                     if v:IsA("BasePart") then v.CanCollide = false end
                 end
-            elseif _tweenObj and tick() - _tweenTick >= 2 then
+            else
                 pcall(function()
-                    lp.Character.Humanoid:ChangeState()
-                    lp.Character.Humanoid:SetStateEnabled(5, true)
-                    local bv = lp.Character.Head:FindFirstChild("BodyVelocity")
-                    if bv then bv:Destroy() end
+                    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+                        lp.Character.Humanoid:SetStateEnabled(5, true)
+                        local bv = lp.Character.Head:FindFirstChild("BodyVelocity")
+                        if bv then bv:Destroy() end
+                    end
                 end)
             end
         end)
