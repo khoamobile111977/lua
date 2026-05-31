@@ -1,5 +1,6 @@
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
+task.wait(3)
 local lp = game.Players.LocalPlayer
 local rs = game.ReplicatedStorage
 
@@ -15,6 +16,7 @@ if getgenv().Trade then
         end)
     end
     repeat wait() until lp.Team
+    task.wait(3)
 end
 local ts = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
