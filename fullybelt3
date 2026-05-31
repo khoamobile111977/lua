@@ -135,7 +135,7 @@ local function Tweento(cf, customSpeed)
     if not c then return end
     _tweenTick = tick()
     hm:SetStateEnabled(5, false)
-    if GetDist(cf, nil, true) <= 15 then
+    if GetDist(cf, nil, true) <= 50 then
         if _tweenObj then _tweenObj:Cancel() end
         c.PrimaryPart.CFrame = cf
         _ncPart.CFrame = cf
@@ -1183,10 +1183,35 @@ function buyDragonTalon()
     local function tpToNPC(npcName)
         local npc = findNPC(npcName)
         if npc and npc:FindFirstChild("HumanoidRootPart") then
-            TP1(CFrame.new(npc.HumanoidRootPart.Position))
-            local char = lp.Character or lp.CharacterAdded:Wait()
-            local hrp  = char:WaitForChild("HumanoidRootPart")
-            repeat task.wait() until (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 5
+            local targetPos = npc.HumanoidRootPart.Position
+            local targetCFrame = CFrame.new(targetPos)
+            
+            TP1(targetCFrame)
+            
+            while task.wait() do
+                local char = lp.Character
+                if not char then break end
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if not hrp then break end
+                
+                local dist = (hrp.Position - targetPos).Magnitude
+                if dist <= 3 then break end
+                
+                if not _tweenObj or _tweenObj.PlaybackState ~= Enum.PlaybackState.Playing then
+                    TP1(targetCFrame)
+                end
+            end
+            
+            local char = lp.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    if _tweenObj then _tweenObj:Cancel() end
+                    hrp.CFrame = targetCFrame
+                    if _ncPart then _ncPart.CFrame = targetCFrame end
+                end
+            end
+            
             return true
         end
         return false
