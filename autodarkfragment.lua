@@ -47,6 +47,44 @@ local killCount = 0
 local MeleeEquipped = false
 local AttackDebounce = 0
 
+
+local function ensureTeamSelected()
+    if not Player.Team then
+        local success = pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Marines")
+        end)
+        if success then
+            repeat task.wait() until Player.Team
+            task.wait(0.5)
+        end
+    end
+end
+
+local function joinSea2()
+    ensureTeamSelected()
+    
+    local success = pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelDressrosa")
+    end)
+    
+    if success then
+        print("Đang tham gia Sea 2...")
+    else
+        print("Lỗi: Không thể join Sea 2!")
+    end
+end
+
+local currentPlaceId = game.PlaceId
+
+if currentPlaceId ~= 4442272183 and currentPlaceId ~= 79091703265657 then
+    joinSea2()
+    return 
+end
+
+
+
+
+
 local m = require(ReplicatedStorage.Modules.CombatUtil)
 function m.IsGunReloading() return false end
 function m:CanAttack() return true end
