@@ -22,6 +22,7 @@ local lp              = Players.LocalPlayer
 local rs              = game:GetService("ReplicatedStorage")
 local playerName      = lp.Name
 local stateFile       = playerName .. "_dracoflow.json"
+local TweenSpeed = 275
 
 local vu = game:GetService("VirtualUser")
 lp.Idled:Connect(function()
@@ -662,7 +663,7 @@ function TP1(targetPos)
 
     local tween = TweenService:Create(
         hrp,
-        TweenInfo.new(math.max(0.3, d / 300), Enum.EasingStyle.Linear),
+        TweenInfo.new(math.max(0.3, d / TweenSpeed), Enum.EasingStyle.Linear),
         { CFrame = target }
     )
     tween.Completed:Connect(function()
