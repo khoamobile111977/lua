@@ -32,133 +32,6 @@ local stateFile       = playerName .. "_fullytodojo.json"
 local localServerFile = "draco_localserver_" .. tostring(game.PlaceId) .. ".json"
 
 -- ============================================================
---  TWEEN & NOCLIP UTILITIES
--- ============================================================
-local TWEEN_SPEED = 275
-getgenv().NoClip = true
-
-local _ncPart = Instance.new("Part")
-_ncPart.Name = "n_TweenPart"
-_ncPart.Size = Vector3.new(1, 1, 1)
-_ncPart.Transparency = 1
-_ncPart.CanCollide = false
-_ncPart.Anchored = true
-_ncPart.Parent = workspace
-
-local _tweenObj, _tweenTick = nil, tick()
-
-local function isTweening()
-    return _tweenObj and _tweenObj.PlaybackState == Enum.PlaybackState.Playing
-end
-
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if not isTweening() then return end
-        local c = lp.Character
-        if not c or not c.PrimaryPart then return end
-        if c.Head:FindFirstChild("BodyVelocity") then
-            if (_ncPart.Position - c.PrimaryPart.Position).Magnitude <= 200 then
-                c.PrimaryPart.CFrame = _ncPart.CFrame
-            else
-                _ncPart.CFrame = c.PrimaryPart.CFrame
-            end
-        end
-    end)
-end)
-
-RunService.Stepped:Connect(function()
-    pcall(function()
-        local c = lp.Character
-        if not c then return end
-        if getgenv().NoClip and isTweening() then
-            for _, v in ipairs(c:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
-            end
-            if not c.Head:FindFirstChild("BodyVelocity") then
-                local bv = Instance.new("BodyVelocity")
-                bv.Name = "BodyVelocity"
-                bv.Velocity = Vector3.new(0, 0, 0)
-                bv.P = 1500
-                bv.MaxForce = Vector3.new(10000, 10000, 10000)
-                bv.Parent = c.Head
-            end
-        end
-    end)
-end)
-
-spawn(function()
-    while task.wait() do
-        pcall(function()
-            if isTweening() then
-                local c = lp.Character
-                if not c then return end
-                for _, v in next, c:GetDescendants() do
-                    if v:IsA("BasePart") then v.CanCollide = false end
-                end
-            else
-                pcall(function()
-                    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-                        lp.Character.Humanoid:SetStateEnabled(5, true)
-                        local bv = lp.Character.Head:FindFirstChild("BodyVelocity")
-                        if bv then bv:Destroy() end
-                    end
-                end)
-            end
-        end)
-    end
-end)
-
-local function GetChar()
-    local c = lp.Character
-    if not c then return nil end
-    local h = c:FindFirstChild("HumanoidRootPart")
-    local hm = c:FindFirstChildOfClass("Humanoid")
-    if not h or not hm or hm.Health <= 0 then return nil end
-    return c, h, hm
-end
-
-local function GetDist(pos1, pos2, noY)
-    if not pos1 then return 9e9 end
-    local c = lp.Character
-    if not c or not c:FindFirstChild("HumanoidRootPart") then return 9e9 end
-    local function toV3(x)
-        if typeof(x) == "Vector3" then return x
-        elseif typeof(x) == "CFrame" then return x.Position
-        elseif typeof(x) == "Instance" then
-            if x:IsA("Model") then return x:GetPivot().Position end
-            return x.Position
-        end
-        return Vector3.new()
-    end
-    local p1 = toV3(pos1)
-    local p2 = pos2 and toV3(pos2) or c.HumanoidRootPart.Position
-    if noY then p1 = Vector3.new(p1.X, 0, p1.Z); p2 = Vector3.new(p2.X, 0, p2.Z) end
-    return (p1 - p2).Magnitude
-end
-
-local function Tweento(cf, customSpeed)
-    local c, h, hm = GetChar()
-    if not c then return end
-    _tweenTick = tick()
-    hm:SetStateEnabled(5, false)
-    if GetDist(cf, nil, true) <= 50 then
-        if _tweenObj then _tweenObj:Cancel() end
-        c.PrimaryPart.CFrame = cf
-        _ncPart.CFrame = cf
-        return
-    end
-    local t = CFrame.new(cf.X, cf.Y, cf.Z)
-    local spd = customSpeed or TWEEN_SPEED
-    _tweenObj = TweenService:Create(
-        _ncPart,
-        TweenInfo.new(GetDist(t, nil, true) / spd, Enum.EasingStyle.Linear),
-        {CFrame = t}
-    )
-    _tweenObj:Play()
-end
-
-
--- ============================================================
 --  UI
 -- ============================================================
 pcall(function()
@@ -1182,43 +1055,80 @@ function buyDragonTalon()
     end
 
     local function TP1(Pos)
-        Tweento(Pos)
+        local char = lp.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum or hum.Health <= 0 then return end
+
+        local DistanceToPos = calcpos(hrp.CFrame, Pos)
+
+        if DistanceToPos <= 100 then
+            wait(0.1)
+            hrp.CFrame = Pos
+            return true
+        end
+
+        local Speed  = 275
+        local twTime = math.max(0.3, DistanceToPos / Speed)
+        local twInfo = TweenInfo.new(twTime, Enum.EasingStyle.Linear)
+        local tween  = game:GetService("TweenService"):Create(hrp, twInfo, { CFrame = Pos })
+        tween:Play()
+        hrp.CFrame = CFrame.new(hrp.Position.X, Pos.Y, hrp.Position.Z)
         return true
     end
 
     local function tpToNPC(npcName)
         local npc = findNPC(npcName)
         if npc and npc:FindFirstChild("HumanoidRootPart") then
-            local targetPos = npc.HumanoidRootPart.Position
-            local targetCFrame = CFrame.new(targetPos)
-            
-            TP1(targetCFrame)
-            
-            while task.wait() do
-                local char = lp.Character
-                if not char then break end
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if not hrp then break end
+            local targetPos = CFrame.new(npc.HumanoidRootPart.Position)
+            while true do
+                local char = lp.Character or lp.CharacterAdded:Wait()
+                local hrp  = char:WaitForChild("HumanoidRootPart")
+                local hum  = char:WaitForChild("Humanoid")
                 
-                local dist = (hrp.Position - targetPos).Magnitude
-                if dist <= 3 then break end
+                -- Phát hiện nhân vật die thì đợi respawn
+                if hum.Health <= 0 then
+                    char = lp.CharacterAdded:Wait()
+                    hrp  = char:WaitForChild("HumanoidRootPart")
+                    hum  = char:WaitForChild("Humanoid")
+                    task.wait(1)
+                end
                 
-                if not _tweenObj or _tweenObj.PlaybackState ~= Enum.PlaybackState.Playing then
-                    TP1(targetCFrame)
+                TP1(targetPos)
+                
+                local reached = false
+                local stuckTime = 0
+                local lastPos = hrp.Position
+                
+                while task.wait(0.1) do
+                    -- Nếu đang tween mà nhân vật chết hoặc mất
+                    if not char or not char.Parent or hum.Health <= 0 or not hrp or not hrp.Parent then
+                        break -- Thoát vòng chờ, quay lại loop ngoài để TP tiếp
+                    end
+                    
+                    if (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 10 then
+                        reached = true
+                        break
+                    end
+                    
+                    -- Nếu kẹt hoặc dừng tween giữa chừng
+                    if (hrp.Position - lastPos).Magnitude < 1 then
+                        stuckTime = stuckTime + 0.1
+                        if stuckTime >= 3 then
+                            break -- Đứng im 3s thì thoát để gọi lại TP1
+                        end
+                    else
+                        stuckTime = 0
+                    end
+                    lastPos = hrp.Position
                 end
-            end
-            
-            local char = lp.Character
-            if char then
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    if _tweenObj then _tweenObj:Cancel() end
-                    hrp.CFrame = targetCFrame
-                    if _ncPart then _ncPart.CFrame = targetCFrame end
+                
+                if reached then
+                    return true
                 end
+                task.wait(0.5)
             end
-            
-            return true
         end
         return false
     end
