@@ -1069,7 +1069,7 @@ function buyDragonTalon()
             return true
         end
 
-        local Speed  = 275
+        local Speed  = 250
         local twTime = math.max(0.3, DistanceToPos / Speed)
         local twInfo = TweenInfo.new(twTime, Enum.EasingStyle.Linear)
         local tween  = game:GetService("TweenService"):Create(hrp, twInfo, { CFrame = Pos })
