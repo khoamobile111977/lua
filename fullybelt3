@@ -18,14 +18,22 @@ end
 repeat wait() until game.Players.LocalPlayer.Team
 
 -- Services
-local Players       = game:GetService("Players")
+local Players         = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local HttpService   = game:GetService("HttpService")
-local TweenService  = game:GetService("TweenService")
-local RunService    = game:GetService("RunService")
-local lp            = Players.LocalPlayer
-local rs            = game:GetService("ReplicatedStorage")
-local playerName    = lp.Name
+local HttpService     = game:GetService("HttpService")
+local TweenService    = game:GetService("TweenService")
+local RunService      = game:GetService("RunService")
+local lp              = Players.LocalPlayer
+local rs              = game:GetService("ReplicatedStorage")
+local playerName      = lp.Name
+
+-- ============================================================
+--  SERVER BROWSER  (dùng để hop, KHÔNG dùng TeleportService)
+-- ============================================================
+local ServerBrowser = rs:WaitForChild("__ServerBrowser", 15)
+if not ServerBrowser then
+    warn("[DRACO0] ⚠️ __ServerBrowser không tìm thấy sau 15s!")
+end
 
 -- File paths
 local stateFile       = playerName .. "_fullytodojo.json"
@@ -64,8 +72,8 @@ Panel.BorderSizePixel        = 0
 Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 14)
 
 local BorderStroke = Instance.new("UIStroke", Panel)
-BorderStroke.Color       = Color3.fromRGB(139, 92, 246)
-BorderStroke.Thickness   = 1.5
+BorderStroke.Color        = Color3.fromRGB(139, 92, 246)
+BorderStroke.Thickness    = 1.5
 BorderStroke.Transparency = 0.25
 
 local Header = Instance.new("Frame")
@@ -103,7 +111,7 @@ VerLabel.Size                 = UDim2.new(0, 80, 0, 16)
 VerLabel.Position             = UDim2.new(0, 158, 0.5, -8)
 VerLabel.BackgroundColor3     = Color3.fromRGB(60, 50, 100)
 VerLabel.BackgroundTransparency = 0.3
-VerLabel.Text                 = "v4.0  draco0"
+VerLabel.Text                 = "v4.1  draco0"
 VerLabel.Font                 = Enum.Font.Gotham
 VerLabel.TextSize             = 9
 VerLabel.TextColor3           = Color3.fromRGB(180, 160, 255)
@@ -149,8 +157,8 @@ ImgFrame.BorderSizePixel      = 0
 Instance.new("UICorner", ImgFrame).CornerRadius = UDim.new(0, 10)
 
 local ImgStroke = Instance.new("UIStroke", ImgFrame)
-ImgStroke.Color       = Color3.fromRGB(139, 92, 246)
-ImgStroke.Thickness   = 1
+ImgStroke.Color        = Color3.fromRGB(139, 92, 246)
+ImgStroke.Thickness    = 1
 ImgStroke.Transparency = 0.5
 
 local ItemImage = Instance.new("ImageLabel")
@@ -312,29 +320,11 @@ function writeState(state, mastery, fragments, jobId)
 end
 
 -- ============================================================
---  LOCAL SERVER  (file JSON dùng chung giữa mọi tab Roblox)
---
---  Cấu trúc file:
---  {
---    "players": {
---      "PlayerName": {
---        "state": "FARM_TYRANT",
---        "place_id": 123,
---        "job_id": "abc-xyz",          ← server đang ở
---        "target_job_id": "def-uvw",   ← server đang cố join (pending)
---        "player_count": 3,
---        "last_update": 1234567890
---      }
---    },
---    "farm_tyrant_target": "job_id",   ← server target chung cho tất cả acc FARM_TYRANT
---    "target_set_by": "PlayerName",    ← ai set target này
---    "target_updated": 1234567890      ← thời điểm set
---  }
+--  LOCAL SERVER FILE
 -- ============================================================
-
-local LS_STALE_SECS    = 300   -- Coi acc là offline nếu không update > 5 phút
-local LS_TARGET_STALE  = 600   -- Target hết hạn sau 10 phút không update
-local MAX_SERVER_PLAYERS = 12  -- Tối đa player trong 1 server (server giới hạn 12 người)
+local LS_STALE_SECS    = 300
+local LS_TARGET_STALE  = 600
+local MAX_SERVER_PLAYERS = 12
 
 function lsRead()
     if isfile(localServerFile) then
@@ -348,7 +338,6 @@ function lsWrite(data)
     pcall(function() writefile(localServerFile, HttpService:JSONEncode(data)) end)
 end
 
--- Post thông tin acc hiện tại lên local server
 function lsPost(state, jobId, playerCount, targetJobId)
     local data = lsRead()
     data.players[playerName] = {
@@ -362,34 +351,23 @@ function lsPost(state, jobId, playerCount, targetJobId)
     lsWrite(data)
 end
 
--- Xóa acc khỏi local server
 function lsUnregister()
     local data = lsRead()
     data.players[playerName] = nil
     lsWrite(data)
 end
 
--- ============================================================
---  LOCAL SERVER: FARM TYRANT TARGET  (shared coordination)
--- ============================================================
-
--- Lấy target server hiện tại cho FARM_TYRANT
--- Trả về: targetJobId, setBy  hoặc  nil, nil
 function lsGetFarmTarget()
-    local data      = lsRead()
-    local target    = data.farm_tyrant_target
-    local updated   = data.target_updated or 0
-    local setBy     = data.target_set_by or ""
-
-    if target and target ~= ""
-       and (os.time() - updated) < LS_TARGET_STALE
-    then
+    local data    = lsRead()
+    local target  = data.farm_tyrant_target
+    local updated = data.target_updated or 0
+    local setBy   = data.target_set_by or ""
+    if target and target ~= "" and (os.time() - updated) < LS_TARGET_STALE then
         return target, setBy
     end
     return nil, nil
 end
 
--- Set target server chung cho FARM_TYRANT
 function lsSetFarmTarget(jobId, setBy)
     local data = lsRead()
     data.farm_tyrant_target = jobId
@@ -399,7 +377,6 @@ function lsSetFarmTarget(jobId, setBy)
     print("[DRACO0] 🎯 Set farm_tyrant_target = " .. tostring(jobId):sub(1,12) .. "... (by " .. (setBy or playerName) .. ")")
 end
 
--- Xóa target (khi target đã bị full và cần leader set lại)
 function lsClearFarmTarget()
     local data = lsRead()
     data.farm_tyrant_target = ""
@@ -407,18 +384,10 @@ function lsClearFarmTarget()
     lsWrite(data)
 end
 
--- ============================================================
---  LOCAL SERVER: LEADER ELECTION
---
---  Leader = acc có tên alphabetically nhỏ nhất
---  trong số các acc FARM_TYRANT còn active.
---  Leader có quyền set farm_tyrant_target.
--- ============================================================
 function lsIsLeader()
     local data       = lsRead()
     local now        = os.time()
-    local candidates = { playerName }   -- luôn bao gồm mình
-
+    local candidates = { playerName }
     for name, info in pairs(data.players) do
         if name ~= playerName
            and info.state    == "FARM_TYRANT"
@@ -428,18 +397,10 @@ function lsIsLeader()
             table.insert(candidates, name)
         end
     end
-
     table.sort(candidates)
-    local isLeader  = (candidates[1] == playerName)
-    local leaderName = candidates[1]
-    return isLeader, leaderName, candidates
+    return (candidates[1] == playerName), candidates[1], candidates
 end
 
--- ============================================================
---  LOCAL SERVER: ĐẾM ACC CÙNG SERVER
--- ============================================================
-
--- Đếm số acc FARM_TYRANT đang ở đúng 1 job_id (kể cả mình)
 function lsCountAccsAtServer(jobId)
     if not jobId or jobId == "" then return 0 end
     local data  = lsRead()
@@ -457,7 +418,6 @@ function lsCountAccsAtServer(jobId)
     return count
 end
 
--- Lấy danh sách acc FARM_TYRANT đang ở cùng server với mình (kể cả mình)
 function lsGetAccsSameServer()
     local data  = lsRead()
     local now   = os.time()
@@ -474,8 +434,6 @@ function lsGetAccsSameServer()
     return list
 end
 
--- Kiểm tra có acc FARM_TYRANT nào ĐANG THỰC SỰ ở server đó không (job_id khớp)
--- Dùng để cho phép join kể cả khi player count API trả về cao
 function lsIsAccFarmingAtServer(jobId)
     if not jobId or jobId == "" then return false end
     local data = lsRead()
@@ -493,10 +451,6 @@ function lsIsAccFarmingAtServer(jobId)
     return false, nil
 end
 
--- ============================================================
---  [NEW] Kiểm tra mình có đang farm MỘT MÌNH không
---  (không có acc FARM_TYRANT nào khác cùng job_id)
--- ============================================================
 function lsAmIAloneInServer()
     local data = lsRead()
     local now  = os.time()
@@ -507,16 +461,12 @@ function lsAmIAloneInServer()
            and info.job_id   == game.JobId
            and (now - (info.last_update or 0)) < LS_STALE_SECS
         then
-            return false  -- có acc khác cùng server → không đơn độc
+            return false
         end
     end
-    return true  -- không ai cùng server → đang farm một mình
+    return true
 end
 
--- ============================================================
---  [FIX] Đếm số acc đang PENDING join vào 1 server
---  (target_job_id = server đó nhưng job_id chưa đổi sang đó)
--- ============================================================
 function lsCountPendingAtServer(jobId)
     if not jobId or jobId == "" then return 0 end
     local data  = lsRead()
@@ -528,7 +478,7 @@ function lsCountPendingAtServer(jobId)
            and info.place_id == game.PlaceId
            and (now - (info.last_update or 0)) < LS_STALE_SECS
            and info.target_job_id == jobId
-           and info.job_id       ~= jobId   -- chưa thực sự đến nơi
+           and info.job_id       ~= jobId
         then
             count = count + 1
         end
@@ -536,21 +486,11 @@ function lsCountPendingAtServer(jobId)
     return count
 end
 
--- ============================================================
---  [FIX] Tìm các server farm đang hoạt động CÒN CHỖ TRỐNG
---
---  Đọc local file, gom nhóm acc theo job_id thực tế,
---  tính effective_count = player_count + pending_count,
---  lọc server có effective_count < MAX_SERVER_PLAYERS.
---  Trả về list {job_id, acc_count, player_count, pending_count}
---  sắp xếp theo acc_count giảm dần.
--- ============================================================
 function lsFindAvailableFarmServers()
     local data    = lsRead()
     local now     = os.time()
-    local servers = {}   -- map job_id → {job_id, acc_count, player_count, pending_count}
+    local servers = {}
 
-    -- Gom acc đã THỰC SỰ ở server (job_id)
     for name, info in pairs(data.players) do
         if name ~= playerName
            and info.state    == "FARM_TYRANT"
@@ -562,12 +502,7 @@ function lsFindAvailableFarmServers()
         then
             local jid = info.job_id
             if not servers[jid] then
-                servers[jid] = {
-                    job_id        = jid,
-                    acc_count     = 0,
-                    player_count  = info.player_count or 0,
-                    pending_count = 0,
-                }
+                servers[jid] = { job_id = jid, acc_count = 0, player_count = info.player_count or 0, pending_count = 0 }
             end
             servers[jid].acc_count = servers[jid].acc_count + 1
             if (info.player_count or 0) > servers[jid].player_count then
@@ -576,7 +511,6 @@ function lsFindAvailableFarmServers()
         end
     end
 
-    -- Đếm thêm pending (target_job_id trỏ vào server đó nhưng chưa đến)
     for name, info in pairs(data.players) do
         if name ~= playerName
            and info.state    == "FARM_TYRANT"
@@ -585,7 +519,7 @@ function lsFindAvailableFarmServers()
            and type(info.target_job_id) == "string"
            and info.target_job_id ~= ""
            and info.target_job_id ~= game.JobId
-           and info.target_job_id ~= info.job_id   -- đang pending, chưa tới
+           and info.target_job_id ~= info.job_id
         then
             local tjid = info.target_job_id
             if servers[tjid] then
@@ -594,7 +528,6 @@ function lsFindAvailableFarmServers()
         end
     end
 
-    -- Chỉ giữ server có effective_count (player + pending) < MAX_SERVER_PLAYERS
     local available = {}
     for _, sv in pairs(servers) do
         local effective = sv.player_count + sv.pending_count
@@ -603,123 +536,17 @@ function lsFindAvailableFarmServers()
         end
     end
 
-    -- Sắp xếp: server nhiều acc nhất lên trước (consolidate)
-    table.sort(available, function(a, b)
-        return a.acc_count > b.acc_count
-    end)
-
+    table.sort(available, function(a, b) return a.acc_count > b.acc_count end)
     return available
 end
 
 -- ============================================================
---  [NEW] Tìm server ÍT NGƯỜI theo phương pháp hopsmallui.lua
---  (scan Roblox API, tìm server 1-3 người, lấy ứng viên thứ 10)
---  Trả về jobId hoặc nil nếu không tìm được
--- ============================================================
-function hopFindLowPlayerServer()
-    local cursor     = ""
-    local candidates = {}
-    local attempts   = 0
-    local maxAttempts = 5
-
-    repeat
-        attempts = attempts + 1
-        local ok, result = pcall(function()
-            return HttpService:JSONDecode(
-                game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId
-                             .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. cursor)
-            )
-        end)
-
-        if ok and result and type(result) == "table"
-           and result.data and type(result.data) == "table"
-        then
-            for _, sv in pairs(result.data) do
-                if type(sv) == "table" and sv.playing and sv.id
-                   and sv.playing >= 1 and sv.playing <= 3
-                   and sv.id ~= game.JobId
-                then
-                    table.insert(candidates, sv)
-                    updateStatus("FARM_TYRANT",
-                        "🔍 Scan server ít người... "
-                        .. #candidates .. "/10 ứng viên")
-
-                    if #candidates >= 10 then
-                        -- Trả về ứng viên thứ 10 (phương pháp hopsmallui)
-                        return candidates[10].id
-                    end
-                end
-            end
-            cursor = result.nextPageCursor or ""
-        else
-            task.wait(2)
-        end
-    until cursor == "" or attempts >= maxAttempts
-
-    -- Nếu tìm được ít hơn 10, lấy cái cuối cùng
-    if #candidates > 0 then
-        return candidates[#candidates].id
-    end
-    return nil
-end
-
--- (Legacy) lấy danh sách server FARM_TYRANT từ các acc khác
-function lsGetTyrantServers()
-    local data  = lsRead()
-    local now   = os.time()
-    local seen  = {}
-    local list  = {}
-
-    for name, info in pairs(data.players) do
-        if name ~= playerName
-           and info.state    == "FARM_TYRANT"
-           and info.place_id == game.PlaceId
-           and (now - (info.last_update or 0)) < LS_STALE_SECS
-           and type(info.job_id) == "string"
-           and not seen[info.job_id]
-        then
-            seen[info.job_id] = true
-            table.insert(list, {
-                job_id       = info.job_id,
-                player_count = info.player_count or 0,
-                posted_by    = name,
-            })
-        end
-    end
-
-    return list
-end
-
--- Background loop: cập nhật thông tin của mình lên local server mỗi 60s
-local function startLocalServerHeartbeat(getStateFn)
-    task.spawn(function()
-        task.wait(10)
-        while true do
-            pcall(function()
-                local s = getStateFn()
-                lsPost(s, game.JobId, getCurrentServerPlayers(), game.JobId)
-                -- ✅ FIX: Refresh farm_tyrant_target để không bị expire (600s)
-                -- Nếu đang FARM_TYRANT và mình là người đã set target → refresh lại
-                if s == "FARM_TYRANT" then
-                    local lsData = lsRead()
-                    if lsData.target_set_by == playerName then
-                        lsSetFarmTarget(game.JobId, playerName)
-                    end
-                end
-            end)
-            task.wait(60)
-        end
-    end)
-end
-
--- Cleanup khi leave
-game.Players.PlayerRemoving:Connect(function(player)
-    if player == lp then pcall(lsUnregister) end
-end)
-
--- ============================================================
 --  GAME FUNCTIONS
 -- ============================================================
+
+function getCurrentServerPlayers()
+    return #Players:GetPlayers()
+end
 
 local function safeInvoke(...)
     local args = { ... }
@@ -730,34 +557,22 @@ end
 
 function checkMastery(itemName)
     local mastery = 0
-
     pcall(function()
         local char = workspace.Characters and workspace.Characters:FindFirstChild(playerName)
         if char and char:FindFirstChild(itemName) then
             local tool = char:FindFirstChild(itemName)
-            if tool:FindFirstChild("Level") then
-                mastery = tool.Level.Value
-                return
-            end
+            if tool:FindFirstChild("Level") then mastery = tool.Level.Value; return end
         end
-
         local char2 = lp.Character
         if char2 and char2:FindFirstChild(itemName) then
             local tool = char2:FindFirstChild(itemName)
-            if tool:FindFirstChild("Level") then
-                mastery = tool.Level.Value
-                return
-            end
+            if tool:FindFirstChild("Level") then mastery = tool.Level.Value; return end
         end
-
         if lp.Backpack:FindFirstChild(itemName) then
             local tool = lp.Backpack:FindFirstChild(itemName)
-            if tool:FindFirstChild("Level") then
-                mastery = tool.Level.Value
-            end
+            if tool:FindFirstChild("Level") then mastery = tool.Level.Value end
         end
     end)
-
     return mastery
 end
 
@@ -779,10 +594,6 @@ function checkFragments()
     return best
 end
 
-function getCurrentServerPlayers()
-    return #Players:GetPlayers()
-end
-
 function getServerInfo(targetJobId)
     local cursor  = ""
     local attempts = 0
@@ -796,24 +607,21 @@ function getServerInfo(targetJobId)
         end)
         if ok and result and result.data then
             for _, sv in pairs(result.data) do
-                if sv.id == targetJobId then
-                    return sv.playing, sv.maxPlayers
-                end
+                if sv.id == targetJobId then return sv.playing, sv.maxPlayers end
             end
             cursor = result.nextPageCursor or ""
         else
-            wait(2)
+            task.wait(2)
         end
     until cursor == "" or attempts >= 3
     return nil, nil
 end
 
 function findLowPlayerServers(maxCount)
-    maxCount   = maxCount or 10
+    maxCount = maxCount or 10
     local cursor     = ""
     local candidates = {}
     local attempts   = 0
-
     repeat
         attempts = attempts + 1
         local ok, result = pcall(function()
@@ -835,16 +643,15 @@ function findLowPlayerServers(maxCount)
             cursor = result.nextPageCursor or ""
             if result.errors then break end
         else
-            wait(2)
+            task.wait(2)
         end
     until cursor == "" or attempts >= 5
-
     return candidates
 end
 
 function findRandomServer()
-    local cursor  = ""
-    local pool    = {}
+    local cursor   = ""
+    local pool     = {}
     local attempts = 0
     repeat
         attempts = attempts + 1
@@ -863,7 +670,7 @@ function findRandomServer()
             cursor = result.nextPageCursor or ""
             if #pool >= 10 then break end
         else
-            wait(2)
+            task.wait(2)
         end
     until cursor == "" or attempts >= 3
     if #pool > 0 then
@@ -874,76 +681,87 @@ function findRandomServer()
 end
 
 -- ============================================================
---  TELEPORT QUA SERVER BROWSER  (Blox Fruits không cho TeleportToPlaceInstance)
---
---  Dùng ServerBrowser RemoteFunction để hop server.
---  Fallback sang TeleportService nếu không tìm được ServerBrowser.
+--  hopFindLowPlayerServer  (hopsmallui method)
 -- ============================================================
-local function findServerBrowser()
-    -- Tìm trong các vị trí phổ biến của Blox Fruits
-    local locations = {
-        rs.Remotes,
-        rs,
-        game.Players.LocalPlayer.PlayerGui,
-    }
-    for _, container in ipairs(locations) do
-        if container then
-            for _, child in ipairs(container:GetChildren()) do
-                local n = child.Name:lower()
-                if (n:find("serverbrowser") or n:find("server_browser") or n:find("hopping"))
-                   and child:IsA("RemoteFunction")
+function hopFindLowPlayerServer()
+    local cursor     = ""
+    local candidates = {}
+    local attempts   = 0
+    local maxAttempts = 5
+    repeat
+        attempts = attempts + 1
+        local ok, result = pcall(function()
+            return HttpService:JSONDecode(
+                game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId
+                             .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. cursor)
+            )
+        end)
+        if ok and result and type(result) == "table"
+           and result.data and type(result.data) == "table"
+        then
+            for _, sv in pairs(result.data) do
+                if type(sv) == "table" and sv.playing and sv.id
+                   and sv.playing >= 1 and sv.playing <= 3
+                   and sv.id ~= game.JobId
                 then
-                    return child
+                    table.insert(candidates, sv)
+                    updateStatus("FARM_TYRANT",
+                        "🔍 Scan server ít người... " .. #candidates .. "/10 ứng viên")
+                    if #candidates >= 10 then return candidates[10].id end
                 end
             end
+            cursor = result.nextPageCursor or ""
+        else
+            task.wait(2)
         end
-    end
-    -- Fallback: tìm bất kỳ RemoteFunction nào có "server" trong tên
-    for _, child in ipairs(rs.Remotes:GetChildren()) do
-        if child.Name:lower():find("server") and child:IsA("RemoteFunction") then
-            return child
-        end
-    end
+    until cursor == "" or attempts >= maxAttempts
+    if #candidates > 0 then return candidates[#candidates].id end
     return nil
 end
 
+-- ============================================================
+--  TELEPORT VIA SERVER BROWSER  (toàn bộ hop đều qua đây)
+-- ============================================================
 local function teleportToServer(jobId)
     if not jobId or jobId == "" then return false end
-
-    -- Thử ServerBrowser trước
-    local ServerBrowser = findServerBrowser()
-    if ServerBrowser then
-        local success, err = pcall(function()
-            ServerBrowser:InvokeServer("teleport", jobId)
-        end)
-        if success then
-            print("[DRACO0] ✅ ServerBrowser teleport OK → " .. tostring(jobId):sub(1,12))
-            return true
-        end
-        warn("[DRACO0] ServerBrowser thất bại:", err)
+    if not ServerBrowser then
+        warn("[DRACO0] ❌ __ServerBrowser nil, không thể teleport!")
+        return false
     end
-
-    -- Fallback: TeleportToPlaceInstance
-    local ok = pcall(function()
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, lp)
+    local success, err = pcall(function()
+        ServerBrowser:InvokeServer("teleport", jobId)
     end)
-    if ok then
-        print("[DRACO0] ✅ TeleportToPlaceInstance OK → " .. tostring(jobId):sub(1,12))
+    if success then
+        print("[DRACO0] ✅ ServerBrowser teleport OK → " .. tostring(jobId):sub(1,12))
         return true
     end
-
+    warn("[DRACO0] ❌ ServerBrowser teleport thất bại: " .. tostring(err))
     return false
 end
 
+-- Rejoin ngẫu nhiên: lấy job_id từ API rồi dùng ServerBrowser
+local function rejoinRandom()
+    updateStatus("FARM_TYRANT", "🔄 Tìm server ngẫu nhiên để rejoin...")
+    local attempts = 0
+    while attempts < 5 do
+        attempts = attempts + 1
+        local rndId, _ = findRandomServer()
+        if rndId then
+            updateStatus("FARM_TYRANT", "🚀 Rejoin → " .. tostring(rndId):sub(1,12) .. "...")
+            local ok = teleportToServer(rndId)
+            if ok then return end
+        end
+        updateStatus("FARM_TYRANT", "⏳ Chờ rồi thử lại rejoin... (" .. attempts .. "/5)")
+        task.wait(5)
+    end
+    warn("[DRACO0] ❌ Không thể rejoin sau 5 lần thử!")
+end
+
 -- ============================================================
---  TELEPORT FAILURE HANDLER  (Global)
---
---  Lắng nghe TeleportService.TeleportInitFailed để xử lý khi
---  Roblox từ chối join (GameFull, Flooded, v.v.)
---  Thay vì script đứng im, tự động reset pending và farm lại.
+--  TELEPORT FAILURE HANDLER
 -- ============================================================
-local _teleportFailCallback = nil   -- callback gọi khi teleport fail
-local _lastPendingJobId     = nil   -- job_id đang cố join
+local _teleportFailCallback = nil
+local _lastPendingJobId     = nil
 
 TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
     if player ~= lp then return end
@@ -953,22 +771,16 @@ TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage
          .. " | job: " .. tostring(_lastPendingJobId or "?"):sub(1,12)
          .. " | " .. tostring(errorMessage))
 
-    -- Reset pending: trả job_id về server thật, xóa target_job_id pending
     pcall(function()
         lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), game.JobId)
     end)
-
-    -- Nếu target chung trong file chính là server vừa bị từ chối → xóa
     pcall(function()
         local t, _ = lsGetFarmTarget()
-        if t and t == _lastPendingJobId then
-            lsClearFarmTarget()
-        end
+        if t and t == _lastPendingJobId then lsClearFarmTarget() end
     end)
 
     _lastPendingJobId = nil
 
-    -- Chọn delay tuỳ theo lý do từ chối
     local delay = 5
     local msg   = "❌ Server từ chối join (" .. reason .. ")!\n🔄 Xử lý lại..."
     if result == Enum.TeleportResult.Flooded then
@@ -982,21 +794,17 @@ TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage
     updateStatus("FARM_TYRANT", msg)
     task.wait(delay)
 
-    -- Gọi callback nếu có (được set bởi joinServerByJobId)
     local cb = _teleportFailCallback
     _teleportFailCallback = nil
 
     if cb then
         pcall(cb)
     else
-        -- Fallback: đọc state từ file và re-run farm
         local saved = readState()
         if saved.state == "FARM_TYRANT" then
-            pcall(function()
-                handleFarmTyrant(saved.mastery or 0, saved.fragments or 0)
-            end)
+            pcall(function() handleFarmTyrant(saved.mastery or 0, saved.fragments or 0) end)
         else
-            TeleportService:Teleport(game.PlaceId, lp)
+            rejoinRandom()
         end
     end
 end)
@@ -1004,33 +812,29 @@ end)
 function joinServerByJobId(jobId, onFailCallback)
     if not jobId or jobId == "" then return end
 
-    -- Lưu lại để TeleportInitFailed biết server nào bị từ chối
-    _lastPendingJobId   = jobId
+    _lastPendingJobId     = jobId
     _teleportFailCallback = onFailCallback or function()
-        -- Mặc định: đọc state file và farm lại từ đầu
         local saved = readState()
         if saved.state == "FARM_TYRANT" then
             handleFarmTyrant(saved.mastery or 0, saved.fragments or 0)
         else
-            TeleportService:Teleport(game.PlaceId, lp)
+            rejoinRandom()
         end
     end
 
     updateStatus("FARM_TYRANT", "🚀 Đang teleport tới server...")
     local ok = teleportToServer(jobId)
     if not ok then
-        -- Teleport bị block ngay lập tức (không phải async fail)
         _lastPendingJobId     = nil
         _teleportFailCallback = nil
-        updateStatus("FARM_TYRANT", "❌ Teleport thất bại ngay → Rejoin toàn bộ...")
-        wait(3)
-        TeleportService:Teleport(game.PlaceId, lp)
+        updateStatus("FARM_TYRANT", "❌ Teleport thất bại ngay → Rejoin ngẫu nhiên...")
+        task.wait(3)
+        rejoinRandom()
     end
-    -- Nếu ok: script chờ Roblox teleport hoặc TeleportInitFailed fire
 end
 
 -- ============================================================
---  MUA DRAGON TALON  (có retry sau khi mua)
+--  MUA DRAGON TALON
 -- ============================================================
 function buyDragonTalon()
     task.wait(5)
@@ -1060,19 +864,13 @@ function buyDragonTalon()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hrp or not hum or hum.Health <= 0 then return end
-
         local DistanceToPos = calcpos(hrp.CFrame, Pos)
-
         if DistanceToPos <= 100 then
-            wait(0.1)
-            hrp.CFrame = Pos
-            return true
+            wait(0.1); hrp.CFrame = Pos; return true
         end
-
         local Speed  = 250
         local twTime = math.max(0.3, DistanceToPos / Speed)
-        local twInfo = TweenInfo.new(twTime, Enum.EasingStyle.Linear)
-        local tween  = game:GetService("TweenService"):Create(hrp, twInfo, { CFrame = Pos })
+        local tween  = TweenService:Create(hrp, TweenInfo.new(twTime, Enum.EasingStyle.Linear), { CFrame = Pos })
         tween:Play()
         hrp.CFrame = CFrame.new(hrp.Position.X, Pos.Y, hrp.Position.Z)
         return true
@@ -1086,47 +884,28 @@ function buyDragonTalon()
                 local char = lp.Character or lp.CharacterAdded:Wait()
                 local hrp  = char:WaitForChild("HumanoidRootPart")
                 local hum  = char:WaitForChild("Humanoid")
-                
-                -- Phát hiện nhân vật die thì đợi respawn
                 if hum.Health <= 0 then
                     char = lp.CharacterAdded:Wait()
                     hrp  = char:WaitForChild("HumanoidRootPart")
                     hum  = char:WaitForChild("Humanoid")
                     task.wait(1)
                 end
-                
                 TP1(targetPos)
-                
-                local reached = false
+                local reached  = false
                 local stuckTime = 0
-                local lastPos = hrp.Position
-                
+                local lastPos  = hrp.Position
                 while task.wait(0.1) do
-                    -- Nếu đang tween mà nhân vật chết hoặc mất
-                    if not char or not char.Parent or hum.Health <= 0 or not hrp or not hrp.Parent then
-                        break -- Thoát vòng chờ, quay lại loop ngoài để TP tiếp
-                    end
-                    
-                    if (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 10 then
-                        reached = true
-                        break
-                    end
-                    
-                    -- Nếu kẹt hoặc dừng tween giữa chừng
+                    if not char or not char.Parent or hum.Health <= 0 or not hrp or not hrp.Parent then break end
+                    if (hrp.Position - npc.HumanoidRootPart.Position).Magnitude <= 10 then reached = true; break end
                     if (hrp.Position - lastPos).Magnitude < 1 then
                         stuckTime = stuckTime + 0.1
-                        if stuckTime >= 3 then
-                            break -- Đứng im 3s thì thoát để gọi lại TP1
-                        end
+                        if stuckTime >= 3 then break end
                     else
                         stuckTime = 0
                     end
                     lastPos = hrp.Position
                 end
-                
-                if reached then
-                    return true
-                end
+                if reached then return true end
                 task.wait(0.5)
             end
         end
@@ -1142,7 +921,6 @@ function buyDragonTalon()
     end
 end
 
--- Hàm kiểm tra có Dragon Talon không
 local function hasDragonTalon()
     local inBp  = lp.Backpack:FindFirstChild("Dragon Talon")
     local cNode = workspace.Characters and workspace.Characters:FindFirstChild(playerName) or lp.Character
@@ -1150,24 +928,19 @@ local function hasDragonTalon()
     return (inBp ~= nil) or (inCh ~= nil)
 end
 
--- Mua Dragon Talon với retry tự động
 local function buyDragonTalonWithRetry()
     local MAX_BUY_RETRY = 5
     for attempt = 1, MAX_BUY_RETRY do
-        updateStatus("CHECK_TALON",
-            "🛒 Mua Dragon Talon... (lần " .. attempt .. "/" .. MAX_BUY_RETRY .. ")")
+        updateStatus("CHECK_TALON", "🛒 Mua Dragon Talon... (lần " .. attempt .. "/" .. MAX_BUY_RETRY .. ")")
         buyDragonTalon()
         task.wait(4)
-
         if hasDragonTalon() then
             updateStatus("CHECK_TALON", "✅ Đã mua xong Dragon Talon!")
             task.wait(1)
             return true
         end
-
         if attempt < MAX_BUY_RETRY then
-            updateStatus("CHECK_TALON",
-                "⚠️ Chưa thấy Dragon Talon → Mua lại... (" .. attempt .. "/" .. MAX_BUY_RETRY .. ")")
+            updateStatus("CHECK_TALON", "⚠️ Chưa thấy Dragon Talon → Mua lại... (" .. attempt .. "/" .. MAX_BUY_RETRY .. ")")
             task.wait(2)
         end
     end
@@ -1196,32 +969,10 @@ function executeConfig(configType)
 end
 
 -- ============================================================
---  FARM TYRANT  –  COORDINATION CẢI TIẾN
---
---  THUẬT TOÁN:
---  ─────────────────────────────────────────────────────────
---  Tất cả acc FARM_TYRANT dùng chung 1 file JSON để phối hợp.
---  File có trường `farm_tyrant_target` = job_id server mà TẤT CẢ
---  acc cần hop vào. Leader (acc tên nhỏ nhất alphabetically)
---  có quyền set/update target.
---
---  Flow cho mỗi acc:
---  1. Post state lên local server, chờ 3s cho acc khác post
---  2. Kiểm tra mình đang ở target → farm ngay
---  3. Đọc target từ file:
---     a. Target tồn tại + server < MAX_PLAYERS → join target
---     b. Target full hoặc không tồn tại:
---        - Là Leader  → tìm server ít người → set target → join
---        - Là Follower → chờ tối đa 60s cho leader set target
---          → Nếu hết giờ chưa có target → chọn sub-leader
---            (leader trong nhóm acc CHƯA vào được server)
---            → sub-leader tìm server mới → set target → join
---            → các acc còn lại join theo
---  ─────────────────────────────────────────────────────────
+--  FARM TYRANT
 -- ============================================================
 function handleFarmTyrant(mastery, fragments)
 
-    -- Bước 0: Đăng ký lên local server (gửi số player hiện tại)
     local curCount = getCurrentServerPlayers()
     lsPost("FARM_TYRANT", game.JobId, curCount, game.JobId)
     updateStatus("FARM_TYRANT",
@@ -1229,49 +980,39 @@ function handleFarmTyrant(mastery, fragments)
         .. "👥 Server hiện tại: " .. curCount .. "/12 người")
     task.wait(3)
 
-    -- ── Bước 0.5: Server hiện tại đủ 12 người rồi → PHẢI hop sang server khác ──
+    -- Server hiện tại đã đầy → phải hop
     curCount = getCurrentServerPlayers()
     if curCount >= MAX_SERVER_PLAYERS then
         updateStatus("FARM_TYRANT",
-            "⚠️ Server hiện tại ĐẦY (" .. curCount .. "/12)!\n"
-            .. "🔀 Chọn server khác trước khi farm...")
+            "⚠️ Server hiện tại ĐẦY (" .. curCount .. "/12)!\n🔀 Chọn server khác trước khi farm...")
         task.wait(1)
 
-        -- Xóa target cũ nếu có (vì target đó chính là server đang đầy)
         local existingTarget, _ = lsGetFarmTarget()
-        if existingTarget == game.JobId then
-            lsClearFarmTarget()
-        end
+        if existingTarget == game.JobId then lsClearFarmTarget() end
 
         local amLeaderNow, leaderNameNow, _ = lsIsLeader()
         if amLeaderNow then
-            -- Leader: tìm server có chỗ, set target mới rồi hop
             local candidates = findLowPlayerServers(10)
             if #candidates > 0 then
                 local chosen = candidates[math.random(1, #candidates)]
                 updateStatus("FARM_TYRANT",
-                    "👑 Leader → Tìm được server (" .. chosen.players .. "/12)\n"
-                    .. "🚀 Set target & Hop server...")
+                    "👑 Leader → Tìm được server (" .. chosen.players .. "/12)\n🚀 Set target & Hop server...")
                 lsSetFarmTarget(chosen.id, playerName)
                 writeState("FARM_TYRANT", mastery, fragments, chosen.id)
                 lsPost("FARM_TYRANT", chosen.id, chosen.players, chosen.id)
                 task.wait(2)
                 joinServerByJobId(chosen.id)
             else
-                -- Không tìm được → rejoin random
-                updateStatus("FARM_TYRANT",
-                    "❌ Không tìm được server trống\n🔄 Rejoin ngẫu nhiên...")
+                updateStatus("FARM_TYRANT", "❌ Không tìm được server trống\n🔄 Rejoin ngẫu nhiên...")
                 task.wait(2)
-                TeleportService:Teleport(game.PlaceId, lp)
+                rejoinRandom()
             end
         else
-            -- Follower: chờ leader chọn server mới
             updateStatus("FARM_TYRANT",
                 "⏳ Server đầy! Chờ leader " .. leaderNameNow .. " chọn server mới...")
             local waitedFull = 0
             while waitedFull < 45 do
-                task.wait(5)
-                waitedFull = waitedFull + 5
+                task.wait(5); waitedFull = waitedFull + 5
                 local newT, _ = lsGetFarmTarget()
                 if newT and newT ~= "" and newT ~= game.JobId then
                     local cp, _ = getServerInfo(newT)
@@ -1286,25 +1027,21 @@ function handleFarmTyrant(mastery, fragments)
                     end
                 end
                 updateStatus("FARM_TYRANT",
-                    "⏳ Server đầy (" .. curCount .. "/12) | Chờ... ("
-                    .. waitedFull .. "/45s)")
+                    "⏳ Server đầy (" .. curCount .. "/12) | Chờ... (" .. waitedFull .. "/45s)")
             end
-            -- Hết giờ → tự hop random
-            updateStatus("FARM_TYRANT",
-                "❌ Hết giờ chờ → Hop server ngẫu nhiên...")
+            updateStatus("FARM_TYRANT", "❌ Hết giờ chờ → Hop server ngẫu nhiên...")
             task.wait(2)
-            TeleportService:Teleport(game.PlaceId, lp)
+            rejoinRandom()
         end
         return
     end
 
-    -- ── Bước 1: Mình đang ở đúng target rồi? ────────────────────────
+    -- Đang ở đúng target rồi?
     local targetJobId, targetSetBy = lsGetFarmTarget()
     if targetJobId and targetJobId == game.JobId then
         local accList = lsGetAccsSameServer()
         updateStatus("FARM_TYRANT",
-            "✅ Đang ở target server!\n"
-            .. "🤝 " .. #accList .. " acc cùng server → Farm!")
+            "✅ Đang ở target server!\n🤝 " .. #accList .. " acc cùng server → Farm!")
         task.wait(2)
         writeState("FARM_TYRANT", mastery, fragments, game.JobId)
         lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), game.JobId)
@@ -1313,26 +1050,14 @@ function handleFarmTyrant(mastery, fragments)
         return
     end
 
-    -- ── Bước 1.5: [NEW] Phân tích trạng thái farm hiện tại ──────────
-    --
-    --  • Nếu đang farm MỘT MÌNH (không acc nào cùng server):
-    --    → acc này CẦN HOP để tìm server farm chung
-    --  • Nếu đã farm CÙNG nhau (có bạn đồng hành):
-    --    → tiếp tục farm, không cần hop
-    --
-    --  Sau khi xác định cần hop:
-    --  1) Ưu tiên join server đang có acc farm còn chỗ (từ local file)
-    --  2) Nếu không có → dùng leader election + hopFindLowPlayerServer
-    -- ─────────────────────────────────────────────────────────────────
-    local aloneInServer   = lsAmIAloneInServer()
+    -- Đang farm cùng người khác, chưa có target?
+    local aloneInServer    = lsAmIAloneInServer()
     local availableServers = lsFindAvailableFarmServers()
 
     if not aloneInServer and not targetJobId then
-        -- Đang farm cùng người khác, chưa có target set → vẫn farm ở đây
         local accList2 = lsGetAccsSameServer()
         updateStatus("FARM_TYRANT",
-            "✅ Đang farm cùng " .. #accList2 .. " acc khác\n"
-            .. "📡 Set server hiện tại làm target...")
+            "✅ Đang farm cùng " .. #accList2 .. " acc khác\n📡 Set server hiện tại làm target...")
         lsSetFarmTarget(game.JobId, playerName)
         writeState("FARM_TYRANT", mastery, fragments, game.JobId)
         lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), game.JobId)
@@ -1342,31 +1067,22 @@ function handleFarmTyrant(mastery, fragments)
         return
     end
 
-    -- ── Bước 1.6: [NEW] Có server farm đang hoạt động còn chỗ? ──────
-    --  Đọc local file → tìm server có acc đang farm + còn < 12 người
-    --  Nếu có → JOIN NGAY, không cần leader election
-    -- ─────────────────────────────────────────────────────────────────
+    -- Có server farm đang chạy còn chỗ?
     if #availableServers > 0 then
-        -- Chọn server đông acc nhất còn chỗ (consolidate)
-        local best = availableServers[1]
-
-        -- ✅ FIX: Xác nhận qua API và tính cả pending count
+        local best         = availableServers[1]
         local apiPlayers, _ = getServerInfo(best.job_id)
-        local pendingCount   = lsCountPendingAtServer(best.job_id)
+        local pendingCount  = lsCountPendingAtServer(best.job_id)
         local accConfirmed, accName = lsIsAccFarmingAtServer(best.job_id)
-
-        local canJoin = false
+        local canJoin  = false
         local joinReason = ""
 
         if apiPlayers then
-            -- Tính effective = api players + acc đang pending join
             local effective = apiPlayers + pendingCount
             if effective < MAX_SERVER_PLAYERS then
                 canJoin = true
                 joinReason = "API: " .. apiPlayers .. " + " .. pendingCount .. " pending = " .. effective .. "/" .. MAX_SERVER_PLAYERS
             end
         elseif accConfirmed then
-            -- API lag, nhưng local xác nhận có acc; kiểm tra pending
             local localEff = (best.player_count or 0) + pendingCount
             if localEff < MAX_SERVER_PLAYERS then
                 canJoin = true
@@ -1376,37 +1092,29 @@ function handleFarmTyrant(mastery, fragments)
 
         if canJoin then
             updateStatus("FARM_TYRANT",
-                "🔍 Tìm thấy server farm đang chạy!\n"
-                .. "🤝 " .. best.acc_count .. " acc | " .. joinReason .. " → Join cùng farm...")
+                "🔍 Tìm thấy server farm đang chạy!\n🤝 " .. best.acc_count .. " acc | " .. joinReason .. " → Join cùng farm...")
             writeState("FARM_TYRANT", mastery, fragments, best.job_id)
-            -- ✅ FIX: Ghi target_job_id = best.job_id nhưng GIỮ job_id = game.JobId
-            --         để acc khác biết mình đang pending, không ghi player_count sai
             lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), best.job_id)
             task.wait(2)
             joinServerByJobId(best.job_id)
             return
         else
-            -- Server trong local file đã full (kể cả pending) hoặc không còn hợp lệ
             updateStatus("FARM_TYRANT",
-                "⚠️ Server farm cũ đã đầy (" .. (apiPlayers or "?") .. " API + "
-                .. pendingCount .. " pending)/12\n🔄 Tìm server mới...")
+                "⚠️ Server farm cũ đã đầy (" .. (apiPlayers or "?") .. " API + " .. pendingCount .. " pending)/12\n🔄 Tìm server mới...")
             task.wait(1)
         end
     end
 
-    -- ── Bước 2: Thử join target đang được set trong file ─────────────
+    -- Thử join target đang có trong file
     if targetJobId and targetJobId ~= "" then
         local curPlayers, _ = getServerInfo(targetJobId)
         local accAtTarget   = lsCountAccsAtServer(targetJobId)
-
         updateStatus("FARM_TYRANT",
             "🎯 Target: " .. tostring(targetJobId):sub(1,10) .. "...\n"
             .. "👥 " .. (curPlayers or "?") .. " players | 🤝 " .. accAtTarget .. " acc")
         task.wait(1)
 
         local accConfirmedThere, accNameThere = lsIsAccFarmingAtServer(targetJobId)
-
-        -- ✅ FIX: Tính cả pending count khi kiểm tra slot target
         local targetPending = lsCountPendingAtServer(targetJobId)
 
         if curPlayers then
@@ -1415,26 +1123,20 @@ function handleFarmTyrant(mastery, fragments)
                 updateStatus("FARM_TYRANT",
                     "✅ Join target (" .. curPlayers .. " + " .. targetPending .. " pending = " .. targetEff .. "/" .. MAX_SERVER_PLAYERS .. ")...")
                 writeState("FARM_TYRANT", mastery, fragments, targetJobId)
-                -- ✅ FIX: job_id vẫn là game.JobId (chưa join), target_job_id = targetJobId
                 lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), targetJobId)
                 task.wait(2)
                 joinServerByJobId(targetJobId)
                 return
             else
-                -- Kể cả pending đã full
                 updateStatus("FARM_TYRANT",
-                    "⚠️ Target server full kể cả pending (" .. curPlayers .. " + " .. targetPending .. " = " .. (curPlayers + targetPending) .. "/12)\n"
-                    .. "🔄 Cần leader tìm server mới...")
-                lsClearFarmTarget()
-                task.wait(1)
+                    "⚠️ Target server full kể cả pending (" .. curPlayers .. " + " .. targetPending .. " = " .. (curPlayers + targetPending) .. "/12)\n🔄 Cần leader tìm server mới...")
+                lsClearFarmTarget(); task.wait(1)
             end
         elseif accConfirmedThere then
-            -- API lag → kiểm tra pending trước khi join
-            local localEff = targetPending  -- không có API, chỉ tính pending
+            local localEff = targetPending
             if localEff < MAX_SERVER_PLAYERS then
                 updateStatus("FARM_TYRANT",
-                    "✅ " .. accNameThere .. " đang farm ở target!\n"
-                    .. "🚀 Join cùng farm... (" .. targetPending .. " pending, API lag)")
+                    "✅ " .. accNameThere .. " đang farm ở target!\n🚀 Join cùng farm... (" .. targetPending .. " pending, API lag)")
                 writeState("FARM_TYRANT", mastery, fragments, targetJobId)
                 lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), targetJobId)
                 task.wait(2)
@@ -1442,28 +1144,18 @@ function handleFarmTyrant(mastery, fragments)
                 return
             else
                 updateStatus("FARM_TYRANT",
-                    "⚠️ Target server có quá nhiều pending (" .. targetPending .. "/12)\n"
-                    .. "🔄 Tìm server khác...")
-                lsClearFarmTarget()
-                task.wait(1)
+                    "⚠️ Target server có quá nhiều pending (" .. targetPending .. "/12)\n🔄 Tìm server khác...")
+                lsClearFarmTarget(); task.wait(1)
             end
         else
-            -- Không có API, không có acc → xóa target
             updateStatus("FARM_TYRANT",
-                "⚠️ Target server không tìm thấy qua API\n"
-                .. "🔄 Cần leader tìm server mới...")
-            lsClearFarmTarget()
-            task.wait(1)
+                "⚠️ Target server không tìm thấy qua API\n🔄 Cần leader tìm server mới...")
+            lsClearFarmTarget(); task.wait(1)
         end
     end
 
-    -- ── Bước 3: Không có target / không có farm server nào ──────────
-    --    Leader election: acc tên nhỏ nhất alphabetically = leader
-    --    Leader dùng hopFindLowPlayerServer() (method của hopsmallui.lua)
-    --    để tìm server 1-3 người, set target cho cả nhóm.
-    -- ─────────────────────────────────────────────────────────────────
+    -- Leader election
     local amLeader, leaderName, allCandidates = lsIsLeader()
-
     updateStatus("FARM_TYRANT",
         "📋 " .. #allCandidates .. " acc cần hop\n"
         .. "👑 Leader: " .. leaderName
@@ -1472,31 +1164,22 @@ function handleFarmTyrant(mastery, fragments)
     task.wait(1)
 
     if amLeader then
-        -- ── LEADER: dùng hopFindLowPlayerServer (hopsmallui method) ──
-        updateStatus("FARM_TYRANT",
-            "👑 Leader → Scan server 1-3 người (hopsmallui method)...")
+        updateStatus("FARM_TYRANT", "👑 Leader → Scan server 1-3 người (hopsmallui method)...")
         task.wait(1)
-
         local newJobId = hopFindLowPlayerServer()
-
         if newJobId then
             updateStatus("FARM_TYRANT",
-                "✅ Leader tìm được server ít người!\n"
-                .. "🚀 Set target & Hop server → các acc khác sẽ join theo...")
+                "✅ Leader tìm được server ít người!\n🚀 Set target & Hop server → các acc khác sẽ join theo...")
             lsSetFarmTarget(newJobId, playerName)
             writeState("FARM_TYRANT", mastery, fragments, newJobId)
-            -- ✅ FIX: Ghi job_id hiện tại + target_job_id = newJobId (pending)
-            --         Không ghi player_count của server chưa vào
             lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), newJobId)
             task.wait(2)
             joinServerByJobId(newJobId)
         else
-            -- Không tìm được server 1-3 người → thử server hiện tại nếu còn chỗ
             local nowCount = getCurrentServerPlayers()
             if nowCount < MAX_SERVER_PLAYERS then
                 updateStatus("FARM_TYRANT",
-                    "❌ Không tìm được server ít người\n"
-                    .. "⛏️ Farm server hiện tại (" .. nowCount .. "/12)...")
+                    "❌ Không tìm được server ít người\n⛏️ Farm server hiện tại (" .. nowCount .. "/12)...")
                 lsSetFarmTarget(game.JobId, playerName)
                 writeState("FARM_TYRANT", mastery, fragments, game.JobId)
                 lsPost("FARM_TYRANT", game.JobId, nowCount, game.JobId)
@@ -1507,41 +1190,35 @@ function handleFarmTyrant(mastery, fragments)
                 updateStatus("FARM_TYRANT",
                     "⚠️ Server hiện tại đầy (" .. nowCount .. "/12)\n🔄 Rejoin ngẫu nhiên...")
                 task.wait(3)
-                TeleportService:Teleport(game.PlaceId, lp)
+                rejoinRandom()
             end
         end
 
     else
-        -- ── FOLLOWER: Chờ leader set target ─────────────────────────
+        -- Follower
         local WAIT_INTERVAL = 5
         local MAX_WAIT      = 60
         local waited        = 0
 
         updateStatus("FARM_TYRANT",
-            "⏳ Follower → Chờ leader " .. leaderName .. " set target...\n"
-            .. "(hoặc tìm server farm có sẵn trong local file)")
+            "⏳ Follower → Chờ leader " .. leaderName .. " set target...\n(hoặc tìm server farm có sẵn trong local file)")
 
         while waited < MAX_WAIT do
             task.wait(WAIT_INTERVAL)
             waited = waited + WAIT_INTERVAL
 
-            -- [NEW] Mỗi vòng lặp cũng kiểm tra local file xem có server nào sẵn không
             local freshServers = lsFindAvailableFarmServers()
             if #freshServers > 0 then
-                local freshBest = freshServers[1]
-                local freshAPI, _ = getServerInfo(freshBest.job_id)
+                local freshBest    = freshServers[1]
+                local freshAPI, _  = getServerInfo(freshBest.job_id)
                 local freshPending = lsCountPendingAtServer(freshBest.job_id)
                 local freshConfirmed, freshAccName = lsIsAccFarmingAtServer(freshBest.job_id)
-
-                -- ✅ FIX: Tính effective = API + pending
                 local freshEff = (freshAPI or freshBest.player_count or 0) + freshPending
                 if freshEff < MAX_SERVER_PLAYERS and (freshAPI or freshConfirmed) then
                     local joinInfo = freshAPI and (freshAPI .. "+" .. freshPending .. "p = " .. freshEff .. "/" .. MAX_SERVER_PLAYERS) or "? players"
                     updateStatus("FARM_TYRANT",
-                        "🔍 Follower: thấy server farm (" .. freshBest.acc_count .. " acc | " .. joinInfo .. ")\n"
-                        .. "🚀 Join ngay không chờ leader...")
+                        "🔍 Follower: thấy server farm (" .. freshBest.acc_count .. " acc | " .. joinInfo .. ")\n🚀 Join ngay không chờ leader...")
                     writeState("FARM_TYRANT", mastery, fragments, freshBest.job_id)
-                    -- ✅ FIX: Ghi pending, không ghi player_count sai
                     lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), freshBest.job_id)
                     task.wait(2)
                     joinServerByJobId(freshBest.job_id)
@@ -1549,49 +1226,40 @@ function handleFarmTyrant(mastery, fragments)
                 end
             end
 
-            -- Kiểm tra target do leader set
             local newTarget, newSetBy = lsGetFarmTarget()
             if newTarget and newTarget ~= "" then
                 local curPlayers, _ = getServerInfo(newTarget)
                 local accConfirmed, accName = lsIsAccFarmingAtServer(newTarget)
-
                 if curPlayers and curPlayers < MAX_SERVER_PLAYERS then
                     updateStatus("FARM_TYRANT",
-                        "✅ " .. (newSetBy or leaderName) .. " set target!\n"
-                        .. "🚀 Join server (" .. curPlayers .. "/" .. MAX_SERVER_PLAYERS .. ")...")
+                        "✅ " .. (newSetBy or leaderName) .. " set target!\n🚀 Join server (" .. curPlayers .. "/" .. MAX_SERVER_PLAYERS .. ")...")
                     writeState("FARM_TYRANT", mastery, fragments, newTarget)
                     lsPost("FARM_TYRANT", newTarget, curPlayers, newTarget)
                     task.wait(2)
                     joinServerByJobId(newTarget)
                     return
-
                 elseif accConfirmed then
                     updateStatus("FARM_TYRANT",
-                        "✅ " .. accName .. " đang farm ở target!\n"
-                        .. "🚀 Join cùng farm... (" .. (curPlayers or "?") .. " players API)")
+                        "✅ " .. accName .. " đang farm ở target!\n🚀 Join cùng farm... (" .. (curPlayers or "?") .. " players API)")
                     writeState("FARM_TYRANT", mastery, fragments, newTarget)
                     lsPost("FARM_TYRANT", newTarget, curPlayers or 0, newTarget)
                     task.wait(2)
                     joinServerByJobId(newTarget)
                     return
-
                 else
                     updateStatus("FARM_TYRANT",
-                        "⚠️ Target của " .. (newSetBy or leaderName) .. " đã full\n"
-                        .. "🔄 Tìm target mới...")
+                        "⚠️ Target của " .. (newSetBy or leaderName) .. " đã full\n🔄 Tìm target mới...")
                     lsClearFarmTarget()
                     break
                 end
             end
 
             updateStatus("FARM_TYRANT",
-                "⏳ Chờ " .. leaderName .. " hop server... ("
-                .. waited .. "/" .. MAX_WAIT .. "s)")
+                "⏳ Chờ " .. leaderName .. " hop server... (" .. waited .. "/" .. MAX_WAIT .. "s)")
         end
 
-        -- ── Hết giờ chờ / target full → Sub-leader election ─────────
-        updateStatus("FARM_TYRANT",
-            "⚠️ Không có target khả dụng\n🔄 Sub-leader election...")
+        -- Sub-leader election
+        updateStatus("FARM_TYRANT", "⚠️ Không có target khả dụng\n🔄 Sub-leader election...")
         task.wait(1)
 
         local lsData2       = lsRead()
@@ -1621,19 +1289,14 @@ function handleFarmTyrant(mastery, fragments)
         task.wait(1)
 
         if amSubLeader then
-            -- Sub-leader: dùng hopFindLowPlayerServer (hopsmallui method)
-            updateStatus("FARM_TYRANT",
-                "👑 Sub-leader → Scan server 1-3 người cho sub-group...")
+            updateStatus("FARM_TYRANT", "👑 Sub-leader → Scan server 1-3 người cho sub-group...")
             task.wait(1)
-
             local subNewJobId = hopFindLowPlayerServer()
             if subNewJobId then
                 updateStatus("FARM_TYRANT",
-                    "✅ Sub-leader tìm được server ít người!\n"
-                    .. "🚀 Set target & Hop → các sub-follower sẽ join theo...")
+                    "✅ Sub-leader tìm được server ít người!\n🚀 Set target & Hop → các sub-follower sẽ join theo...")
                 lsSetFarmTarget(subNewJobId, playerName)
                 writeState("FARM_TYRANT", mastery, fragments, subNewJobId)
-                -- ✅ FIX: Ghi pending, không ghi player_count sai
                 lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), subNewJobId)
                 task.wait(2)
                 joinServerByJobId(subNewJobId)
@@ -1641,8 +1304,7 @@ function handleFarmTyrant(mastery, fragments)
                 local nowCount2 = getCurrentServerPlayers()
                 if nowCount2 < MAX_SERVER_PLAYERS then
                     updateStatus("FARM_TYRANT",
-                        "❌ Không tìm được server mới\n"
-                        .. "⛏️ Farm server hiện tại (" .. nowCount2 .. "/12)...")
+                        "❌ Không tìm được server mới\n⛏️ Farm server hiện tại (" .. nowCount2 .. "/12)...")
                     lsSetFarmTarget(game.JobId, playerName)
                     writeState("FARM_TYRANT", mastery, fragments, game.JobId)
                     lsPost("FARM_TYRANT", game.JobId, nowCount2, game.JobId)
@@ -1653,36 +1315,32 @@ function handleFarmTyrant(mastery, fragments)
                     updateStatus("FARM_TYRANT",
                         "⚠️ Server hiện tại đầy (" .. nowCount2 .. "/12)\n🔄 Rejoin ngẫu nhiên...")
                     task.wait(3)
-                    TeleportService:Teleport(game.PlaceId, lp)
+                    rejoinRandom()
                 end
             end
 
         else
-            -- Sub-follower: chờ sub-leader
+            -- Sub-follower
             local subWaited = 0
             local SUB_MAX   = 45
 
-            updateStatus("FARM_TYRANT",
-                "⏳ Sub-follower → Chờ sub-leader " .. subLeaderName .. "...")
+            updateStatus("FARM_TYRANT", "⏳ Sub-follower → Chờ sub-leader " .. subLeaderName .. "...")
 
             while subWaited < SUB_MAX do
                 task.wait(WAIT_INTERVAL)
                 subWaited = subWaited + WAIT_INTERVAL
 
-                -- [NEW] Sub-follower cũng kiểm tra local file
                 local subFreshServers = lsFindAvailableFarmServers()
                 if #subFreshServers > 0 then
-                    local sf = subFreshServers[1]
-                    local sfAPI, _ = getServerInfo(sf.job_id)
+                    local sf        = subFreshServers[1]
+                    local sfAPI, _  = getServerInfo(sf.job_id)
                     local sfPending = lsCountPendingAtServer(sf.job_id)
                     local sfConfirmed, sfAccName = lsIsAccFarmingAtServer(sf.job_id)
                     local sfEff = (sfAPI or sf.player_count or 0) + sfPending
                     if sfEff < MAX_SERVER_PLAYERS and (sfAPI or sfConfirmed) then
                         updateStatus("FARM_TYRANT",
-                            "🔍 Sub-follower: thấy server farm (" .. sf.acc_count .. " acc | eff: " .. sfEff .. "/12)\n"
-                            .. "🚀 Join ngay không chờ sub-leader...")
+                            "🔍 Sub-follower: thấy server farm (" .. sf.acc_count .. " acc | eff: " .. sfEff .. "/12)\n🚀 Join ngay không chờ sub-leader...")
                         writeState("FARM_TYRANT", mastery, fragments, sf.job_id)
-                        -- ✅ FIX: Ghi pending, không ghi player_count sai
                         lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), sf.job_id)
                         task.wait(2)
                         joinServerByJobId(sf.job_id)
@@ -1696,8 +1354,7 @@ function handleFarmTyrant(mastery, fragments)
                     local accConfirmed2, accName2 = lsIsAccFarmingAtServer(newTarget2)
                     if curPlayers2 and curPlayers2 < MAX_SERVER_PLAYERS then
                         updateStatus("FARM_TYRANT",
-                            "✅ Sub-leader " .. (newSetBy2 or subLeaderName) .. " set target!\n"
-                            .. "🚀 Join server (" .. curPlayers2 .. "/" .. MAX_SERVER_PLAYERS .. ")...")
+                            "✅ Sub-leader " .. (newSetBy2 or subLeaderName) .. " set target!\n🚀 Join server (" .. curPlayers2 .. "/" .. MAX_SERVER_PLAYERS .. ")...")
                         writeState("FARM_TYRANT", mastery, fragments, newTarget2)
                         lsPost("FARM_TYRANT", newTarget2, curPlayers2, newTarget2)
                         task.wait(2)
@@ -1705,8 +1362,7 @@ function handleFarmTyrant(mastery, fragments)
                         return
                     elseif accConfirmed2 then
                         updateStatus("FARM_TYRANT",
-                            "✅ " .. accName2 .. " đang farm ở target!\n"
-                            .. "🚀 Join cùng farm... (" .. (curPlayers2 or "?") .. " players API)")
+                            "✅ " .. accName2 .. " đang farm ở target!\n🚀 Join cùng farm... (" .. (curPlayers2 or "?") .. " players API)")
                         writeState("FARM_TYRANT", mastery, fragments, newTarget2)
                         lsPost("FARM_TYRANT", newTarget2, curPlayers2 or 0, newTarget2)
                         task.wait(2)
@@ -1716,13 +1372,11 @@ function handleFarmTyrant(mastery, fragments)
                 end
 
                 updateStatus("FARM_TYRANT",
-                    "⏳ Chờ sub-leader " .. subLeaderName .. "... ("
-                    .. subWaited .. "/" .. SUB_MAX .. "s)")
+                    "⏳ Chờ sub-leader " .. subLeaderName .. "... (" .. subWaited .. "/" .. SUB_MAX .. "s)")
             end
 
             -- Hết hạn → farm server hiện tại
-            updateStatus("FARM_TYRANT",
-                "❌ Hết thời gian chờ sub-leader\n⛏️ Farm server hiện tại...")
+            updateStatus("FARM_TYRANT", "❌ Hết thời gian chờ sub-leader\n⛏️ Farm server hiện tại...")
             writeState("FARM_TYRANT", mastery, fragments, game.JobId)
             lsPost("FARM_TYRANT", game.JobId, getCurrentServerPlayers(), game.JobId)
             task.wait(3)
@@ -1733,7 +1387,7 @@ function handleFarmTyrant(mastery, fragments)
 end
 
 -- ============================================================
---  MASTERY WATCHER  (event-based)
+--  MASTERY WATCHER
 -- ============================================================
 local masteryWatcherActive = false
 
@@ -1759,23 +1413,18 @@ local function hookTalonLevel(onMasteryChange)
     local lv, _ = findTalonLevel()
     if not lv then return nil end
     onMasteryChange(lv.Value)
-    return lv.Changed:Connect(function(newVal)
-        onMasteryChange(newVal)
-    end)
+    return lv.Changed:Connect(function(newVal) onMasteryChange(newVal) end)
 end
 
 function startMasteryWatcher(targetMastery, onReached)
     if masteryWatcherActive then return end
     masteryWatcherActive = true
-
     local triggered = false
 
     local function handleMastery(mas)
         if triggered then return end
         local frags = checkFragments()
-        updateStatus("FARM_MASTERY",
-            "⚔️ Mastery: " .. mas .. "/" .. targetMastery
-            .. " | 💎 Frags: " .. frags)
+        updateStatus("FARM_MASTERY", "⚔️ Mastery: " .. mas .. "/" .. targetMastery .. " | 💎 Frags: " .. frags)
         if mas >= targetMastery then
             triggered = true
             masteryWatcherActive = false
@@ -1785,14 +1434,10 @@ function startMasteryWatcher(targetMastery, onReached)
 
     task.spawn(function()
         task.wait(5)
-
         local currentConn = nil
 
         local function reconnect()
-            if currentConn then
-                pcall(function() currentConn:Disconnect() end)
-                currentConn = nil
-            end
+            if currentConn then pcall(function() currentConn:Disconnect() end); currentConn = nil end
             if triggered then return end
             currentConn = hookTalonLevel(handleMastery)
         end
@@ -1800,19 +1445,13 @@ function startMasteryWatcher(targetMastery, onReached)
         reconnect()
 
         local bpConn = lp.Backpack.ChildAdded:Connect(function(child)
-            if child.Name == "Dragon Talon" then
-                task.wait(0.1)
-                reconnect()
-            end
+            if child.Name == "Dragon Talon" then task.wait(0.1); reconnect() end
         end)
 
         local function watchChar(char)
             if not char then return end
             char.ChildAdded:Connect(function(child)
-                if child.Name == "Dragon Talon" then
-                    task.wait(0.1)
-                    reconnect()
-                end
+                if child.Name == "Dragon Talon" then task.wait(0.1); reconnect() end
             end)
         end
 
@@ -1821,18 +1460,12 @@ function startMasteryWatcher(targetMastery, onReached)
             local myChar = wsChars:FindFirstChild(playerName)
             if myChar then watchChar(myChar) end
             wsChars.ChildAdded:Connect(function(child)
-                if child.Name == playerName then
-                    task.wait(1)
-                    watchChar(child)
-                    reconnect()
-                end
+                if child.Name == playerName then task.wait(1); watchChar(child); reconnect() end
             end)
         end
 
         lp.CharacterAdded:Connect(function(char)
-            task.wait(1)
-            watchChar(char)
-            reconnect()
+            task.wait(1); watchChar(char); reconnect()
         end)
 
         while masteryWatcherActive do
@@ -1856,6 +1489,25 @@ end
 --  MONITORING LOOP
 -- ============================================================
 local monitorActive = false
+
+local function startLocalServerHeartbeat(getStateFn)
+    task.spawn(function()
+        task.wait(10)
+        while true do
+            pcall(function()
+                local s = getStateFn()
+                lsPost(s, game.JobId, getCurrentServerPlayers(), game.JobId)
+                if s == "FARM_TYRANT" then
+                    local lsData = lsRead()
+                    if lsData.target_set_by == playerName then
+                        lsSetFarmTarget(game.JobId, playerName)
+                    end
+                end
+            end)
+            task.wait(60)
+        end
+    end)
+end
 
 function startMonitoring(initStateType)
     if monitorActive then return end
@@ -1883,7 +1535,7 @@ function startMonitoring(initStateType)
                     task.wait(1)
                     joinServerByJobId(rndId)
                 else
-                    TeleportService:Teleport(game.PlaceId, lp)
+                    rejoinRandom()
                 end
             else
                 writeState("FARM_TYRANT", mas, frags)
@@ -1895,10 +1547,8 @@ function startMonitoring(initStateType)
         return
     end
 
-    -- Poll fragments mỗi 30s cho FARM_TYRANT / FARM_DOJOBELT
     task.spawn(function()
         task.wait(15)
-
         while monitorActive do
             pcall(function()
                 local saved = readState()
@@ -1908,8 +1558,7 @@ function startMonitoring(initStateType)
                 lsPost(state, game.JobId, getCurrentServerPlayers(), game.JobId)
 
                 if state == "FARM_TYRANT" then
-                    -- ✅ FIX: chỉ đếm acc đang ở CÙNG server với mình
-                    local accList = lsGetAccsSameServer()
+                    local accList  = lsGetAccsSameServer()
                     local srvCount = getCurrentServerPlayers()
                     updateStatus("FARM_TYRANT",
                         "💎 Frags: " .. frags .. "/25000"
@@ -1924,20 +1573,23 @@ function startMonitoring(initStateType)
                         task.wait(2)
                         local rndId, _ = findRandomServer()
                         if rndId then joinServerByJobId(rndId)
-                        else TeleportService:Teleport(game.PlaceId, lp) end
+                        else rejoinRandom() end
                         return
                     end
 
                 elseif state == "FARM_DOJOBELT" then
-                    updateStatus("FARM_DOJOBELT",
-                        "⚔️ Farm Dojo Belt | 💎 Frags: " .. frags)
+                    updateStatus("FARM_DOJOBELT", "⚔️ Farm Dojo Belt | 💎 Frags: " .. frags)
                 end
             end)
-
             task.wait(30)
         end
     end)
 end
+
+-- Cleanup
+game.Players.PlayerRemoving:Connect(function(player)
+    if player == lp then pcall(lsUnregister) end
+end)
 
 -- ============================================================
 --  MAIN LOGIC
@@ -1947,8 +1599,6 @@ updateStatus("CHECK_TALON", "Đang khởi động...")
 local currentState       = readState()
 local dragonTalonMastery = 0
 local fragments          = checkFragments()
-
------ Xử lý state từ file -----
 
 if currentState.state == "FARM_DOJOBELT" then
     updateStatus("FARM_DOJOBELT", "▶ Tiếp tục từ file → Farm Dojo Belt...")
@@ -1966,7 +1616,7 @@ if currentState.state == "FARM_TYRANT" then
         writeState("FARM_DOJOBELT", currentState.mastery, fragments)
         task.wait(2)
         local rndId, _ = findRandomServer()
-        if rndId then joinServerByJobId(rndId) else TeleportService:Teleport(game.PlaceId, lp) end
+        if rndId then joinServerByJobId(rndId) else rejoinRandom() end
         return
     end
 
@@ -1980,8 +1630,7 @@ if currentState.state == "FARM_TYRANT" then
         return
     end
 
-    updateStatus("FARM_TYRANT",
-        "▶ Tiếp tục farm Tyrant | 💎 " .. fragments .. "/25000")
+    updateStatus("FARM_TYRANT", "▶ Tiếp tục farm Tyrant | 💎 " .. fragments .. "/25000")
     task.wait(2)
     handleFarmTyrant(currentState.mastery or 0, fragments)
     return
@@ -2005,12 +1654,10 @@ if currentState.state == "FARM_MASTERY" then
     end
 end
 
------ CHECK_TALON -----
-
+-- CHECK_TALON
 updateStatus("CHECK_TALON", "🔍 Kiểm tra Dragon Talon...")
 task.wait(3)
 
--- Kiểm tra lần đầu
 local inBackpack  = lp.Backpack:FindFirstChild("Dragon Talon")
 local charNode    = workspace.Characters and workspace.Characters:FindFirstChild(playerName) or lp.Character
 local inCharacter = charNode and charNode:FindFirstChild("Dragon Talon")
@@ -2029,10 +1676,8 @@ end
 
 if not inBackpack and not inCharacter then
     updateStatus("CHECK_TALON", "❌ Chưa có Dragon Talon → Mua...")
-    -- ✅ FIX: Mua có retry, sau mỗi lần mua check lại xem có Dragon Talon chưa
     buyDragonTalonWithRetry()
     task.wait(2)
-    -- Verify lại 1 lần cuối
     inBackpack  = lp.Backpack:FindFirstChild("Dragon Talon")
     charNode    = workspace.Characters and workspace.Characters:FindFirstChild(playerName) or lp.Character
     inCharacter = charNode and charNode:FindFirstChild("Dragon Talon")
