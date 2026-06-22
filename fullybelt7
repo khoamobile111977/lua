@@ -896,13 +896,19 @@ end
 
 
 local function rejoin(reason)
-    updateStatus("FARM_V2V3", (reason or "Rejoin..."))
-    task.wait(3)
-    local args = {
-        "teleport",
-        game.JobId
-    }
-    game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser"):InvokeServer(unpack(args))
+    task.spawn(function()
+        while task.wait(3) do
+            pcall(function()
+                updateStatus("FARM_V2V3", (reason or "Rejoin..."))
+                local args = {
+                    "teleport",
+                    game.JobId -- JobId là ID của server hiện tại bạn đang chơi
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser"):InvokeServer(unpack(args))
+            end)
+            task.wait(10) -- Chờ xem có bị lỗi không, nếu chưa out game thì loop lại
+        end
+    end)
 end
 
 
@@ -1235,7 +1241,7 @@ if state == "GET_DAI8_TETHER" then
                 "Lần 1 thất bại → Chờ 60s cooldown, rejoin thử lại...")
             writeState("GET_DAI8_TETHER", { tether_retry = 1, bone_target = boneTarget })
             task.wait(60)
-            TeleportService:Teleport(game.PlaceId, lp)
+            rejoin("Rejoin thử lại sau cooldown...")
 
         else
             local newTarget = boneTarget + 5
@@ -1246,7 +1252,7 @@ if state == "GET_DAI8_TETHER" then
                 bone_target  = newTarget
             })
             task.wait(3)
-            TeleportService:Teleport(game.PlaceId, lp)
+            rejoin("Rejoin để farm thêm bone...")
         end
     end
 end
