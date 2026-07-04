@@ -1,7 +1,13 @@
+
 repeat wait() until game:IsLoaded()
 repeat wait() until game.Players and game.Players.LocalPlayer
+task.wait(3)
+if not game.Players.LocalPlayer.Team then 
+    game.ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", getgenv().Team or "Marines") 
+end
 repeat wait() until game.Players.LocalPlayer.Team
-task.wait(10)
+
+task.wait(3)
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +16,8 @@ local RunService        = game:GetService("RunService")
 local UserInputService  = game:GetService("UserInputService")
 local lp                = Players.LocalPlayer
 local rs                = ReplicatedStorage
+
+
 
 -- ╔══════════════════════════════════════════╗
 -- ║        NOCLIP + SMOOTH TWEEN TP          ║
@@ -168,6 +176,57 @@ local function rejoinCurrentServer()
         return false
     end
     return teleportToServer(jobId)
+end
+
+-- ╔══════════════════════════════════════════════════════════════════╗
+-- ║              AUTO FARM MATERIAL INTEGRATION                      ║
+-- ║  Chỉ execute script farm MỘT LẦN DUY NHẤT khi phát hiện chưa đủ  ║
+-- ║  nguyên liệu. Sau khi đã execute, cờ _farmScriptStarted sẽ luôn  ║
+-- ║  là true trong suốt vòng đời script (kể cả reset/loop lại), nên  ║
+-- ║  sẽ không bao giờ loadstring lại lần 2.                          ║
+-- ╚══════════════════════════════════════════════════════════════════╝
+local _farmScriptStarted = false
+
+local function startFarmScriptOnce()
+    if _farmScriptStarted then return end
+    _farmScriptStarted = true
+
+    local ok, err = pcall(function()
+        getgenv().Config = {
+            ["Shoot Heart When Ice Spike Breaks"] = false,
+            ["Drive Boat To Tiki"] = false,
+            ["No Frog"] = false,
+            ["Random Devil Fruit"] = false,
+            ["Use skill fast dont hold"] = true,
+            ["Webhook Shoot Heart Leviathan"] = false,
+            ["Webhook Destroy IDK"] = false,
+            ["Auto Farm Material Sanguine Art"] = true,
+            ["Webhook Unlock Draco v4"] = false,
+            ["Auto light the torch"] = false,
+            ["Drive Boat To Hydra"] = false,
+            ["Use Click M1 Fruit"] = false,
+            ["Use New Method Shoot Heart"] = false,
+            ["Webhook Drive To Tiki/Hydra"] = false,
+            ["Webhook Find Leviathan"] = false,
+            ["Boost Fps"] = true,
+            ["Value Collect Chest to Hop"] = "80",
+            ["Auto Chest Hop"] = true,
+            ["Ping Discord"] = false,
+            ["Auto Craft Scroll"] = false,
+            ["Account Buy Boat"] = false,
+            ["Auto Store Fruit"] = false,
+            ["Start Hunt Leviathan"] = false
+        }
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-KaitunLevi.lua"))()
+    end)
+
+    if ok then
+        print("[Sanguine] Đã execute script Auto Farm nguyên liệu (1 lần).")
+    else
+        warn("[Sanguine] Lỗi khi execute farm script:", err)
+        -- Nếu lỗi, cho phép thử lại ở lần check tiếp theo
+        _farmScriptStarted = false
+    end
 end
 
 -- ╔══════════════════════════════════════════════════════════════════╗
@@ -534,17 +593,14 @@ local function joinSea3()
 end
 
 -- ── Idle Countdown (reset khi nhân vật cử động) ──────────────────
--- Trả về true nếu đếm đủ 60s mà không bị interrupt,
--- trả về false nếu bị cử động reset (caller sẽ loop lại).
 local function waitIdleCountdown()
     local timeLeft   = IDLE_SECONDS
     local wasReset   = false
 
-    -- Khi phát hiện cử động → reset timer
     startMoveWatch(function()
         if timeLeft > 0 then
             wasReset  = true
-            timeLeft  = IDLE_SECONDS   -- reset về 60
+            timeLeft  = IDLE_SECONDS
             moveIcon.Visible = true
             TweenService:Create(moveIcon, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
             task.delay(1.2, function()
@@ -575,7 +631,7 @@ local function waitIdleCountdown()
     stopMoveWatch()
     cdLabel.Text     = ""
     moveIcon.Visible = false
-    return true   -- đếm xong
+    return true
 end
 
 -- ── Purchase + NPC-not-found rejoin ──────────────────────────────
@@ -584,7 +640,6 @@ local function trySanguinePurchase()
     setResult("MOVING", "warn")
 
     if not tpToNPC("Shafi") then
-        -- Shafi không tìm thấy → rejoin cùng server
         setStatus("Không thấy Shafi — rejoin server...", "error")
         setResult("REJOINING", "error")
 
@@ -602,7 +657,7 @@ local function trySanguinePurchase()
             setStatus("JobId trống — không rejoin được!", "error")
             setResult("NO JOB ID", "error")
         end
-        return false   -- dừng attempt này
+        return false
     end
 
     task.wait(2)
@@ -622,7 +677,6 @@ local function buySanguineWithRetry()
 
         local sent = trySanguinePurchase()
         if not sent then
-            -- NPC không thấy → rejoin đã được gọi bên trong → dừng vòng lặp
             setRetry("NPC not found — rejoined")
             return false
         end
@@ -668,7 +722,8 @@ end
 -- ║                                                             ║
 -- ║  result == 0  →  Đủ nguyên liệu → mua ngay                 ║
 -- ║  result == 1  →  Idle 60s (reset nếu cử động) → mua        ║
--- ║  khác         →  poll lại mỗi 5s                            ║
+-- ║  khác         →  chưa đủ → auto-execute farm script (1 lần)║
+-- ║                   rồi poll lại mỗi 5s cho tới khi đủ        ║
 -- ╚══════════════════════════════════════════════════════════════╝
 setResult("INIT", "idle")
 setStatus("Đang kiểm tra nguyên liệu...", "idle")
@@ -686,12 +741,9 @@ task.spawn(function()
             shouldBuy = true
 
         elseif result == 1 then
-            -- Bắt đầu idle countdown; nếu bị reset thì vòng while ngoài
-            -- sẽ gọi checkMaterials() lại và rơi vào nhánh này tiếp.
             setResult("IDLE WAIT", "warn")
-            waitIdleCountdown()        -- block ở đây cho đến khi đủ 60s
+            waitIdleCountdown()
 
-            -- Sau 60s idle xong → mua
             setStatus("Idle hoàn tất — tiến hành mua!", "success")
             setResult("READY", "success")
             shouldBuy = true
@@ -702,9 +754,13 @@ task.spawn(function()
             task.wait(5)
 
         else
+            -- Chưa đủ nguyên liệu → bật auto farm (chỉ 1 lần duy nhất)
             local info = tostring(result)
-            setStatus("Chờ nguyên liệu...\n" .. info:sub(1, 60), "warn")
-            setResult("MISSING", "warn")
+            setStatus("Chưa đủ nguyên liệu — kích hoạt Auto Farm...\n" .. info:sub(1, 60), "warn")
+            setResult("FARMING", "warn")
+
+            startFarmScriptOnce()   -- không execute lại nếu đã chạy rồi
+
             task.wait(5)
         end
     end
