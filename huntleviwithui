@@ -67,7 +67,7 @@ local HYDRA_HELPER_CONFIG = {
 }
 
 -- ======================== VARIABLES ========================
-local lp = game.Players.LocalPlayer
+local lp = game:GetService("Players").LocalPlayer
 local rs = game.ReplicatedStorage
 local ts = game:GetService("TweenService")
 
@@ -193,34 +193,35 @@ end
 -- ======================== MELEE CHECK & BUY ========================
 local function checkMelee(meleeName)
     sendNotification("⏳ Kiểm tra", "Đang kiểm tra " .. meleeName .. "...", 3)
-    
-    local inBackpack = lp.Backpack:FindFirstChild(meleeName)
-    local char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-    local inCharacter = char and char:FindFirstChild(meleeName)
-    
+
+    local myPlayer = game:GetService("Players").LocalPlayer
+    local inBackpack = myPlayer.Backpack:FindFirstChild(meleeName)
+    local charModel = workspace.Characters:FindFirstChild(myPlayer.Name)
+    local inCharacter = charModel and charModel:FindFirstChild(meleeName)
+
     if not inBackpack and not inCharacter then
         sendNotification("⏳ Đợi", "Đợi Backpack load...", 3)
-        
+
         local maxWait = 10
         local waited = 0
-        
+
         while waited < maxWait do
             task.wait(1)
             waited = waited + 1
-            
-            inBackpack = lp.Backpack:FindFirstChild(meleeName)
-            char = workspace.Characters:FindFirstChild(lp.Name) or lp.Character
-            inCharacter = char and char:FindFirstChild(meleeName)
-            
+
+            inBackpack = myPlayer.Backpack:FindFirstChild(meleeName)
+            charModel = workspace.Characters:FindFirstChild(myPlayer.Name)
+            inCharacter = charModel and charModel:FindFirstChild(meleeName)
+
             if inBackpack or inCharacter then
                 sendNotification("✅ Thành công", "Tìm thấy " .. meleeName .. "!", 3)
                 return true
             end
         end
-        
+
         return false
     end
-    
+
     sendNotification("✅ Thành công", "Đã có " .. meleeName .. "!", 3)
     return true
 end
