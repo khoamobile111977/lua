@@ -20,9 +20,14 @@ local RunService      = game:GetService("RunService")
 local StarterGui      = game:GetService("StarterGui")
 local lp              = Players.LocalPlayer
 local rs              = game:GetService("ReplicatedStorage")
+local InventoryController, ItemConfig
+pcall(function()
+    InventoryController = require(rs:WaitForChild("Controllers"):WaitForChild("UI"):WaitForChild("Inventory"))
+    ItemConfig = require(rs:WaitForChild("ItemConfig"))
+end)
 local playerName      = lp.Name
 local stateFile       = playerName .. "_dracoflow.json"
-local TweenSpeed = 275
+local TweenSpeed = 200
 
 local vu = game:GetService("VirtualUser")
 lp.Idled:Connect(function()
@@ -453,14 +458,41 @@ local function warmupInventoryCache()
 end
 
 local function checkInventory(name)
-    _ensureCache()
-    return invCache[name] ~= nil
+    local ok, result = pcall(function()
+        return InventoryController:HasTile(name)
+    end)
+    if ok then return result end
+    local ok2, tiles = pcall(function() return InventoryController:GetTiles() end)
+    if not ok2 or not tiles then return false end
+    for _, tile in ipairs(tiles) do
+        local ok3, cfg = pcall(function()
+            return ItemConfig.match(tile.ItemId):unwrap()
+        end)
+        if ok3 and cfg then
+            if cfg.Index.StorageKey == name or cfg.Index.DebugLabel == name then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 local function getItemCount(itemName)
-    _ensureCache()
-    local e = invCache[itemName]
-    return e and e.count or 0
+    local count = 0
+    pcall(function()
+        local tiles = InventoryController:GetTiles()
+        for _, tile in ipairs(tiles) do
+            local ok, cfg = pcall(function()
+                return ItemConfig.match(tile.ItemId):unwrap()
+            end)
+            if ok and cfg then
+                if cfg.Index.StorageKey == itemName or cfg.Index.DebugLabel == itemName then
+                    count = count + 1
+                end
+            end
+        end
+    end)
+    return count
 end
 
 local function findWeaponLevel(weaponName)
